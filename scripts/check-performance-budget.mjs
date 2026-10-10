@@ -143,8 +143,8 @@ const budgets = [
     // agent built and shows sits in its reply too. The transcript lays itself
     // out from the bottom, and tool rows draw an icon for what each call does.
     // A sent message can be opened again, edited and sent in its place.
-    // GitLab's agent tools add their rows. A finished answer folds its work
-    // under how long it took.
+    // GitLab's agent tools add their rows, and so do Slack's. A finished
+    // answer folds its work under how long it took.
     label: "ACP chat lazy chunk",
     pattern: /^AgentSurface-.*\.js$/,
     raw: 141_000,
