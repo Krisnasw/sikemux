@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import MaskedView from '@react-native-masked-view/masked-view';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { activityText, composerPlaceholder } from '@mac/chat/chatStatus';
 import { sentPrompts } from '@mac/chat/promptHistory';
@@ -106,6 +108,34 @@ function useArrivals(running: boolean, waiting: string | undefined, said: { done
     }
     asked.current = waiting;
   }, [waiting, said.asks]);
+}
+
+/** How far the transcript fades out under the header and above the composer. */
+const FADE = 22;
+
+function Fade({ id, from }: { id: string; from: 0 | 1 }) {
+  return (
+    <Svg width="100%" height={FADE}>
+      <Defs>
+        <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#000" stopOpacity={from} />
+          <Stop offset="1" stopColor="#000" stopOpacity={1 - from} />
+        </LinearGradient>
+      </Defs>
+      <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id})`} />
+    </Svg>
+  );
+}
+
+/** The header and composer float over the backdrop, so the transcript fades into them rather than ending on a line. */
+function EdgeFades() {
+  return (
+    <View style={{ flex: 1 }}>
+      <Fade id="transcript-top" from={0} />
+      <View style={{ flex: 1, backgroundColor: '#000' }} />
+      <Fade id="transcript-bottom" from={1} />
+    </View>
+  );
 }
 
 export default function Chat() {
@@ -243,59 +273,61 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
           <ProviderContext value={provider}>
             <FoldsContext value={session.folds}>
               <View style={styles.transcript}>
-                <FlashList
-                  ref={list}
-                  data={state.messages}
-                  keyExtractor={(message) => message.id}
-                  getItemType={(message) => message.role}
-                  extraData={marks}
-                  renderItem={({ item, index }) => {
-                    const fold = folds.get(index);
-                    const workId = fold ? state.messages[fold.start].id : '';
-                    const folded = fold !== undefined && !openWork.has(workId);
-                    const summary =
-                      fold && index === fold.start ? (
-                        <WorkSummary took={fold.took} calls={fold.calls} open={!folded} onToggle={() => toggleWork(workId)} />
-                      ) : null;
-                    if (fold && folded && index < fold.end) return summary ?? <View />;
-                    return (
+                <MaskedView style={styles.transcript} maskElement={<EdgeFades />}>
+                  <FlashList
+                    ref={list}
+                    data={state.messages}
+                    keyExtractor={(message) => message.id}
+                    getItemType={(message) => message.role}
+                    extraData={marks}
+                    renderItem={({ item, index }) => {
+                      const fold = folds.get(index);
+                      const workId = fold ? state.messages[fold.start].id : '';
+                      const folded = fold !== undefined && !openWork.has(workId);
+                      const summary =
+                        fold && index === fold.start ? (
+                          <WorkSummary took={fold.took} calls={fold.calls} open={!folded} onToggle={() => toggleWork(workId)} />
+                        ) : null;
+                      if (fold && folded && index < fold.end) return summary ?? <View />;
+                      return (
+                        <>
+                          {summary}
+                          <Message
+                            message={item}
+                            live={item.id === liveId}
+                            untimed={chat.replayed.has(item.id)}
+                            unsent={chat.unsent.get(item.id)}
+                            onRetry={session.retrySend}
+                            onTap={onTap}
+                            strip={item.id === open ? openStrip : undefined}
+                            sentFiles={chat.sentFiles}
+                            from={fold && folded ? fold.from : 0}
+                          />
+                        </>
+                      );
+                    }}
+                    ListHeaderComponent={
+                      chat.hasEarlier ? <Earlier failed={chat.earlier === 'failed'} onRetry={session.loadEarlier} /> : null
+                    }
+                    onStartReached={chat.hasEarlier && chat.earlier === 'idle' ? session.loadEarlier : undefined}
+                    ListFooterComponent={
                       <>
-                        {summary}
-                        <Message
-                          message={item}
-                          live={item.id === liveId}
-                          untimed={chat.replayed.has(item.id)}
-                          unsent={chat.unsent.get(item.id)}
-                          onRetry={session.retrySend}
-                          onTap={onTap}
-                          strip={item.id === open ? openStrip : undefined}
-                          sentFiles={chat.sentFiles}
-                          from={fold && folded ? fold.from : 0}
-                        />
+                        {chat.queued.length ? <Queued held={chat.queued} sentFiles={chat.sentFiles} /> : null}
+                        {activity ? <Activity provider={provider} label={activity} since={chat.turnSince} /> : null}
+                        {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
                       </>
-                    );
-                  }}
-                  ListHeaderComponent={
-                    chat.hasEarlier ? <Earlier failed={chat.earlier === 'failed'} onRetry={session.loadEarlier} /> : null
-                  }
-                  onStartReached={chat.hasEarlier && chat.earlier === 'idle' ? session.loadEarlier : undefined}
-                  ListFooterComponent={
-                    <>
-                      {chat.queued.length ? <Queued held={chat.queued} sentFiles={chat.sentFiles} /> : null}
-                      {activity ? <Activity provider={provider} label={activity} since={chat.turnSince} /> : null}
-                      {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
-                    </>
-                  }
-                  contentContainerStyle={styles.content}
-                  maintainVisibleContentPosition={{
-                    startRenderingFromBottom: true,
-                    autoscrollToBottomThreshold: FOLLOW,
-                    animateAutoScrollToBottom: false,
-                  }}
-                  onScroll={onScroll}
-                  scrollEventThrottle={100}
-                  keyboardDismissMode="interactive"
-                />
+                    }
+                    contentContainerStyle={styles.content}
+                    maintainVisibleContentPosition={{
+                      startRenderingFromBottom: true,
+                      autoscrollToBottomThreshold: FOLLOW,
+                      animateAutoScrollToBottom: false,
+                    }}
+                    onScroll={onScroll}
+                    scrollEventThrottle={100}
+                    keyboardDismissMode="interactive"
+                  />
+                </MaskedView>
                 {away ? (
                   <Pressable
                     onPress={toEnd}
@@ -392,7 +424,7 @@ const makeStyles = (colors: Palette) => {
   return StyleSheet.create({
     title: { fontFamily: fonts.uiSemibold, fontSize: 16, letterSpacing: -0.25, color: colors.ink, flexShrink: 1 },
     more: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-    transcript: { flex: 1, borderTopWidth: 1, borderTopColor: colors.border },
+    transcript: { flex: 1 },
     alone: { justifyContent: 'flex-end' },
     content: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 28 },
     jump: {

@@ -177,7 +177,7 @@
   .footer { flex: none; padding: 12px 16px 34px; display: flex; flex-direction: column; gap: 8px; }
 
   /* ---------- chat pane ---------- */
-  .chat { flex: 1; min-height: 0; overflow: hidden; padding: 6px 18px 20px; display: flex; flex-direction: column; justify-content: flex-end; }
+  .chat { flex: 1; min-height: 0; overflow: hidden; padding: 6px 18px 20px; display: flex; flex-direction: column; justify-content: flex-end; -webkit-mask-image: linear-gradient(transparent, #000 22px, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(transparent, #000 22px, #000 calc(100% - 22px), transparent); }
   .chat > * { flex: none; }
   .earlier { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 0 6px; font-size: 12.5px; color: var(--text-tertiary); }
   .msg-user { align-self: flex-end; max-width: 84%; margin: 12px 0 8px; padding: 9px 13px; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--line) 80%, transparent); background: color-mix(in oklab, var(--rail-2) 72%, transparent); color: var(--ink); font-size: 14px; line-height: 1.57; }
@@ -1415,14 +1415,14 @@
 <!-- ================================================================ -->
 <section class="flow on-host">
   <h2>An agent</h2>
-  <p>The Mac's chat pane, line for line: your messages in a bubble on the right, the agent's prose with no bubble, its thinking in faint italics, tool calls as a tree with the coloured verbs, open while the agent is still adding to them and folded to "N tool calls" once it moves on. Once a turn ends, everything before its reply folds under "Worked for 48s · 1 tool call" with a hairline under it, and a tap opens it again. Then the working line with the agent's logo breathing. The composer is the Mac's: attach, YOLO, model, effort, context ring, send or stop. What the agent still has going sits in one line docked on the composer, and opens into a sheet.</p>
+  <p>The Mac's chat pane, line for line: your messages in a bubble on the right, the agent's prose with no bubble, its thinking in faint italics, tool calls as a tree with the coloured verbs, open while the agent is still adding to them and folded to "N tool calls" once it moves on. Once a turn ends, everything before its reply folds under "Worked for 48s · 1 tool call" with a hairline under it, and a tap opens it again. Then the working line with the agent's logo breathing. No line runs under the header: the transcript fades out under it and above the composer, over the backdrop. The composer is the Mac's: attach, YOLO, model, effort, context ring, send or stop. What the agent still has going sits in one line docked on the composer, and opens into a sheet.</p>
   <div class="phones">
 
     <figure><div class="phone"><div class="island"></div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="codex">{{IconCodex:17}}</span><span>Fix the flaky PTY replay test</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user"><code class="chip">usePty.test.tsx &gt; replays the snapshot once</code> fails about one run in ten on CI. Find out why and fix it without adding sleeps.</div>
           <div class="work"><span class="work-sum">Worked for 48s <span class="calls">· 1 tool call</span>{{IconChevron:11}}</span></div>
           <div class="prose">The channel could deliver bytes already inside the attach snapshot. The controller now drops channel output until the snapshot is written, which passes 100 out of 100 runs.</div>
@@ -1461,7 +1461,7 @@
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Remote pairing screen</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="prose">The pairing screen builds and the Devices page shows the waiting phone. Before I commit, I want the settings tests green.</div>
           <div class="tools">
             <span class="tools-sum open">2 tool calls <span class="time">1s</span>{{IconChevron:11}}</span>
@@ -1499,7 +1499,7 @@
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Download size on the hero</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Show the download size next to the button.</div>
           <div class="work"><span class="work-sum">Worked for 14s <span class="calls">· 2 tool calls</span>{{IconChevron:11}}</span></div>
           <div class="prose">Done. The size comes from the latest release's DMG at build time, then from the visitor's browser, so it stays right between deploys.</div>
@@ -1533,7 +1533,7 @@
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Download size on the hero</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Show the download size next to the button.</div>
           <div class="work"><span class="work-sum">Worked for 14s <span class="calls">· 2 tool calls</span>{{IconChevron:11}}</span></div>
           <div class="prose">Done. The size comes from the latest release's DMG at build time, then from the visitor's browser.</div>
@@ -1569,7 +1569,7 @@
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Download size on the hero</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Show the download size next to the button.</div>
           <div class="work"><span class="work-sum">Worked for 14s <span class="calls">· 2 tool calls</span>{{IconChevron:11}}</span></div>
           <div class="prose">Done. The size comes from the latest release's DMG at build time, then from the visitor's browser.</div>
@@ -1601,7 +1601,7 @@
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Download size on the hero</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Show the download size next to the button.</div>
           <div class="work"><span class="work-sum">Worked for 14s <span class="calls">· 2 tool calls</span>{{IconChevron:11}}</span></div>
           <div class="prose">Done. The size comes from the latest release's DMG at build time, then from the visitor's browser.</div>
@@ -1635,7 +1635,7 @@
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="codex">{{IconCodex:17}}</span><span>Fix the flaky PTY replay test</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border);justify-content:flex-start">
+        <div class="chat" style="justify-content:flex-start">
           <div class="prose">The channel could deliver bytes already inside the attach snapshot, so the first write landed twice whenever the channel won the race.</div>
           <div class="msg-user">Good. Run the whole terminal suite, then commit it.</div>
           <div class="work"><span class="work-sum">Worked for 31s <span class="calls">· 3 tool calls</span>{{IconChevron:11}}</span></div>
@@ -1665,7 +1665,7 @@
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="codex">{{IconCodex:17}}</span><span>Fix the flaky PTY replay test</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border);justify-content:flex-start">
+        <div class="chat" style="justify-content:flex-start">
           <div class="earlier"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>Loading earlier messages…</div>
           <div class="msg-user"><code class="chip">usePty.test.tsx &gt; replays the snapshot once</code> fails about one run in ten on CI. Find out why and fix it without adding sleeps.</div>
           <div class="work"><span class="work-sum">Worked for 1m 12s <span class="calls">· 4 tool calls</span>{{IconChevron:11}}</span></div>
@@ -1695,7 +1695,7 @@
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Download size on the hero</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Show the download size next to the button.</div>
           <div class="work"><span class="work-sum">Worked for 14s <span class="calls">· 2 tool calls</span>{{IconChevron:11}}</span></div>
           <div class="prose">Done. The size comes from the latest release's DMG at build time, then from the visitor's browser.</div>
@@ -1726,7 +1726,7 @@
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="codex">{{IconCodex:17}}</span><span>Fix the flaky PTY replay test</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="tools">
             <span class="tools-sum open">2 tool calls <span class="time">7s</span>{{IconChevron:11}}</span>
             <div class="tools-body">
@@ -1767,7 +1767,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Remote pairing screen</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="prose">The pairing screen builds and the Devices page shows the waiting phone.</div>
         </div>
         <div class="composer-wrap">
@@ -1798,7 +1798,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Download size on the hero</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Show the download size next to the button.</div>
           <div class="work"><span class="work-sum">Worked for 14s <span class="calls">· 2 tool calls</span>{{IconChevron:11}}</span></div>
           <div class="prose">Done. The size comes from the latest release's DMG at build time, then from the visitor's browser.</div>
@@ -1857,7 +1857,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Download size on the hero</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border);justify-content:flex-start">
+        <div class="chat" style="justify-content:flex-start">
           <div class="msg-user">Show the download size next to the button.</div>
           <div class="work"><span class="work-sum">Worked for 14s <span class="calls">· 2 tool calls</span>{{IconChevron:11}}</span></div>
           <div class="prose">Done. The size comes from the latest release's DMG at build time, then from the visitor's browser, so it stays right between deploys.</div>
@@ -1881,7 +1881,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Remote pairing screen</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border);padding-bottom:34px">
+        <div class="chat" style="padding-bottom:34px">
           <p style="text-align:center;font-size:13px;color:var(--text-tertiary);margin-bottom:16px">This chat is no longer running on the host.</p>
           <div class="btn">Try again</div>
         </div>
@@ -1895,7 +1895,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>E2E suite on CI</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Get the e2e suite green on CI, and keep an eye on the preview deploy while you work.</div>
           <div class="sub"><div class="sub-head"><span class="chev">{{IconChevron:10}}</span><span class="claude">{{IconClaude:15}}</span><span class="nm">Explore</span><span class="tk">Find where the flaky checkout selector lives</span><span class="calls">6 calls</span><span class="st"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
           <div class="sub"><div class="sub-head"><span class="chev">{{IconChevron:10}}</span><span class="claude">{{IconClaude:15}}</span><span class="nm">Review</span><span class="tk">Read the last three CI runs for the same failure</span><span class="calls">3 calls</span><span class="st"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
@@ -1932,7 +1932,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>E2E suite on CI</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Get the e2e suite green on CI, and keep an eye on the preview deploy while you work.</div>
           <div class="sub"><div class="sub-head"><span class="chev">{{IconChevron:10}}</span><span class="claude">{{IconClaude:15}}</span><span class="nm">Explore</span><span class="tk">Find where the flaky checkout selector lives</span><span class="calls">6 calls</span><span class="st"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
           <div class="sub"><div class="sub-head"><span class="chev">{{IconChevron:10}}</span><span class="claude">{{IconClaude:15}}</span><span class="nm">Review</span><span class="tk">Read the last three CI runs for the same failure</span><span class="calls">3 calls</span><span class="st"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div></div>
@@ -1998,7 +1998,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Remote pairing screen</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="prose">The pairing screen builds. Three cleanups next, then the tests.</div>
           <div class="tools"><span class="tools-sum">4 tool calls <span class="time">2s</span>{{IconChevron:11}}</span></div>
         </div>
@@ -2030,7 +2030,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="codex">{{IconCodex:17}}</span><span>Fix the flaky PTY replay test</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="tools">
             <span class="tools-sum open">3 tool calls <span class="time">8s</span>{{IconChevron:11}}</span>
             <div class="tools-body">
@@ -2076,7 +2076,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>E2E suite on CI</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="sub"><div class="sub-head open"><span class="chev">{{IconChevron:10}}</span><span class="claude">{{IconClaude:15}}</span><span class="nm">Explore</span><span class="tk">Find where the flaky checkout selector lives</span><span class="calls">3 calls</span><span class="st" style="color:var(--live)">{{IconCheck:13}}</span></div>
             <div class="sub-body">
               <div class="tools">
@@ -2117,7 +2117,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="claude">{{IconClaude:17}}</span><span>Download size on the hero</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Show the download size next to the button.</div>
           <div class="work"><span class="work-sum">Worked for 14s <span class="calls">· 2 tool calls</span>{{IconChevron:11}}</span></div>
           <div class="prose" style="margin-top:0">Done. The size is read from the latest release at build time:</div>
@@ -2149,7 +2149,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="codex">{{IconCodex:17}}</span><span>Fix the flaky PTY replay test</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="msg-user">Good. Run the whole terminal suite, then commit it.</div>
           <div class="tools"><span class="tools-sum">3 tool calls <span class="time">7s</span>{{IconChevron:11}}</span></div>
           <div class="prose">All 214 terminal tests pass, and the fix is committed.</div>
@@ -2186,7 +2186,7 @@ expected 1 write, got 2</div>
       <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
       <div class="screen">
         <div class="nav"><span class="back">{{IconChevron:18}}</span><span class="mid"><span class="codex">{{IconCodex:17}}</span><span>Fix the flaky PTY replay test</span></span><span class="icon-btn">{{IconMoreVertical:16}}</span></div>
-        <div class="chat" style="border-top:1px solid var(--border)">
+        <div class="chat">
           <div class="prose">All 214 terminal tests pass, and the fix is committed.</div>
         </div>
         <div class="composer-wrap">
