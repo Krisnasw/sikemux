@@ -257,7 +257,6 @@ const ChatRow = memo(function ChatRow({
   const where = (state: string) => (place ? `${place} · ${state}` : state);
   return (
     <Row
-      bright={asking}
       mark={<AgentIcon provider={chat.provider} size={20} />}
       title={chatTitle(chat)}
       detail={

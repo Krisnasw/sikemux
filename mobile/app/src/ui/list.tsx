@@ -29,7 +29,6 @@ export function Row({
   end,
   onPress,
   dim,
-  bright,
 }: {
   mark?: ReactNode;
   title: string;
@@ -37,8 +36,6 @@ export function Row({
   end?: ReactNode;
   onPress?: () => void;
   dim?: boolean;
-  /** Titles the row in full ink, for the one that is waiting on the person. */
-  bright?: boolean;
 }) {
   const colors = useColors();
   const styles = useStyles(makeStyles);
@@ -49,7 +46,7 @@ export function Row({
       style={({ pressed }) => [styles.row, pressed && onPress && styles.rowPressed]}>
       {mark ? <View style={styles.mark}>{mark}</View> : null}
       <View style={styles.rowBody}>
-        <Text style={[styles.rowTitle, { color: dim ? colors.tertiary : bright ? colors.ink : colors.secondary }]} numberOfLines={1}>
+        <Text style={[styles.rowTitle, { color: dim ? colors.tertiary : colors.ink }]} numberOfLines={1}>
           {title}
         </Text>
         {detail ? (
