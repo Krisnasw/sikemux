@@ -9,6 +9,7 @@ import {
   Text,
   View,
   type NativeScrollEvent,
+  type LayoutChangeEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
@@ -24,6 +25,7 @@ import type { ChatMessage, ChatState } from '@mac/chat/types';
 import { ChatMenu } from '@/chat/ChatMenu';
 import { askTitle, Composer, RecentSheet } from '@/chat/Composer';
 import { FoldsContext } from '@/chat/folds';
+import { HostContext } from '@/chat/hostFiles';
 import { LiveSheet, LiveStrip } from '@/chat/Live';
 import { hasLiveWork, liveKey, liveWork } from '@/chat/liveWork';
 import { stripMeta, stripOwner } from '@/chat/messageMeta';
@@ -212,11 +214,30 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
   const [away, setAway] = useState(false);
   const awayRef = useRef(false);
   const bottom = useBottomGap();
-  const onScroll = ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
-    const now = contentSize.height - contentOffset.y - layoutMeasurement.height > layoutMeasurement.height * FOLLOW;
+  // A finished turn folds and shrinks the chat with no scroll, which can bring a reader to the end.
+  // Only a reader already away is checked: anyone at the end is kept there by the list.
+  const metrics = useRef({ offset: 0, content: 0, viewport: 0 });
+  const measureAway = () => {
+    const { offset, content, viewport } = metrics.current;
+    const now = content - offset - viewport > viewport * FOLLOW;
     awayRef.current = now;
     setAway(now);
+  };
+  const onScroll = ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
+    metrics.current = {
+      offset: nativeEvent.contentOffset.y,
+      content: nativeEvent.contentSize.height,
+      viewport: nativeEvent.layoutMeasurement.height,
+    };
+    measureAway();
+  };
+  const onContentSizeChange = (_width: number, height: number) => {
+    metrics.current.content = height;
+    if (awayRef.current) measureAway();
+  };
+  const onListLayout = ({ nativeEvent }: LayoutChangeEvent) => {
+    metrics.current.viewport = nativeEvent.layout.height;
+    if (awayRef.current) measureAway();
   };
   useEffect(() => {
     // The keyboard takes the bottom of the screen; someone reading the latest keeps reading it.
@@ -279,81 +300,85 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
         {chat.attached !== 'live' && !state.messages.length ? (
           <View style={[styles.transcript, styles.alone, { paddingBottom: bottom }]}>{status}</View>
         ) : (
-          <ProviderContext value={provider}>
-            <FoldsContext value={session.folds}>
-              <View style={styles.transcript}>
-                <MaskedView style={styles.transcript} maskElement={<EdgeFades />}>
-                  <FlashList
-                    ref={list}
-                    data={state.messages}
-                    keyExtractor={(message) => message.id}
-                    getItemType={(message, index) => {
-                      const fold = folds.get(index);
-                      // Folded work draws nothing, so it is never recycled into a whole answer.
-                      return fold && index < fold.end && !openWork.has(fold.id) ? 'folded' : message.role;
-                    }}
-                    extraData={marks}
-                    renderItem={({ item, index }) => {
-                      const fold = folds.get(index);
-                      const workId = fold ? fold.id : '';
-                      const folded = fold !== undefined && !openWork.has(workId);
-                      const summary =
-                        fold && index === fold.start ? (
-                          <WorkSummary took={fold.took} calls={fold.calls} open={!folded} onToggle={() => toggleWork(workId)} />
-                        ) : null;
-                      if (fold && folded && index < fold.end) return summary ?? <View />;
-                      return (
+          <HostContext value={core}>
+            <ProviderContext value={provider}>
+              <FoldsContext value={session.folds}>
+                <View style={styles.transcript}>
+                  <MaskedView style={styles.transcript} maskElement={<EdgeFades />}>
+                    <FlashList
+                      ref={list}
+                      data={state.messages}
+                      keyExtractor={(message) => message.id}
+                      getItemType={(message, index) => {
+                        const fold = folds.get(index);
+                        // Folded work draws nothing, so it is never recycled into a whole answer.
+                        return fold && index < fold.end && !openWork.has(fold.id) ? 'folded' : message.role;
+                      }}
+                      extraData={marks}
+                      renderItem={({ item, index }) => {
+                        const fold = folds.get(index);
+                        const workId = fold ? fold.id : '';
+                        const folded = fold !== undefined && !openWork.has(workId);
+                        const summary =
+                          fold && index === fold.start ? (
+                            <WorkSummary took={fold.took} calls={fold.calls} open={!folded} onToggle={() => toggleWork(workId)} />
+                          ) : null;
+                        if (fold && folded && index < fold.end) return summary ?? <View />;
+                        return (
+                          <>
+                            {summary}
+                            <Message
+                              message={item}
+                              live={item.id === liveId}
+                              untimed={chat.replayed.has(item.id)}
+                              unsent={chat.unsent.get(item.id)}
+                              onRetry={session.retrySend}
+                              onTap={onTap}
+                              strip={item.id === open ? openStrip : undefined}
+                              sentFiles={chat.sentFiles}
+                              from={fold && folded ? fold.from : 0}
+                            />
+                          </>
+                        );
+                      }}
+                      ListHeaderComponent={
+                        chat.hasEarlier ? <Earlier failed={chat.earlier === 'failed'} onRetry={session.loadEarlier} /> : null
+                      }
+                      onStartReached={chat.hasEarlier && chat.earlier === 'idle' ? session.loadEarlier : undefined}
+                      ListFooterComponent={
                         <>
-                          {summary}
-                          <Message
-                            message={item}
-                            live={item.id === liveId}
-                            untimed={chat.replayed.has(item.id)}
-                            unsent={chat.unsent.get(item.id)}
-                            onRetry={session.retrySend}
-                            onTap={onTap}
-                            strip={item.id === open ? openStrip : undefined}
-                            sentFiles={chat.sentFiles}
-                            from={fold && folded ? fold.from : 0}
-                          />
+                          {chat.queued.length ? <Queued held={chat.queued} sentFiles={chat.sentFiles} /> : null}
+                          {activity ? <Activity provider={provider} label={activity} since={chat.turnSince} /> : null}
+                          {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
                         </>
-                      );
-                    }}
-                    ListHeaderComponent={
-                      chat.hasEarlier ? <Earlier failed={chat.earlier === 'failed'} onRetry={session.loadEarlier} /> : null
-                    }
-                    onStartReached={chat.hasEarlier && chat.earlier === 'idle' ? session.loadEarlier : undefined}
-                    ListFooterComponent={
-                      <>
-                        {chat.queued.length ? <Queued held={chat.queued} sentFiles={chat.sentFiles} /> : null}
-                        {activity ? <Activity provider={provider} label={activity} since={chat.turnSince} /> : null}
-                        {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
-                      </>
-                    }
-                    contentContainerStyle={styles.content}
-                    maintainVisibleContentPosition={{
-                      startRenderingFromBottom: true,
-                      autoscrollToBottomThreshold: FOLLOW,
-                      animateAutoScrollToBottom: false,
-                    }}
-                    onScroll={onScroll}
-                    scrollEventThrottle={100}
-                    keyboardDismissMode="interactive"
-                  />
-                </MaskedView>
-                {away ? (
-                  <Pressable
-                    onPress={toEnd}
-                    style={styles.jump}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Jump to latest message">
-                    <Icon name="IconArrowDown" size={16} color={colors.inkDim} />
-                  </Pressable>
-                ) : null}
-              </View>
-            </FoldsContext>
-          </ProviderContext>
+                      }
+                      contentContainerStyle={styles.content}
+                      maintainVisibleContentPosition={{
+                        startRenderingFromBottom: true,
+                        autoscrollToBottomThreshold: FOLLOW,
+                        animateAutoScrollToBottom: false,
+                      }}
+                      onScroll={onScroll}
+                      onContentSizeChange={onContentSizeChange}
+                      onLayout={onListLayout}
+                      scrollEventThrottle={100}
+                      keyboardDismissMode="interactive"
+                    />
+                  </MaskedView>
+                  {away ? (
+                    <Pressable
+                      onPress={toEnd}
+                      style={styles.jump}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Jump to latest message">
+                      <Icon name="IconArrowDown" size={16} color={colors.inkDim} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              </FoldsContext>
+            </ProviderContext>
+          </HostContext>
         )}
         {chat.attached === 'live' ? (
           <>
