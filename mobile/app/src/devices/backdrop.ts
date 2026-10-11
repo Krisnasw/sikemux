@@ -20,10 +20,11 @@ function folder(core: string): Directory {
   return new Directory(Paths.document, 'backdrops', core.slice(0, 16));
 }
 
-/* iOS moves an app's documents on every update, so a saved picture is found by its name in the
-   host's folder, not by the path it was saved at. */
+/* iOS moves an app's documents on every update, so a saved picture is looked for by its name in the
+   host's folder first, and by the path it was saved at only when it is not there. */
 function savedPicture(core: string, image: { uri: string }): File {
-  return new File(folder(core), image.uri.slice(image.uri.lastIndexOf('/') + 1));
+  const here = new File(folder(core), image.uri.slice(image.uri.lastIndexOf('/') + 1));
+  return here.exists ? here : new File(image.uri);
 }
 
 /** Deletes the picture saved for a host's backdrop. */
