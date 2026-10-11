@@ -11,6 +11,7 @@ import { haptics } from '@/ui/haptics';
 import { AgentIcon, Icon } from '@/ui/Icon';
 import { Working } from '@/ui/status';
 import { fonts, type Palette, translucent, useColors, useStyles } from '@/ui/theme';
+import { useAnimating } from '@/ui/motion';
 import { Shimmer } from '@/ui/Shimmer';
 import { FoldsContext, useFold } from './folds';
 import { Markdown } from './Markdown';
@@ -401,7 +402,9 @@ export function Activity({ provider, label, since }: { provider: string; label: 
   const styles = useStyles(makeStyles);
   const [breath] = useState(() => new Animated.Value(1));
   const [seconds, setSeconds] = useState(() => Math.round((Date.now() - since) / 1000));
+  const animating = useAnimating();
   useEffect(() => {
+    if (!animating) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(breath, { toValue: 0.5, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
@@ -414,7 +417,7 @@ export function Activity({ provider, label, since }: { provider: string; label: 
       loop.stop();
       clearInterval(tick);
     };
-  }, [breath, since]);
+  }, [breath, since, animating]);
   return (
     <View style={styles.activity} accessible accessibilityLabel={label}>
       <Animated.View style={{ opacity: breath }}>
