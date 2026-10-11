@@ -157,6 +157,42 @@ fn track_subagent(running: &mut HashSet<String>, payload: &Value) {
     }
 }
 
+/// Keeps `tasks` to the parent session's background tasks, each marked with
+/// whether it is running now rather than paused. One that ends is dropped.
+fn track_task(tasks: &mut HashMap<String, bool>, subagents: &HashSet<String>, payload: &Value) {
+    let in_subagent = payload
+        .get("sessionId")
+        .and_then(Value::as_str)
+        .is_some_and(|session| subagents.contains(session));
+    if in_subagent {
+        return;
+    }
+    let Some(update) = payload.get("update") else {
+        return;
+    };
+    let Some(id) = update.get("asyncTaskId").and_then(Value::as_str) else {
+        return;
+    };
+    let state = update.get("state").and_then(Value::as_str);
+    match update.get("sessionUpdate").and_then(Value::as_str) {
+        Some("async_task_spawned") => {
+            tasks.entry(id.to_owned()).or_insert(true);
+        }
+        Some("async_task_progress" | "async_task_state_update") => match state {
+            Some("completed" | "failed" | "stopped") => {
+                tasks.remove(id);
+            }
+            Some(state) => {
+                if let Some(running) = tasks.get_mut(id) {
+                    *running = state == "running";
+                }
+            }
+            None => {}
+        },
+        _ => {}
+    }
+}
+
 fn chunk(payload: &Value) -> Option<Chunk<'_>> {
     let notification = payload.as_object()?;
     if !only_keys(notification, &["sessionId", "update"]) {
@@ -661,6 +697,7 @@ struct Inner {
     permission_mode: String,
     title: Option<String>,
     subagents: HashSet<String>,
+    tasks: HashMap<String, bool>,
     /// The session ended, so nobody new is let in to wait for events that
     /// will not come.
     closed: bool,
@@ -700,6 +737,7 @@ impl Feed {
                 permission_mode,
                 title: None,
                 subagents: HashSet::new(),
+                tasks: HashMap::new(),
                 closed: false,
             }),
         })
@@ -792,6 +830,8 @@ impl Feed {
             if let Some(title) = session_title(&payload) {
                 inner.title = Some(title.to_owned());
             }
+            let Inner { tasks, subagents, .. } = &mut *inner;
+            track_task(tasks, subagents, &payload);
             track_subagent(&mut inner.subagents, &payload);
             inner.pending.push(payload);
             inner.pending_bytes += bytes;
@@ -817,6 +857,14 @@ impl Feed {
         }
         if kind == ChatEventKind::Status || cancels_subagents(kind, &payload) {
             inner.subagents.clear();
+        }
+        if kind == ChatEventKind::Status
+            && matches!(
+                payload.get("state").and_then(Value::as_str),
+                Some("stopped" | "error")
+            )
+        {
+            inner.tasks.clear();
         }
         self.flush_locked(&mut inner);
         self.broadcast(&mut inner, kind, payload);
@@ -992,6 +1040,13 @@ impl Feed {
         self.inner
             .lock()
             .map(|inner| inner.subagents.len() as u32)
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn running_tasks(&self) -> u32 {
+        self.inner
+            .lock()
+            .map(|inner| inner.tasks.values().filter(|running| **running).count() as u32)
             .unwrap_or_default()
     }
 
