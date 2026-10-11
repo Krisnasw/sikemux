@@ -4,9 +4,11 @@ import { router, useIsFocused } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 
 import { useFarewell } from '@/account/farewell';
+import { useAccountStatus } from '@/account/session';
 import { readDevicesAgain, useDevices } from '@/devices/hub';
 import { DevicesList } from '@/screens/DevicesList';
 import { Farewell } from '@/screens/Farewell';
+import { RestoreAccount } from '@/screens/RestoreAccount';
 import { Welcome } from '@/screens/Welcome';
 import { Button } from '@/ui/controls';
 import { Screen, useBottomGap } from '@/ui/screen';
@@ -37,6 +39,7 @@ export default function Home() {
   const { isSignedIn } = useAuth();
   const { devices, problem } = useDevices();
   const farewell = useFarewell();
+  const status = useAccountStatus();
   const focused = useIsFocused();
   const only = isSignedIn && devices.length === 1 ? devices[0].core : undefined;
 
@@ -47,6 +50,7 @@ export default function Home() {
   }, [isSignedIn, focused, only]);
 
   if (!isSignedIn) return farewell ? <Farewell reason={farewell} /> : <Welcome />;
+  if (status?.step === 'deleting') return <RestoreAccount deletesAt={status.deletesAt} />;
   if (problem) return <Unreadable problem={problem} />;
   return <DevicesList devices={devices} />;
 }

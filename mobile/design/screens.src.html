@@ -1083,7 +1083,7 @@
         <div class="footer"><div class="btn primary">Continue</div></div>
       </div>
       <div class="home-bar"></div></div>
-      <figcaption><b>Removed</b><div class="note">The phone stays connected to the account while the app is open, so it hears at once when it is removed, and on its next launch if it was away. It signs out, forgets its hosts, and says why before the welcome screen. When the account was deleted elsewhere the same screen reads "Your account was deleted" and "It was deleted on another device or at app.sikemux.com. This phone signed out and forgot the hosts it was paired with." A host joining, renaming or leaving the account changes the Devices list the same way, without a reload.</div></figcaption>
+      <figcaption><b>Removed</b><div class="note">The phone stays connected to the account while the app is open, so it hears at once when it is removed, and on its next launch if it was away. It signs out, forgets its hosts, and says why before the welcome screen. When the account was deleted elsewhere the same screen reads "Your account was deleted" and "It was deleted on another device or at app.sikemux.com. This phone signed out and forgot the hosts it was paired with. Sign in again within 30 days to restore it." A host joining, renaming or leaving the account changes the Devices list the same way, without a reload.</div></figcaption>
     </figure>
 
     <figure><div class="phone"><div class="island"></div>
@@ -1105,11 +1105,11 @@
         <div class="nav"><span class="back">{{IconChevron:18}}Back</span></div>
         <div class="signin">
           <h2>Delete your account</h2>
-          <p style="margin-bottom:0">This deletes <b class="ink">contact@nodelike.com</b> from Sikemux right away. It can't be undone.</p>
+          <p style="margin-bottom:0">This deletes <b class="ink">contact@nodelike.com</b> from Sikemux. Changed your mind? Sign in again within 30 days to restore it.</p>
           <ul class="gone">
             <li>Hosts are signed out. The phones paired to them keep working.</li>
             <li>Phones, this one too, are signed out and removed from every host.</li>
-            <li>Your sign-in is deleted. Device keys and the account’s history are erased within 30 days, and backups within 30 days after that.</li>
+            <li>After 30 days your sign-in, device keys and the account’s history are erased, and backups within 30 days after that.</li>
           </ul>
           <p style="margin:0">Your code and files never reached us, so they stay on your hosts.</p>
           <div class="field-label" style="margin-top:8px">Type <span class="m" style="color:var(--text-primary)">delete</span> to confirm</div>
@@ -1147,12 +1147,25 @@
       <div class="screen">
         <div class="stack" style="padding-bottom:120px">
           <h2 style="font-size:22px">Your account is deleted</h2>
-          <p>Every device on it is signed out. Device keys and the account’s history are erased within 30 days. Your code and files never reached us, so they are still on your hosts.</p>
+          <p>Every device on it is signed out. Changed your mind? Sign in again within 30 days to restore it. Your code and files never reached us, so they are still on your hosts.</p>
         </div>
         <div class="footer"><div class="btn primary">Continue</div></div>
       </div>
       <div class="home-bar"></div></div>
       <figcaption><b>Deleted</b><div class="note">The phone signs out and forgets its hosts, then says it is done, in the same place as Removed. Continue goes to the welcome screen.</div></figcaption>
+    </figure>
+
+    <figure><div class="phone"><div class="island"></div>
+      <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
+      <div class="screen">
+        <div class="stack" style="padding-bottom:120px">
+          <h2 style="font-size:22px">Your account is being deleted</h2>
+          <p>It will be deleted for good on <b class="ink">10 November 2026</b>. Restore it to keep using Sikemux. Your devices were signed out, so each one signs in again.</p>
+        </div>
+        <div class="footer"><div class="btn primary">Restore account</div><div class="btn">Sign out</div></div>
+      </div>
+      <div class="home-bar"></div></div>
+      <figcaption><b>Restore</b><div class="note">Signing in to an account deleted in the last 30 days, on this phone or anywhere else, lands here instead of Devices. Restore account takes the deletion back and the phone signs in to the account as new; computers and other phones each sign in again. A failure shows in red under the words. Sign out goes back to the welcome screen and leaves the deletion as it was. After 30 days the account is gone and signing in starts a new one.</div></figcaption>
     </figure>
 
     <figure><div class="phone"><div class="island"></div>
