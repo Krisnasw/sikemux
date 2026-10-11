@@ -4,7 +4,9 @@ The fourth nightly on the 0.5.1 line. Nightlies are signed and delivered exactly
 
 ## New since nightly.3
 
-- **The chat.** A finished answer folds its work above the reply, so the answer reads first. A reloaded chat keeps the real time of every turn, and live labels shimmer in place instead of sliding in.
+- **The chat.** A finished answer folds its work above the reply, so the answer reads first, and each turn folds, times and copies on its own. A reloaded chat keeps the real time of every turn, reading up in a streaming reply holds your place, durations past an hour read in hours, and live labels shimmer in place instead of sliding in.
+- **Delete a chat.** Right-click a recent Claude or Codex chat to delete it.
+- **Dictation.** Dictating into a pane finishes cleanly and says whether words are still coming, and sending while you dictate waits for the spoken words.
 - **What your agents cost.** The Activity page prices your agents' tokens and shows what they cost.
 - **Bitbucket.** The Git pane shows whether a pull request can merge, Bitbucket's issues, its tags as releases and an inbox of pull requests waiting on you. Agents can read the issue tracker and an issue's comments.
 - **Notifications.** Clicking an agent's notification opens that agent.
