@@ -134,6 +134,41 @@ function readCore<T>(json: string): T {
 }
 
 export const readView = (json: string) => readCore<Snapshot>(json);
+
+function same(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every((key) => same((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
+}
+
+/** The items of `next`, each the previous one with its key when nothing in it changed. */
+function keepItems<T>(previous: T[], next: T[], key: (item: T) => string | number): T[] {
+  const before = new Map(previous.map((item) => [key(item), item]));
+  const kept = next.map((item) => {
+    const old = before.get(key(item));
+    return old !== undefined && same(old, item) ? old : item;
+  });
+  return kept.length === previous.length && kept.every((item, index) => item === previous[index]) ? previous : kept;
+}
+
+/**
+ * A host sends its whole view whenever anything in it changes, several times a second while an agent works. Each
+ * part of the new view that equals the last one's is the last one's own object, so a screen or row that shows only
+ * unchanged parts is not drawn again.
+ */
+export function keepUnchanged(previous: Snapshot | undefined, next: Snapshot): Snapshot {
+  if (!previous) return next;
+  return {
+    workspace: same(previous.workspace, next.workspace) ? previous.workspace : next.workspace,
+    sessions: keepItems(previous.sessions, next.sessions, (session) => session.id),
+    chats: keepItems(previous.chats, next.chats, (chat) => chat.agentId),
+    attentions: keepItems(previous.attentions, next.attentions, (attention) => attention.id),
+    recent: keepItems(previous.recent, next.recent, (chat) => chat.id),
+  };
+}
 export const readHost = (json: string) => readCore<HostInfo>(json);
 
 /** A chat event as the Mac app's chat code reads it. */

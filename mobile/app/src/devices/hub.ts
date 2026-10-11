@@ -2,7 +2,7 @@ import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { CoreEvent, MobileError, type ConnectionLike, type CoreListener } from '@sikemux/native';
 
-import { readHost, readView, type Snapshot } from '@/core/protocol';
+import { keepUnchanged, readHost, readView, type Snapshot } from '@/core/protocol';
 import { goOffline, thisDevice } from '@/device/identity';
 import { onNetworkChange } from '@/network/connectivity';
 import { dismissHostCards, reconcileCards } from '@/notify/cards';
@@ -195,15 +195,16 @@ function drop(core: string, reason: string, error?: unknown) {
 
 function listener(core: string, found: Entry, attempt: object): CoreListener {
   const current = () => found.current === attempt && entries.get(core) === found;
+  let fresh = true;
   return {
     events(events) {
       if (!current()) return;
       const chats: ChatDelivery[] = [];
-      let view: Snapshot | undefined;
+      let viewJson: string | undefined;
       for (const event of events) {
         if (CoreEvent.Chat.instanceOf(event)) chats.push(event.inner);
         // Each view is whole, so of several in one batch only the last matters.
-        else if (CoreEvent.View.instanceOf(event)) view = readView(event.inner.viewJson);
+        else if (CoreEvent.View.instanceOf(event)) viewJson = event.inner.viewJson;
       }
       if (chats.length) {
         found.chats.forEach((listen) => {
@@ -214,10 +215,12 @@ function listener(core: string, found: Entry, attempt: object): CoreListener {
           }
         });
       }
-      if (!view) return;
+      if (viewJson === undefined) return;
+      const view = keepUnchanged(found.live.snapshot, readView(viewJson));
       // The host sends its view as soon as it lets the phone in, which can be before `connect` answers.
       set(core, found, { ...found.live, snapshot: view });
-      reconcileCards(core, view);
+      reconcileCards(core, view, fresh);
+      fresh = false;
     },
     closed() {
       if (!current() || found.live.status !== 'open') return;
