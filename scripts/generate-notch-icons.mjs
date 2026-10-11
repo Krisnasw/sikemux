@@ -26,6 +26,7 @@ const LINE_ICONS = {
   check: "IconCheck",
   arrowUp: "IconArrowUp",
   agent: "IconAgent",
+  command: "IconCommand",
 };
 
 // Line icons the app fills from its stylesheet rather than from the icon itself.
