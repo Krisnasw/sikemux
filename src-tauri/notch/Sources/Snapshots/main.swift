@@ -43,6 +43,8 @@ let fixture = #"""
      "running": false, "pendingPermissions": [], "subagents": 0, "tasks": 2, "permissionMode": "bypass", "asleep": false, "unread": false},
     {"agentId": "a6", "provider": "claude", "title": "Sikemux bug", "cwd": "/Users/me/sikemux", "sessionId": null, "state": "stopped",
      "running": false, "pendingPermissions": [], "subagents": 0, "tasks": 0, "permissionMode": "bypass", "asleep": true, "unread": false},
+    {"agentId": "a7", "provider": "claude", "title": "Tidy the changelog", "cwd": "/Users/me/sikemux", "sessionId": "s7", "state": "ready",
+     "running": false, "pendingPermissions": [], "subagents": 0, "tasks": 0, "permissionMode": "bypass", "asleep": false, "unread": false},
     {"agentId": "a4", "provider": "grok", "title": "Bump Astro to 6", "cwd": "/Users/me/sikemux-front", "sessionId": "s4", "state": "ready",
      "running": false, "pendingPermissions": [], "subagents": 0, "tasks": 0, "permissionMode": "bypass", "asleep": false, "unread": true}
   ],
@@ -163,7 +165,8 @@ if arguments.contains("--film") {
 }
 
 render("C1-idle", agents: [])
-render("C7-only-idle", agents: ["a5", "a6"])
+render("C2b-only-idle", agents: ["a6", "a7"])
+render("C7-still-running", agents: ["a3", "a5"])
 render("O5-with-idle", agents: ["a2", "a5"], height: 300) { $0.mode = .open }
 render("C2-working", agents: ["a2", "a3"])
 render("C3-needs-you")

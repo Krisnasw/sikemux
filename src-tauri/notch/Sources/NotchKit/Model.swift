@@ -117,6 +117,12 @@ enum AgentState: Int, Comparable {
     static func < (lhs: AgentState, rhs: AgentState) -> Bool { lhs.rawValue < rhs.rawValue }
 }
 
+/// One group on the closed island's right wing.
+enum Rollup: Hashable {
+    case state(AgentState)
+    case stillRunning
+}
+
 /// A permission an agent waits on, with the person's choices.
 struct Ask: Equatable {
     let attentionId: String

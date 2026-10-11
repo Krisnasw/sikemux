@@ -299,11 +299,17 @@ final class NotchStore {
         return projects.max { (counts[$0.name] ?? 0) < (counts[$1.name] ?? 0) } ?? projects.first
     }
 
-    /// How many agents need you, work and are done, most pressing first, leaving out the states no agent is in.
-    var rollups: [(state: AgentState, count: Int)] {
-        [AgentState.blocked, .working, .done].compactMap { state in
-            let count = agents.filter { $0.state == state }.count
-            return count > 0 ? (state, count) : nil
+    /// How many agents need you, work, left shells running and are done, most pressing first, leaving out
+    /// what no agent is doing. Shells left running sit beside working: the agent is still at something.
+    var rollups: [(mark: Rollup, count: Int)] {
+        [Rollup.state(.blocked), .state(.working), .stillRunning, .state(.done)].compactMap { mark in
+            let count = agents.filter { agent in
+                switch mark {
+                case .state(let state): agent.state == state
+                case .stillRunning: agent.state == .idle && agent.background
+                }
+            }.count
+            return count > 0 ? (mark, count) : nil
         }
     }
 }

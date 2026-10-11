@@ -544,13 +544,20 @@ function stateMark(state, fresh) {
     }
     if (state === "blocked") return `<span class="st blocked${fresh ? " fresh" : ""}"><span class="ping"></span><span class="ping"></span><span class="dot"></span></span>`;
     if (state === "done") return `<span class="st done"><span class="dot"></span></span>`;
+    if (state === "still") return `<span class="st still">${GLYPH.command}</span>`;
     return "";
 }
 
 /** How many agents need you, work and are done, most pressing first, leaving out the states no agent is in. */
 function rollups(agents) {
-    return ["blocked", "working", "done"]
-        .map((s) => ({ state: s, count: agents.filter((a) => a.state === s && (s !== "done" || a.unread)).length }))
+    const counts = {
+        blocked: (a) => a.state === "blocked",
+        working: (a) => a.state === "working",
+        still: (a) => a.state === "idle" && a.background,
+        done: (a) => a.state === "done" && a.unread,
+    };
+    return Object.entries(counts)
+        .map(([state, has]) => ({ state, count: agents.filter(has).length }))
         .filter((group) => group.count > 0);
 }
 
@@ -652,7 +659,6 @@ class Island {
     target() {
         const d = this.d;
         const plain = d.notchW === 0;
-        const running = this.agents.filter((a) => a.state !== "idle");
         if (this.mode === "open" || this.mode === "drop") {
             const h = Math.min(400, this.layers.open.offsetHeight);
             return { w: plain ? 560 : 680, h, r: RADII.open };
@@ -663,7 +669,7 @@ class Island {
             const w = plain ? 300 : d.notchW + 2 * 150;
             return { w, h: d.notchH, r: RADII.closed };
         }
-        if (!running.length) {
+        if (!this.agents.length) {
             if (plain) return { w: 0, h: 0, r: RADII.closed };
             return { w: d.notchW, h: d.notchH, r: RADII.closed, nudge: true };
         }
@@ -676,7 +682,6 @@ class Island {
         const d = this.d;
         const plain = d.notchW === 0;
         const t = this.mode === "open" || this.mode === "drop" || this.mode === "peek-connect" ? RADII.open[0] : RADII.peek[0];
-        const running = this.agents.filter((a) => a.state !== "idle");
         const groups = rollups(this.agents);
         const wings = this.wings();
 
@@ -690,8 +695,8 @@ class Island {
                 <div class="wing r" style="width:${half}px;height:${d.notchH}px">
                     <span class="inline-text dim">${a.title}</span>${stateMark("done")}</div>`;
         } else {
-            const shown = running.slice(0, 3);
-            const extra = running.length - shown.length;
+            const shown = this.agents.slice(0, 3);
+            const extra = this.agents.length - shown.length;
             this.layers.wings.innerHTML = `
                 <div class="wing l" style="width:${wings.left + (plain ? 4 : 0)}px;height:${d.notchH}px">
                     <span class="stack">${shown.map((a) => `<span class="tile">${ICON[a.type]}</span>`).join("")}${
@@ -700,7 +705,7 @@ class Island {
                 <div class="wing r" style="width:${wings.right + (plain ? 4 : 0)}px;height:${d.notchH}px">
                     ${groups.length
                         ? groups.map((g) => `<span class="group">${g.count > 1 ? `<span class="count">${g.count}</span>` : ""}${stateMark(g.state, this.freshPing)}</span>`).join("")
-                        : `<span class="count">${running.length}</span>`}</div>`;
+                        : `<span class="count">${this.agents.length}</span>`}</div>`;
             if (plain) this.layers.wings.firstElementChild.nextElementSibling.style.paddingRight = "10px";
         }
 
@@ -798,7 +803,7 @@ class Island {
                         <div class="row">
                             <span class="mark">${ICON[a.type]}</span>
                             <span class="title">${a.title}</span>${a.subagents ? `<span class="subagents">${GLYPH.agent}${a.subagents}</span>` : ""}<span class="proj">${GLYPH.folderSmall}${a.project}</span>
-                            ${a.state === "idle" ? (a.background ? `<span class="st still">${GLYPH.command}</span>` : "") : `<span class="time">${a.time}</span>${stateMark(a.state)}`}
+                            ${a.state === "idle" ? stateMark(a.background ? "still" : "idle") : `<span class="time">${a.time}</span>${stateMark(a.state)}`}
                         </div>`).join("")}`).join("");
             }
         } else {
@@ -1044,6 +1049,8 @@ const SECTIONS = [
               shows: "Three marks, then +N.", opts: { agents: () => [...allWorking(), { id: "a5", type: "pi", title: "x", project: "x", state: "working" }] } },
             { id: "C6", name: "Pointer resting", when: "The pointer is on the island, for the 0.3 s before it opens.",
               shows: "The shadow comes on and the trackpad ticks once. The island keeps its size until it opens.", opts: { agents: () => only(["a2", "a3"]), hover: true } },
+            { id: "C7", name: "Shells still running", when: "An agent is idle but left shells or monitors running.",
+              shows: "The amber terminal glyph the Mac's tabs use, beside working since the agent is still at something, with a count past one.", opts: { agents: () => only(["a3", "a5"]) } },
         ],
     },
     {
@@ -1117,9 +1124,9 @@ const OPTIONS = [
 ];
 
 const FLOW = [
-    [["state", "C1–C6", "Closed", "closed"], ["arrow", "rest 0.3 s"], ["state", "O1–O5", "Open", "open"], ["arrow", "leave 0.1 s"], ["state", "C1–C6", "Closed", "closed"]],
+    [["state", "C1–C7", "Closed", "closed"], ["arrow", "rest 0.3 s"], ["state", "O1–O5", "Open", "open"], ["arrow", "leave 0.1 s"], ["state", "C1–C7", "Closed", "closed"]],
     [["event", "", "Agent asks"], ["arrow", ""], ["state", "P1", "Permission", "P1"], ["arrow", "6 s"], ["state", "C3", "Needs you", "C3"]],
-    [["event", "", "Device asks to connect"], ["arrow", ""], ["state", "P3", "Connect", "P3"], ["arrow", "answer"], ["state", "C1–C6", "Closed", "closed"]],
+    [["event", "", "Device asks to connect"], ["arrow", ""], ["state", "P3", "Connect", "P3"], ["arrow", "answer"], ["state", "C1–C7", "Closed", "closed"]],
     [["event", "", "Agent finishes"], ["arrow", ""], ["state", "P2", "Finished", "P2"], ["arrow", "3 s"], ["state", "C4", "Done, unseen", "C4"]],
     [["event", "", "File dragged"], ["arrow", ""], ["state", "D1", "Drop targets", "D1"], ["arrow", "drop"], ["state", "C2", "Working", "C2"]],
 ];
