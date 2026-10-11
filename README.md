@@ -4,7 +4,7 @@
 
 **A terminal workspace for you and your coding agents.**
 
-Bring Claude Code, Codex or OpenCode. Sikemux gives them your shell, browser, logs and deploys, in one 13 MB native app.
+Bring Claude Code, Codex or OpenCode. Sikemux gives them your shell, browser, logs and deploys, in one 16 MB native app.
 
 ![Sikemux with a Claude Code agent and its browser tab](public/screenshots/sikemux-hero.png)
 
@@ -16,7 +16,7 @@ Bring Claude Code, Codex or OpenCode. Sikemux gives them your shell, browser, lo
 
 ## Install
 
-Download the latest `.dmg` from [sikemux.com](https://sikemux.com) or [Releases](https://github.com/nodelike/sikemux/releases/latest). It is about 13 MB, needs macOS 11 or later on Apple Silicon, and keeps itself up to date.
+Download the latest `.dmg` from [sikemux.com](https://sikemux.com) or [Releases](https://github.com/nodelike/sikemux/releases/latest). It is about 16 MB, needs macOS 11 or later on Apple Silicon, and keeps itself up to date.
 
 ## What's inside
 

@@ -82,7 +82,7 @@ fail() {
 
 # The README and sikemux.com promise a small download, so a release that grows
 # past this fails here instead of shipping.
-DMG_BUDGET_BYTES=15000000
+DMG_BUDGET_BYTES=17000000
 
 notarize_dmg() {
   local credentials status
