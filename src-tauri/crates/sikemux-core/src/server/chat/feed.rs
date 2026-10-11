@@ -830,7 +830,9 @@ impl Feed {
             if let Some(title) = session_title(&payload) {
                 inner.title = Some(title.to_owned());
             }
-            let Inner { tasks, subagents, .. } = &mut *inner;
+            let Inner {
+                tasks, subagents, ..
+            } = &mut *inner;
             track_task(tasks, subagents, &payload);
             track_subagent(&mut inner.subagents, &payload);
             inner.pending.push(payload);
