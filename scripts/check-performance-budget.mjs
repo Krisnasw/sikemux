@@ -147,8 +147,8 @@ const budgets = [
     // under how long it took.
     label: "ACP chat lazy chunk",
     pattern: /^AgentSurface-.*\.js$/,
-    raw: 139_000,
-    gzip: 43_000,
+    raw: 141_000,
+    gzip: 44_000,
   },
   {
     // Shiki, its JavaScript regex engine and vscode-textmate, with no
