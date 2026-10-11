@@ -455,6 +455,8 @@
   .rows .row .t { font-size: 14.5px; color: var(--text-primary); }
   .sheet .rows .row .t { color: var(--text-secondary); }
   .rows .row .s { font-size: 12px; }
+  .rows .row .s .place { color: var(--live); margin-right: 4px; }
+  .rows .row .s .place svg { display: inline-block; vertical-align: -1px; }
   .rows .row code { font-family: var(--mono); font-size: 11.5px; color: var(--text-secondary); }
   .rows .row.ask { margin-top: 8px; }
   .rows .row.more { min-height: 40px; padding-left: 38px; }
@@ -1210,14 +1212,14 @@
           <div class="rows"><div class="row ask"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Remote pairing screen</div><div class="s">Needs input · wants to run <code>pnpm test</code></div></div><span class="status-slot"><span class="dot warn"></span></span></div></div>
           <div class="glabel">Open</div>
           <div class="rows">
-            <div class="row"><span class="mark codex">{{IconCodex:20}}</span><div class="body"><div class="t">Fix the flaky PTY replay test</div><div class="s">sikemux · Running a command…</div></div><span class="subagents">{{IconAgent:11}}3</span><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
-            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Tighten the rail spacing</div><div class="s">sikemux · Editing…</div></div><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
-            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Download size on the hero</div><div class="s">sikemux-front · Done</div></div><span class="status-slot"><span class="dot acc"></span></span></div>
+            <div class="row"><span class="mark codex">{{IconCodex:20}}</span><div class="body"><div class="t">Fix the flaky PTY replay test</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux · Running a command…</div></div><span class="subagents">{{IconAgent:11}}3</span><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
+            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Tighten the rail spacing</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux · Editing…</div></div><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
+            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Download size on the hero</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux-front · Done</div></div><span class="status-slot"><span class="dot acc"></span></span></div>
           </div>
           <div class="glabel">Recent</div>
           <div class="rows">
-            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Split the Rundeck matrix into jobs</div><div class="s">sikemux</div></div><span class="ago">3h</span></div>
-            <div class="row"><span class="mark hermes">{{IconHermes:20}}</span><div class="body"><div class="t">Why does the shader dim the rail</div><div class="s">sikemux-front</div></div><span class="ago">1d</span></div>
+            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Split the Rundeck matrix into jobs</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux</div></div><span class="ago">3h</span></div>
+            <div class="row"><span class="mark hermes">{{IconHermes:20}}</span><div class="body"><div class="t">Why does the shader dim the rail</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux-front</div></div><span class="ago">1d</span></div>
             <div class="row more"><div class="body"><div class="t">Show 12 more</div></div></div>
           </div>
         </div>
@@ -1288,7 +1290,7 @@
           <div class="rows"><div class="row ask"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Remote pairing screen</div><div class="s">Needs input · wants to run <code>pnpm test</code></div></div><span class="status-slot"><span class="dot warn"></span></span></div></div>
           <div class="glabel">Open</div>
           <div class="rows">
-            <div class="row"><span class="mark codex">{{IconCodex:20}}</span><div class="body"><div class="t">Fix the flaky PTY replay test</div><div class="s">sikemux · Running a command…</div></div><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
+            <div class="row"><span class="mark codex">{{IconCodex:20}}</span><div class="body"><div class="t">Fix the flaky PTY replay test</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux · Running a command…</div></div><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
           </div>
         </div>
       </div>
@@ -1328,12 +1330,12 @@
         <div class="host-head"><div class="where"><i class="live"></i>Online · Dev · 4 agents · 3 terminals</div><h1>MacBook Pro</h1></div>
         <div class="host-bar"><div class="host-tabs"><span class="on">Agents <i class="count">1</i></span><span>Terminals</span></div><span class="host-project"><span class="folder">{{IconFolder:14}}</span>All projects<span class="ch">{{IconChevron:12}}</span></span></div>
         <div class="pad grow">
-          <div class="rows"><div class="row ask"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Remote pairing screen</div><div class="s">sikemux · Needs input</div></div><span class="status-slot"><span class="dot warn"></span></span></div></div>
+          <div class="rows"><div class="row ask"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Remote pairing screen</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux · Needs input</div></div><span class="status-slot"><span class="dot warn"></span></span></div></div>
           <div class="glabel">Open</div>
           <div class="rows">
-            <div class="row"><span class="mark codex">{{IconCodex:20}}</span><div class="body"><div class="t">Fix the flaky PTY replay test</div><div class="s">sikemux · Running a command…</div></div><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
-            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Download size on the hero</div><div class="s">sikemux-front · Done</div></div><span class="status-slot"><span class="dot acc"></span></span></div>
-            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Release notes for v0.4.3</div><div class="s">sikemux-front · Sleeping</div></div><span class="status-slot"></span></div>
+            <div class="row"><span class="mark codex">{{IconCodex:20}}</span><div class="body"><div class="t">Fix the flaky PTY replay test</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux · Running a command…</div></div><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
+            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Download size on the hero</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux-front · Done</div></div><span class="status-slot"><span class="dot acc"></span></span></div>
+            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Release notes for v0.4.3</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux-front · Sleeping</div></div><span class="status-slot"></span></div>
           </div>
         </div>
         <div class="fab">{{IconPlus:18}}New chat</div>

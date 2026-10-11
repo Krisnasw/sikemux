@@ -254,7 +254,7 @@ const ChatRow = memo(function ChatRow({
   attention?: Attention;
 }) {
   const asking = chat.pendingPermissions.length > 0;
-  const where = (state: string) => (place ? `${place} · ${state}` : state);
+  const state = asking ? 'Needs input' : chatState(chat);
   return (
     <Row
       mark={<AgentIcon provider={chat.provider} size={20} />}
@@ -264,8 +264,13 @@ const ChatRow = memo(function ChatRow({
           <>
             Needs input · <Wants attention={attention} />
           </>
+        ) : place ? (
+          <>
+            <Place name={place} />
+            {` · ${state}`}
+          </>
         ) : (
-          where(asking ? 'Needs input' : chatState(chat))
+          state
         )
       }
       end={<ChatEnd chat={chat} />}
@@ -273,6 +278,17 @@ const ChatRow = memo(function ChatRow({
     />
   );
 });
+
+/** A chat's project, marked with the folder the Mac's rail puts beside it. */
+function Place({ name }: { name: string }) {
+  const colors = useColors();
+  return (
+    <>
+      <Icon name="IconFolder" size={11} color={colors.live} />
+      {` ${name}`}
+    </>
+  );
+}
 
 const RecentRow = memo(function RecentRow({
   chat,
@@ -294,7 +310,7 @@ const RecentRow = memo(function RecentRow({
     <Row
       mark={<AgentIcon provider={chat.provider} size={20} />}
       title={chat.title}
-      detail={place}
+      detail={place ? <Place name={place} /> : undefined}
       end={resuming ? <Working /> : <Text style={[type.meta, styles.age]}>{age(Number(chat.activeAt), minute * 60_000)}</Text>}
       onPress={() => onResume(chat)}
     />
