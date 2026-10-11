@@ -1,10 +1,10 @@
-# Sikemux v0.5.1-nightly.5
+# Sikemux v0.5.1-nightly.6
 
-The fifth nightly on the 0.5.1 line. Nightlies are signed and delivered exactly like stable releases, but they carry unreleased work and can break. Switch back to stable in Settings → About whenever you want; you keep the build you are on until a stable release passes it.
+The sixth nightly on the 0.5.1 line. Nightlies are signed and delivered exactly like stable releases, but they carry unreleased work and can break. Switch back to stable in Settings → About whenever you want; you keep the build you are on until a stable release passes it.
 
-## New since nightly.4
+## New since nightly.5
 
-- **The notch shows what agents left running.** The island marks agents that left shells or monitors running, and shows those shells even while it is closed.
-- **More for your phone.** Your computer now hands a paired phone the pictures kept for a chat and how many background tasks each chat has running, and answers the phone's requests by name, so new phone features can arrive without a new phone app.
+- **A deleted account can come back.** Deleting your Sikemux account now waits 30 days, and signing in during that time offers to restore it.
+- Selected text in a chat is clearly visible, and the text cursor shows over it.
 
-For the complete patch history, compare [`v0.5.1-nightly.4...v0.5.1-nightly.5`](https://github.com/nodelike/sikemux/compare/v0.5.1-nightly.4...v0.5.1-nightly.5).
+For the complete patch history, compare [`v0.5.1-nightly.5...v0.5.1-nightly.6`](https://github.com/nodelike/sikemux/compare/v0.5.1-nightly.5...v0.5.1-nightly.6).
