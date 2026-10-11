@@ -16,7 +16,6 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list';
 
 import { activityText, composerPlaceholder } from '@mac/chat/chatStatus';
 import { sentPrompts } from '@mac/chat/promptHistory';
-import { rowMeta } from '@mac/chat/messageMeta';
 import { activeToolLabel } from '@mac/chat/toolLabels';
 import { workFolds } from '@mac/chat/transcript';
 import type { ChatMessage, ChatState } from '@mac/chat/types';
@@ -256,12 +255,7 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
                     const folded = fold !== undefined && !openWork.has(workId);
                     const summary =
                       fold && index === fold.start ? (
-                        <WorkSummary
-                          took={rowMeta(state.messages, fold.end).took}
-                          calls={fold.calls}
-                          open={!folded}
-                          onToggle={() => toggleWork(workId)}
-                        />
+                        <WorkSummary took={fold.took} calls={fold.calls} open={!folded} onToggle={() => toggleWork(workId)} />
                       ) : null;
                     if (fold && folded && index < fold.end) return summary ?? <View />;
                     return (

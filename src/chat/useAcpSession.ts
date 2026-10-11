@@ -175,7 +175,7 @@ export function useAcpSession({
                 if (sessionIdRef.current && agentRef.current.resumeId !== sessionIdRef.current) {
                     cmd.attachAgentSession(agent.id, sessionIdRef.current);
                 }
-                dispatch({ type: "turn_started" });
+                dispatch({ type: "turn_started", at: typeof event.payload.at === "number" ? event.payload.at : undefined });
             } else if (event.kind === "turn_completed") {
                 dispatch({
                     type: "turn_completed",

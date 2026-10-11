@@ -38,6 +38,7 @@ export const initialChatState: ChatState = {
     nextId: 1,
     revision: 0,
     awaitingReplay: false,
+    turnOpening: null,
 };
 
 /* The parent session and each subagent session own a transcript of the same
@@ -128,12 +129,12 @@ function appendChunk(
     partKind: "text" | "thought",
     chunk: AcpContentChunk,
     timed: boolean,
+    fresh: boolean,
 ): Transcript {
     const contentText = textOf(chunk.content.text);
     const lastMessage = transcript.messages.at(-1);
-    const messageId =
-        chunk.messageId ??
-        (lastMessage?.role === role && !lastMessage.id.startsWith("local-") ? lastMessage.id : `${role}-fallback-${transcript.nextId}`);
+    const continues = lastMessage?.role === role && !lastMessage.id.startsWith("local-") && !fresh;
+    const messageId = chunk.messageId ?? (continues ? lastMessage.id : `${role}-fallback-${transcript.nextId}`);
     const existingIndex = transcript.messages.findLastIndex((message) => message.id === messageId);
     const messages = [...transcript.messages];
     let nextId = transcript.nextId;
@@ -171,10 +172,10 @@ function appendChunk(
     return { messages, nextId };
 }
 
-function appendPart(transcript: Transcript, part: ChatPart): Transcript {
+function appendPart(transcript: Transcript, part: ChatPart, fresh = false): Transcript {
     const messages = [...transcript.messages];
     const last = messages.at(-1);
-    if (last?.role === "assistant" && !last.id.startsWith("local-")) {
+    if (last?.role === "assistant" && !last.id.startsWith("local-") && !fresh) {
         messages[messages.length - 1] = { ...last, parts: [...last.parts, part] };
         return { messages, nextId: transcript.nextId };
     }
@@ -215,7 +216,7 @@ function settleTool(part: ToolPart): ToolPart {
     };
 }
 
-function upsertTool(transcript: Transcript, update: AcpToolCall, merge: boolean): Transcript | null {
+function upsertTool(transcript: Transcript, update: AcpToolCall, merge: boolean, fresh: boolean): Transcript | null {
     const messages = [...transcript.messages];
     for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
         const message = messages[messageIndex];
@@ -247,11 +248,11 @@ function upsertTool(transcript: Transcript, update: AcpToolCall, merge: boolean)
        already finished the first time this side sees it never ran here. Stamping
        both ends now would time the replay rather than the call. */
     const opened: ToolPart = { id: `tool-${update.toolCallId}`, kind: "tool", tool: update, ...(ended ? {} : { startedAt: Date.now() }) };
-    return appendPart(transcript, ended ? settleTool({ ...opened, endedAt: Date.now() }) : opened);
+    return appendPart(transcript, ended ? settleTool({ ...opened, endedAt: Date.now() }) : opened, fresh);
 }
 
 /** Applies the updates a session streams regardless of whose session it is. */
-function transcriptUpdate(transcript: Transcript, update: Record<string, unknown>, timed: boolean): Transcript | null {
+function transcriptUpdate(transcript: Transcript, update: Record<string, unknown>, timed: boolean, fresh = false): Transcript | null {
     switch (update.sessionUpdate) {
         case "user_message_chunk":
         case "agent_message_chunk":
@@ -266,20 +267,28 @@ function transcriptUpdate(transcript: Transcript, update: Record<string, unknown
             )
                 return null;
             const partKind = update.sessionUpdate === "agent_thought_chunk" ? "thought" : "text";
-            return appendChunk(transcript, role, partKind, chunk, timed);
+            return appendChunk(transcript, role, partKind, chunk, timed, fresh && role === "assistant");
         }
         case "tool_call": {
             const toolCallId = textOf(update.toolCallId);
             const title = textOf(update.title);
-            return toolCallId && title ? upsertTool(transcript, { ...update, toolCallId, title }, false) : null;
+            return toolCallId && title ? upsertTool(transcript, { ...update, toolCallId, title }, false, fresh) : null;
         }
         case "tool_call_update": {
             const toolCallId = textOf(update.toolCallId);
-            return toolCallId ? upsertTool(transcript, { ...update, toolCallId, title: textOf(update.title) ?? "" }, true) : null;
+            return toolCallId ? upsertTool(transcript, { ...update, toolCallId, title: textOf(update.title) ?? "" }, true, fresh) : null;
         }
         default:
             return null;
     }
+}
+
+/* History replayed from the agent's own files marks the first update of a
+   turn the agent began by itself, since no prompt shows where it starts. */
+function replayedTurnStart(update: Record<string, unknown>): { at: number | null } | null {
+    const kept = recordOf(recordOf(update._meta)?.sikemux);
+    if (kept?.opensTurn !== true) return null;
+    return { at: typeof kept.at === "number" ? kept.at : null };
 }
 
 /* History the agent kept says when each part of it happened. A turn this
@@ -486,6 +495,7 @@ function endTurn(state: ChatState, stopReason: string | null, at = Date.now()): 
         ...settled,
         messages,
         running: false,
+        turnOpening: null,
         suppressUserEcho: false,
         permissions: [],
         stopReason,
@@ -501,8 +511,20 @@ function sessionUpdate(state: ChatState, sessionId: string, update: Record<strin
     if (inSubagent) return inSubagent;
 
     if (update.sessionUpdate === "user_message_chunk" && state.suppressUserEcho) return state;
-    const streamed = transcriptUpdate(state, update, state.running);
-    if (streamed) return { ...state, ...recordedTime(streamed, update, state.running), suppressUserEcho: false, revision: state.revision + 1 };
+    const opening = state.turnOpening ?? replayedTurnStart(update);
+    const streamed = transcriptUpdate(state, update, state.running, opening !== null);
+    if (streamed) {
+        const last = streamed.messages.at(-1);
+        const opened = opening !== null && streamed.messages.length > state.messages.length && last?.role === "assistant";
+        const marked = opened ? { ...streamed, messages: [...streamed.messages.slice(0, -1), { ...last, opensTurn: opening }] } : streamed;
+        return {
+            ...state,
+            ...recordedTime(marked, update, state.running),
+            turnOpening: opened ? null : opening,
+            suppressUserEcho: false,
+            revision: state.revision + 1,
+        };
+    }
 
     switch (update.sessionUpdate) {
         case "subagent_spawned":
@@ -631,7 +653,15 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
                 action.update,
             );
         case "turn_started":
-            return { ...state, running: true, stopReason: null, error: null, failure: null, revision: state.revision + 1 };
+            return {
+                ...state,
+                running: true,
+                turnOpening: { at: action.at ?? null },
+                stopReason: null,
+                error: null,
+                failure: null,
+                revision: state.revision + 1,
+            };
         case "turn_completed":
             return endTurn(state, action.stopReason ?? null, action.at);
         case "permission_requested":

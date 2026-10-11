@@ -48,13 +48,14 @@ export function groupParts(parts: ChatPart[]): PartGroup[] {
     return groups;
 }
 
-/* A finished answer is a run of assistant messages: the work, then the reply it
+/* A finished turn is a run of assistant messages: the work, then the reply it
    closed with. `from` is where that reply starts in the run's last message. */
 export interface WorkFold {
     start: number;
     end: number;
     from: number;
     calls: number;
+    took: number | null;
 }
 
 const isReply = (part: ChatPart) => part.kind === "text" || part.kind === "content";
@@ -66,16 +67,25 @@ function workFold(messages: ChatMessage[], start: number, end: number): WorkFold
     if (!parts.slice(from).some((part) => part.kind === "text")) return null;
     const work = [...messages.slice(start, end).flatMap((message) => message.parts), ...parts.slice(0, from)];
     if (work.every(isReply)) return null;
-    return { start, end, from, calls: work.filter((part) => part.kind === "tool").length };
+    return { start, end, from, calls: work.filter((part) => part.kind === "tool").length, took: workTime(messages, start, end) };
 }
 
-/** Every finished answer worth folding, by the index of each message in it. */
+/* A prompted turn starts with its prompt; one the agent began by itself starts
+   when the core said it did. */
+function workTime(messages: ChatMessage[], start: number, end: number): number | null {
+    const before = messages[start - 1];
+    const began = (before?.role === "user" ? before.sentAt : undefined) ?? messages[start].opensTurn?.at ?? null;
+    const ended = messages[end].endedAt ?? null;
+    return began !== null && ended !== null && ended >= began ? ended - began : null;
+}
+
+/** Every finished turn worth folding, by the index of each message in it. */
 export function workFolds(messages: ChatMessage[], running: boolean): Map<number, WorkFold> {
     const folds = new Map<number, WorkFold>();
     for (let start = 0; start < messages.length; start += 1) {
         if (messages[start].role !== "assistant") continue;
         let end = start;
-        while (messages[end + 1]?.role === "assistant") end += 1;
+        while (messages[end + 1]?.role === "assistant" && !messages[end + 1].opensTurn) end += 1;
         const fold = running && end === messages.length - 1 ? null : workFold(messages, start, end);
         if (fold) for (let index = start; index <= end; index += 1) folds.set(index, fold);
         start = end;
