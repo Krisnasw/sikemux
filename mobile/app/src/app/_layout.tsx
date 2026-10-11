@@ -62,19 +62,24 @@ export default function RootLayout() {
     if (required) goOffline().catch(() => {});
   }, [required]);
 
-  if (!loaded && !failed) return null;
+  const fontsReady = loaded || failed;
   if (required)
-    return (
+    return fontsReady ? (
       <>
         <StatusBar style="light" />
         <UpdateRequired required={required} />
       </>
-    );
+    ) : null;
+  // The account starts loading at once; only the screens wait for the fonts, so the two load side by side.
   return (
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache} __experimental_resourceCache={resourceCache}>
       <PhoneOnAccount />
-      <StatusBar style="light" />
-      <Routes background={colors.ground} />
+      {fontsReady ? (
+        <>
+          <StatusBar style="light" />
+          <Routes background={colors.ground} />
+        </>
+      ) : null}
     </ClerkProvider>
   );
 }
