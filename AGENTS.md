@@ -62,7 +62,9 @@
   Keep them to data and transport: never make either depend on `sikemux-core`,
   `sikemux-pty` or `workspace-hack`. Feature logic the phone needs goes in TypeScript it
   shares with the Mac, and a new field rides inside JSON the bridge already passes through
-  rather than on a typed UniFFI record. ADR 0010 records why.
+  rather than on a typed UniFFI record. A request the phone needs is a method of the
+  core's `Call` (`sikemux-core/src/server/calls.rs`), never a new wire request or bridge
+  method, and a released method is never removed or renamed. ADR 0010 records why.
 - Phone builds need rustup's Rust first on `PATH`; Homebrew's Rust ignores
   `rust-toolchain.toml` and has no phone targets.
 - The bindings `uniffi-bindgen-react-native` generates are build output; do not commit or
