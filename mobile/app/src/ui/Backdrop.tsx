@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Image, PixelRatio, StyleSheet, View } from 'react-native';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Image, PixelRatio, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { GLView, type ExpoWebGLRenderingContext } from 'expo-gl';
+import { File, Paths } from 'expo-file-system';
 import { useIsFocused } from 'expo-router';
 import { ditheringFragmentShader, getShaderColorFromString, imageDitheringFragmentShader } from '@paper-design/shaders';
 
@@ -21,6 +22,23 @@ const FRAME_MS = 80;
 const FADE_MS = 400;
 /** Where the grain rests when motion is reduced, as on the Mac. */
 const STILL_MS = 2500;
+
+/** Each picture's shape, measured once, and the backdrops already shown, so a screen opened later draws at once. */
+const aspects = new Map<string, number>();
+const revealed = new Set<string>();
+
+/* A picture backdrop never moves, so its first drawn frame is kept as an image, across launches,
+   and every later screen shows that instead of drawing it again. */
+function keptFrame(key: string): File {
+  let hash = 5381;
+  for (const char of key) hash = ((hash * 33) ^ char.charCodeAt(0)) >>> 0;
+  return new File(Paths.cache, `backdrop-${hash.toString(16)}.png`);
+}
+
+async function keepFrame(gl: ExpoWebGLRenderingContext, key: string) {
+  const shot = await GLView.takeSnapshotAsync(gl, { format: 'png' });
+  new File(shot.localUri).move(keptFrame(key), { overwrite: true });
+}
 
 type Uniform = number | boolean | number[];
 
@@ -173,23 +191,44 @@ export function Backdrop() {
   const active = useAppActive();
   const paused = useBackdropPaused();
   const still = useStill();
-  const [aspect, setAspect] = useState<number>();
   const picture = backdrop?.texture ? backdrop.image : undefined;
+  const window = useWindowDimensions();
+  const frameKey = picture
+    ? [
+        picture.slice(picture.lastIndexOf('/') + 1),
+        colors.ground,
+        colors.shaderDot,
+        Math.round(window.width),
+        Math.round(window.height),
+      ].join('|')
+    : undefined;
+  const frame = useMemo(() => {
+    if (!frameKey) return undefined;
+    const kept = keptFrame(frameKey);
+    return kept.exists ? kept.uri : undefined;
+  }, [frameKey]);
+  const [measured, setMeasured] = useState<{ picture: string; aspect: number }>();
+  const aspect = picture ? (aspects.get(picture) ?? (measured?.picture === picture ? measured.aspect : undefined)) : undefined;
   const moving = !picture && focused && active && !paused && !still;
   const loops = useRef(new Set<Loop>());
   const movingNow = useRef(moving);
-  const [shown] = useState(() => new Animated.Value(0));
+  const [shown] = useState(() => new Animated.Value(frame ? 1 : 0));
   const show = () => {
-    if (still) shown.setValue(1);
+    const key = picture ?? 'grain';
+    if (still || revealed.has(key)) shown.setValue(1);
     else Animated.timing(shown, { toValue: 1, duration: FADE_MS, useNativeDriver: true }).start();
+    revealed.add(key);
   };
 
   useEffect(() => {
-    if (!picture) return;
+    if (!picture || aspects.has(picture)) return;
     Image.getSize(
       picture,
-      (width, height) => setAspect(width / height),
-      () => setAspect(undefined),
+      (width, height) => {
+        aspects.set(picture, width / height);
+        setMeasured({ picture, aspect: width / height });
+      },
+      () => {},
     );
   }, [picture]);
 
@@ -203,7 +242,7 @@ export function Backdrop() {
     return () => running.forEach((loop) => loop.stop());
   }, []);
 
-  if (!backdrop?.texture || (picture && !aspect)) return null;
+  if (!backdrop?.texture || (picture && !aspect && !frame)) return null;
   const { fragment, speed, uniforms } = preset(colors, Boolean(picture));
   const strength = picture ? 0.38 : 0.85;
   const band = picture ? '60%' : '50%';
@@ -227,6 +266,7 @@ export function Backdrop() {
       const reveal = () => {
         draw(surface, 0);
         show();
+        if (frameKey) keepFrame(gl, frameKey).catch(() => {});
       };
       if (loading) loading.then(reveal).catch(() => {});
       else reveal();
@@ -256,11 +296,15 @@ export function Backdrop() {
   return (
     <View pointerEvents="none" style={[styles.band, { height: band }]}>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: Animated.multiply(shown, strength) }]}>
-        <GLView
-          key={`${picture ?? 'grain'}:${colors.ground}:${colors.shaderDot}`}
-          style={StyleSheet.absoluteFill}
-          onContextCreate={ready}
-        />
+        {frame ? (
+          <Image source={{ uri: frame }} style={StyleSheet.absoluteFill} resizeMode="stretch" />
+        ) : (
+          <GLView
+            key={`${picture ?? 'grain'}:${colors.ground}:${colors.shaderDot}`}
+            style={StyleSheet.absoluteFill}
+            onContextCreate={ready}
+          />
+        )}
       </Animated.View>
       {/* The Mac masks the field out by the band's end; covering it with the ground does the same on an opaque screen. */}
       <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
