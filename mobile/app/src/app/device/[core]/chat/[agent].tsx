@@ -19,7 +19,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { activityText, composerPlaceholder } from '@mac/chat/chatStatus';
 import { sentPrompts } from '@mac/chat/promptHistory';
 import { activeToolLabel } from '@mac/chat/toolLabels';
-import { workFolds } from '@mac/chat/transcript';
+import { workFolds, type WorkFold } from '@mac/chat/transcript';
 import type { ChatMessage, ChatState } from '@mac/chat/types';
 import { ChatMenu } from '@/chat/ChatMenu';
 import { askTitle, Composer, RecentSheet } from '@/chat/Composer';
@@ -161,11 +161,18 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
   const liveId = state.running ? state.messages[state.messages.length - 1]?.id : undefined;
   const [open, setOpen] = useState<string>();
   const openStrip = useMemo(() => (open ? stripMeta(state.messages, open) : null), [open, state.messages]);
+  // The list redraws a row when what it is handed changes, so nothing it is handed changes with every word streamed.
+  const messages = useRef(state.messages);
+  useEffect(() => {
+    messages.current = state.messages;
+  }, [state.messages]);
   const onTap = (message: ChatMessage) => {
-    const owner = stripOwner(state.messages, message.id);
+    const owner = stripOwner(messages.current, message.id);
     setOpen((shown) => (shown === owner ? undefined : owner));
   };
-  const folds = useMemo(() => workFolds(state.messages, state.running), [state.messages, state.running]);
+  const [foldsBefore, setFoldsBefore] = useState<Map<number, WorkFold>>();
+  const folds = useMemo(() => workFolds(state.messages, state.running, foldsBefore), [state.messages, state.running, foldsBefore]);
+  if (folds !== foldsBefore) setFoldsBefore(folds);
   const [openWork, setOpenWork] = useState<ReadonlySet<string>>(() => new Set());
   const toggleWork = (id: string) =>
     setOpenWork((shown) => {
@@ -181,17 +188,19 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
   // The strip redraws, and with it the composer, only when what it counts changes, not on every word streamed.
   const [work, setWork] = useState(fresh);
   if (liveKey(fresh) !== liveKey(work)) setWork(fresh);
+  const [recent, setRecent] = useState(false);
   const sent = useMemo(
     () =>
-      sentPrompts(
-        state.messages,
-        chat.queued.map((held) => held.text),
-      ),
-    [state.messages, chat.queued],
+      recent
+        ? sentPrompts(
+            state.messages,
+            chat.queued.map((held) => held.text),
+          )
+        : [],
+    [recent, state.messages, chat.queued],
   );
   const [showLive, setShowLive] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [recent, setRecent] = useState(false);
   const openLive = () => setShowLive(true);
   const openRecent = () => setRecent(true);
   useEffect(() => dismissCardsFor(core, agentId), [core, agentId]);
@@ -222,7 +231,7 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
   const watchOnly = access === 'watch';
   const steerable = state.capabilities.steering === true && state.running && !watchOnly;
   const liveShown = hasLiveWork(fresh) && chat.attached === 'live';
-  const recalls = sent.length > 0 && !watchOnly;
+  const recalls = !watchOnly && (chat.queued.length > 0 || state.messages.some((message) => message.role === 'user'));
   const strip = liveShown ? <LiveStrip work={work} provider={provider} onOpen={openLive} /> : null;
   const unreachable = chat.attached !== 'live' && live.status === 'closed';
   const status = unreachable ? (
@@ -278,11 +287,15 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
                     ref={list}
                     data={state.messages}
                     keyExtractor={(message) => message.id}
-                    getItemType={(message) => message.role}
+                    getItemType={(message, index) => {
+                      const fold = folds.get(index);
+                      // Folded work draws nothing, so it is never recycled into a whole answer.
+                      return fold && index < fold.end && !openWork.has(fold.id) ? 'folded' : message.role;
+                    }}
                     extraData={marks}
                     renderItem={({ item, index }) => {
                       const fold = folds.get(index);
-                      const workId = fold ? state.messages[fold.start].id : '';
+                      const workId = fold ? fold.id : '';
                       const folded = fold !== undefined && !openWork.has(workId);
                       const summary =
                         fold && index === fold.start ? (
@@ -376,7 +389,7 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
       <LiveSheet
         visible={showLive && liveShown}
         onClose={() => setShowLive(false)}
-        work={fresh}
+        work={showLive ? fresh : work}
         provider={provider}
         steerable={steerable}
         canAct={!watchOnly}

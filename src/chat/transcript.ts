@@ -51,6 +51,8 @@ export function groupParts(parts: ChatPart[]): PartGroup[] {
 /* A finished turn is a run of assistant messages: the work, then the reply it
    closed with. `from` is where that reply starts in the run's last message. */
 export interface WorkFold {
+    /** The id of the turn's first message, which names the fold for as long as the turn is shown. */
+    id: string;
     start: number;
     end: number;
     from: number;
@@ -60,14 +62,28 @@ export interface WorkFold {
 
 const isReply = (part: ChatPart) => part.kind === "text" || part.kind === "content";
 
+/* Runs while a reply streams in, so it walks the turn's parts in place rather than gathering them. */
 function workFold(messages: ChatMessage[], start: number, end: number): WorkFold | null {
     const parts = messages[end].parts;
     let from = parts.length;
-    while (from > 0 && isReply(parts[from - 1])) from -= 1;
-    if (!parts.slice(from).some((part) => part.kind === "text")) return null;
-    const work = [...messages.slice(start, end).flatMap((message) => message.parts), ...parts.slice(0, from)];
-    if (work.every(isReply)) return null;
-    return { start, end, from, calls: work.filter((part) => part.kind === "tool").length, took: workTime(messages, start, end) };
+    let said = false;
+    while (from > 0 && isReply(parts[from - 1])) {
+        from -= 1;
+        said ||= parts[from].kind === "text";
+    }
+    if (!said) return null;
+    let calls = 0;
+    let worked = false;
+    for (let index = start; index <= end; index += 1) {
+        const work = messages[index].parts;
+        const until = index === end ? from : work.length;
+        for (let at = 0; at < until; at += 1) {
+            if (work[at].kind === "tool") calls += 1;
+            worked ||= !isReply(work[at]);
+        }
+    }
+    if (!worked) return null;
+    return { id: messages[start].id, start, end, from, calls, took: workTime(messages, start, end) };
 }
 
 /* A prompted turn starts with its prompt; one the agent began by itself starts
@@ -79,8 +95,14 @@ function workTime(messages: ChatMessage[], start: number, end: number): number |
     return began !== null && ended !== null && ended >= began ? ended - began : null;
 }
 
-/** Every finished turn worth folding, by the index of each message in it. */
-export function workFolds(messages: ChatMessage[], running: boolean): Map<number, WorkFold> {
+const sameFold = (a: WorkFold | undefined, b: WorkFold) =>
+    a !== undefined && a.id === b.id && a.start === b.start && a.end === b.end && a.from === b.from && a.calls === b.calls && a.took === b.took;
+
+/**
+ * Every finished turn worth folding, by the index of each message in it. A list redraws its rows when this
+ * changes, so `previous` comes back as it is when nothing in it did.
+ */
+export function workFolds(messages: ChatMessage[], running: boolean, previous?: Map<number, WorkFold>): Map<number, WorkFold> {
     const folds = new Map<number, WorkFold>();
     for (let start = 0; start < messages.length; start += 1) {
         if (messages[start].role !== "assistant") continue;
@@ -90,6 +112,7 @@ export function workFolds(messages: ChatMessage[], running: boolean): Map<number
         if (fold) for (let index = start; index <= end; index += 1) folds.set(index, fold);
         start = end;
     }
+    if (previous && previous.size === folds.size && [...folds].every(([index, fold]) => sameFold(previous.get(index), fold))) return previous;
     return folds;
 }
 
