@@ -99,7 +99,7 @@ function Routes({ background }: { background: string }) {
   if (!ready) return late && !isLoaded ? <Unreachable /> : null;
   return (
     <>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: background } }}>
+      <Stack screenOptions={{ headerShown: false, freezeOnBlur: true, contentStyle: { backgroundColor: background } }}>
         <Stack.Screen name="index" />
         <Stack.Protected guard={!!isSignedIn}>
           <Stack.Screen name="device/[core]" />
