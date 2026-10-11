@@ -35,9 +35,11 @@ function keptFrame(key: string): File {
   return new File(Paths.cache, `backdrop-${hash.toString(16)}.png`);
 }
 
-async function keepFrame(gl: ExpoWebGLRenderingContext, key: string) {
+async function keepFrame(gl: ExpoWebGLRenderingContext, key: string): Promise<string> {
   const shot = await GLView.takeSnapshotAsync(gl, { format: 'png' });
-  new File(shot.localUri).move(keptFrame(key), { overwrite: true });
+  const kept = keptFrame(key);
+  new File(shot.localUri).move(kept, { overwrite: true });
+  return kept.uri;
 }
 
 type Uniform = number | boolean | number[];
@@ -202,11 +204,14 @@ export function Backdrop() {
         Math.round(window.height),
       ].join('|')
     : undefined;
-  const frame = useMemo(() => {
+  const [justKept, setJustKept] = useState<{ key: string; uri: string }>();
+  const onDisk = useMemo(() => {
     if (!frameKey) return undefined;
     const kept = keptFrame(frameKey);
     return kept.exists ? kept.uri : undefined;
   }, [frameKey]);
+  // Once this screen's frame is kept, the image takes the GL surface's place: an idle surface still wakes every frame.
+  const frame = onDisk ?? (justKept && justKept.key === frameKey ? justKept.uri : undefined);
   const [measured, setMeasured] = useState<{ picture: string; aspect: number }>();
   const aspect = picture ? (aspects.get(picture) ?? (measured?.picture === picture ? measured.aspect : undefined)) : undefined;
   const moving = !picture && focused && active && !paused && !still;
@@ -266,7 +271,12 @@ export function Backdrop() {
       const reveal = () => {
         draw(surface, 0);
         show();
-        if (frameKey) keepFrame(gl, frameKey).catch(() => {});
+        if (frameKey) {
+          const key = frameKey;
+          keepFrame(gl, key)
+            .then((uri) => setJustKept({ key, uri }))
+            .catch(() => {});
+        }
       };
       if (loading) loading.then(reveal).catch(() => {});
       else reveal();
@@ -302,6 +312,7 @@ export function Backdrop() {
           <GLView
             key={`${picture ?? 'grain'}:${colors.ground}:${colors.shaderDot}`}
             style={StyleSheet.absoluteFill}
+            msaaSamples={0}
             onContextCreate={ready}
           />
         )}
