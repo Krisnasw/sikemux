@@ -1,7 +1,8 @@
-# 0.1.0-nightly.11
+# 0.1.0-nightly.12
 
-• A finished answer folds its work above the reply, so the answer reads first.
-• A reloaded chat keeps the real time of every turn.
-• Tapping an iPhone notification opens its chat.
-• Try again clears a damaged list of paired hosts.
-• From this build on, more fixes reach your phone without a new app version.
+• Faster all round: chats redraw only what changed, hidden screens and animations rest, and the fonts are built in.
+• Reaches a host at once with the relays it already knows.
+• A host's picture backdrop shows at once, and survives app updates.
+• Each turn folds on its own, with its strip under it.
+• The chat fades into its header and composer.
+• From this build on, host view changes reach your phone without a new app version.
