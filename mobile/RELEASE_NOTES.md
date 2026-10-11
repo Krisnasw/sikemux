@@ -1,8 +1,7 @@
-# 0.1.0-nightly.12
+# 0.1.0-nightly.13
 
-• Faster all round: chats redraw only what changed, hidden screens and animations rest, and the fonts are built in.
-• Reaches a host at once with the relays it already knows.
-• A host's picture backdrop shows at once, and survives app updates.
-• Each turn folds on its own, with its strip under it.
-• The chat fades into its header and composer.
-• From this build on, host view changes reach your phone without a new app version.
+• Pictures pasted on your computer show in the chat as thumbnails, and open full screen on a tap.
+• Agents that left shells or monitors running are marked.
+• A chat shows its project with the rail's folder.
+• The jump-to-latest arrow hides once a chat reaches its end.
+• From this build on, new phone features can arrive without a new app version.
