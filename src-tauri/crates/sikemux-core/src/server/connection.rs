@@ -741,6 +741,25 @@ async fn run_requests(
                     Err(error) => client.respond(request_id, Err(error)),
                 }
             }
+            Request::ChatFile { path } => {
+                let dir = core
+                    .listening
+                    .get()
+                    .and_then(|listening| listening.config.attachment_dir.clone())
+                    .ok_or_else(|| CoreError::from("this host keeps no files for chats"));
+                match dir {
+                    Ok(dir) => {
+                        tokio::spawn(async move {
+                            let result = blocking(move || attachments::read(&dir, &path)).await;
+                            client.respond(
+                                request_id,
+                                result.map(|data| Response::ChatFile { data }),
+                            );
+                        });
+                    }
+                    Err(error) => client.respond(request_id, Err(error)),
+                }
+            }
             Request::AcpCancel { agent_id } => {
                 let result = chat::cancel(&core, &agent_id);
                 client.respond(request_id, result.map(|()| Response::Done));

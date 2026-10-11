@@ -344,6 +344,11 @@ pub enum Request {
         mime: String,
         data: String,
     },
+    /// A file kept beside the pictures pasted into the app's chats, such as
+    /// one a message carried, for a device to show. Answered in base64.
+    ChatFile {
+        path: PathBuf,
+    },
     AcpCancel {
         agent_id: String,
     },
@@ -918,6 +923,9 @@ pub enum Response {
     },
     Attached {
         path: PathBuf,
+    },
+    ChatFile {
+        data: String,
     },
 }
 

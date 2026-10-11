@@ -842,6 +842,35 @@ impl Connection {
         }
     }
 
+    /// Writes a file the host keeps for its chats, at `path` there, into
+    /// `dir` under the same name, and answers with where it is now.
+    pub async fn save_chat_file(&self, dir: String, path: String) -> Result<String, MobileError> {
+        let name = Path::new(&path)
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .ok_or_else(|| invalid("that is not a file"))?;
+        let request = Request::ChatFile { path: path.into() };
+        let Reply::Response(Response::ChatFile { data }) =
+            self.reply_within(request, UPLOAD_TIMEOUT).await?
+        else {
+            return Err(unexpected());
+        };
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(data)
+            .map_err(|_| invalid("the host sent a file this app cannot read"))?;
+        let saved = Path::new(&dir).join(name);
+        let written = saved.clone();
+        on_runtime(async move {
+            if let Some(parent) = written.parent() {
+                tokio::fs::create_dir_all(parent).await?;
+            }
+            tokio::fs::write(&written, bytes).await
+        })
+        .await?
+        .map_err(|error| invalid(format!("could not save the file: {error}")))?;
+        Ok(saved.display().to_string())
+    }
+
     pub async fn cancel(&self, agent_id: String) -> Result<(), MobileError> {
         self.done(Request::AcpCancel { agent_id }).await
     }

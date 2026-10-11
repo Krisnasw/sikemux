@@ -40,6 +40,7 @@ pub(crate) fn needs(request: &Request) -> Needs {
         | Request::AcpDetach { .. }
         | Request::AcpWake { .. }
         | Request::BackdropImage
+        | Request::ChatFile { .. }
         | Request::Unpair
         | Request::SetNotifications { .. }
         | Request::ClearNotifications
