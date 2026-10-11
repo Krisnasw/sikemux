@@ -76,6 +76,7 @@
     font-size: calc(14px * var(--chat-text-em, 1));
     line-height: 1.65;
     user-select: text;
+    cursor: auto;
 }
 
 /* A strip that appeared on hover would resize the row under the pointer, so

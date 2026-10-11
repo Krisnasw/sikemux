@@ -278,7 +278,7 @@ button {
 }
 
 ::selection {
-    background: var(--acc-soft);
+    background: color-mix(in srgb, var(--acc) 38%, transparent);
 }
 
 .cm-scroller::-webkit-scrollbar {
