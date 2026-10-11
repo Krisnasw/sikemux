@@ -3,12 +3,24 @@
 
 use serde::{Deserialize, Serialize};
 
-/// The account and its devices are gone from the moment this is answered; every device is revoked and every token refused.
+/// Whether the signed-in account is in use or waiting to be deleted.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Account {
+    pub status: AccountStatus,
+    /// Only while deleting: when the account is deleted for good unless restored first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deletes_at: Option<String>,
+}
+
+/// Every device is revoked and every token refused from the moment this is answered, except to read or restore the account. Signing in again before deletesAt can restore it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AccountDeletion {
     pub status: AccountDeletionStatus,
     pub requested_at: String,
+    /// When the sign-in is deleted for good and the account can no longer be restored.
+    pub deletes_at: String,
 }
 
 /// What the phone may send when it deletes an account. The body can be left out.
@@ -20,7 +32,7 @@ pub struct AccountDeletionRequest {
     pub apple_authorization_code: Option<String>,
 }
 
-/// Deleted once Clerk confirms it deleted the sign-in too; deleting until then, while the server retries.
+/// Deleting while the account can still be restored, until the server deletes the sign-in in Clerk at deletesAt; deleted once Clerk has.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AccountDeletionStatus {
     #[serde(rename = "deleting")]
@@ -60,6 +72,18 @@ pub enum AccountEventType {
     DeviceRevoked,
     #[serde(rename = "account.deleted")]
     AccountDeleted,
+    /// A value added after this build, which it cannot act on.
+    #[serde(other)]
+    Unknown,
+}
+
+/// Active, or deleting: deleted on request and still restorable until deletesAt.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AccountStatus {
+    #[serde(rename = "active")]
+    Active,
+    #[serde(rename = "deleting")]
+    Deleting,
     /// A value added after this build, which it cannot act on.
     #[serde(other)]
     Unknown,
@@ -582,11 +606,13 @@ pub enum RevokeReason {
 pub(crate) fn round_trip(name: &str, json: &str) -> Option<super::RoundTrip> {
     use super::through;
     Some(match name {
+        "Account" => through::<Account>(json),
         "AccountDeletion" => through::<AccountDeletion>(json),
         "AccountDeletionRequest" => through::<AccountDeletionRequest>(json),
         "AccountDeletionStatus" => through::<AccountDeletionStatus>(json),
         "AccountEvent" => through::<AccountEvent>(json),
         "AccountEventType" => through::<AccountEventType>(json),
+        "AccountStatus" => through::<AccountStatus>(json),
         "ApiError" => through::<ApiError>(json),
         "ApnsEnvironment" => through::<ApnsEnvironment>(json),
         "AppVersion" => through::<AppVersion>(json),
