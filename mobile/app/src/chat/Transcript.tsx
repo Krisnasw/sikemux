@@ -10,7 +10,7 @@ import { CopyButton } from '@/ui/CopyButton';
 import { haptics } from '@/ui/haptics';
 import { AgentIcon, Icon } from '@/ui/Icon';
 import { Working } from '@/ui/status';
-import { fonts, type Palette, translucent, useColors, useStyles } from '@/ui/theme';
+import { fonts, italic, type Palette, translucent, useColors, useStyles } from '@/ui/theme';
 import { useAnimating } from '@/ui/motion';
 import { Shimmer } from '@/ui/Shimmer';
 import { FoldsContext, useFold } from './folds';
@@ -485,7 +485,7 @@ const makeStyles = (colors: Palette) => {
     stripRate: { marginLeft: 'auto', fontFamily: fonts.mono, fontSize: 11, fontStyle: 'italic', color: colors.inkDim },
     prose: { fontFamily: fonts.ui, fontSize: 14.5, lineHeight: 23, color: colors.ink },
     thought: { marginVertical: 8 },
-    thoughtText: { fontFamily: fonts.uiItalic, fontSize: 12.5, lineHeight: 19.5, color: colors.inkFaint },
+    thoughtText: { ...italic, fontSize: 12.5, lineHeight: 19.5, color: colors.inkFaint },
     showRest: { alignSelf: 'flex-start', marginTop: 6, marginBottom: 4 },
     showRestText: { fontFamily: fonts.uiMedium, fontSize: 12.5, color: colors.tertiary },
     subagent: { marginVertical: 6 },

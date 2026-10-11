@@ -64,7 +64,18 @@
           "imageWidth": 96
         }
       ],
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./node_modules/@expo-google-fonts/figtree/400Regular/Figtree_400Regular.ttf",
+            "./node_modules/@expo-google-fonts/figtree/400Regular_Italic/Figtree_400Regular_Italic.ttf",
+            "./node_modules/@expo-google-fonts/figtree/500Medium/Figtree_500Medium.ttf",
+            "./node_modules/@expo-google-fonts/figtree/600SemiBold/Figtree_600SemiBold.ttf",
+            "./node_modules/@expo-google-fonts/jetbrains-mono/400Regular/JetBrainsMono_400Regular.ttf"
+          ]
+        }
+      ],
       [
         "expo-build-properties",
         {
