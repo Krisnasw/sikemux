@@ -20,10 +20,16 @@ function folder(core: string): Directory {
   return new Directory(Paths.document, 'backdrops', core.slice(0, 16));
 }
 
+/* iOS moves an app's documents on every update, so a saved picture is found by its name in the
+   host's folder, not by the path it was saved at. */
+function savedPicture(core: string, image: { uri: string }): File {
+  return new File(folder(core), image.uri.slice(image.uri.lastIndexOf('/') + 1));
+}
+
 /** Deletes the picture saved for a host's backdrop. */
-export function forgetBackdrop(saved: PairedDevice['backdrop']) {
+export function forgetBackdrop(core: string, saved: PairedDevice['backdrop']) {
   if (!saved?.image) return;
-  const file = new File(saved.image.uri);
+  const file = savedPicture(core, saved.image);
   if (file.exists) file.delete();
 }
 
@@ -63,7 +69,7 @@ export function useDeviceBackdrop(core: string): DeviceBackdrop {
             return;
           }
           failedAt.delete(key);
-          forgetBackdrop(remembered);
+          forgetBackdrop(core, remembered);
           return updateDevice(core, { backdrop: { texture, image: { id: wanted, uri: saved.uri } } }).then(reloadDevices);
         })
         .catch(() => failedAt.set(key, Date.now()))
@@ -73,7 +79,7 @@ export function useDeviceBackdrop(core: string): DeviceBackdrop {
         });
       return;
     }
-    if (!wanted && remembered?.image) forgetBackdrop(remembered);
+    if (!wanted && remembered?.image) forgetBackdrop(core, remembered);
     if (texture !== remembered?.texture || (!wanted && remembered?.image)) {
       updateDevice(core, { backdrop: { texture, image: wanted ? remembered?.image : undefined } }).then(reloadDevices, () => {});
     }
@@ -81,6 +87,6 @@ export function useDeviceBackdrop(core: string): DeviceBackdrop {
 
   const shown = texture ?? remembered?.texture ?? false;
   const current = wanted === undefined ? remembered?.image?.id : wanted;
-  const image = current && remembered?.image?.id === current ? remembered.image.uri : undefined;
+  const image = current && remembered?.image?.id === current ? savedPicture(core, remembered.image).uri : undefined;
   return { texture: shown, image };
 }
