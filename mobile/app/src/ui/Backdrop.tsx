@@ -195,9 +195,9 @@ export function Backdrop() {
   const still = useStill();
   const picture = backdrop?.texture ? backdrop.image : undefined;
   const window = useWindowDimensions();
-  const frameKey = picture
+  const frameKey = backdrop?.texture
     ? [
-        picture.slice(picture.lastIndexOf('/') + 1),
+        picture ? picture.slice(picture.lastIndexOf('/') + 1) : 'grain',
         colors.ground,
         colors.shaderDot,
         Math.round(window.width),
@@ -215,6 +215,9 @@ export function Backdrop() {
   const [measured, setMeasured] = useState<{ picture: string; aspect: number }>();
   const aspect = picture ? (aspects.get(picture) ?? (measured?.picture === picture ? measured.aspect : undefined)) : undefined;
   const moving = !picture && focused && active && !paused && !still;
+  // The grain animates only on the screen showing; anywhere else its kept frame stands in, with no GL surface.
+  const animating = !picture && focused && active && !still;
+  const drawing = !frame || animating;
   const loops = useRef(new Set<Loop>());
   const movingNow = useRef(moving);
   const [shown] = useState(() => new Animated.Value(frame ? 1 : 0));
@@ -284,6 +287,12 @@ export function Backdrop() {
     }
     draw(surface, still ? STILL_MS * speed : (Date.now() - ORIGIN) * speed);
     show();
+    if (frameKey && !frame) {
+      const key = frameKey;
+      keepFrame(gl, key)
+        .then((uri) => setJustKept({ key, uri }))
+        .catch(() => {});
+    }
     // The loop holds this surface itself: a screen can mount more than one before settling on one.
     let timer: ReturnType<typeof setTimeout> | undefined;
     const tick = () => {
@@ -306,16 +315,15 @@ export function Backdrop() {
   return (
     <View pointerEvents="none" style={[styles.band, { height: band }]}>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: Animated.multiply(shown, strength) }]}>
-        {frame ? (
-          <Image source={{ uri: frame }} style={StyleSheet.absoluteFill} resizeMode="stretch" />
-        ) : (
+        {frame ? <Image source={{ uri: frame }} style={StyleSheet.absoluteFill} resizeMode="stretch" /> : null}
+        {drawing ? (
           <GLView
             key={`${picture ?? 'grain'}:${colors.ground}:${colors.shaderDot}`}
             style={StyleSheet.absoluteFill}
             msaaSamples={0}
             onContextCreate={ready}
           />
-        )}
+        ) : null}
       </Animated.View>
       {/* The Mac masks the field out by the band's end; covering it with the ground does the same on an opaque screen. */}
       <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
