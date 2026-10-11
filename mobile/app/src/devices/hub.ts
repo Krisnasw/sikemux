@@ -423,15 +423,18 @@ function useHost<T>(core: string, read: () => T): T {
   return useSyncExternalStore((listener) => subscribeHost(core, listener), read);
 }
 
-/** One device's live state; the device stays connected while this is mounted. Only that host's changes re-render. */
-export function useLive(core: string): Live {
-  useEffect(() => watch(core), [core]);
+/**
+ * One device's live state; the device stays connected while this is mounted and `watching`. Only that host's
+ * changes re-render.
+ */
+export function useLive(core: string, watching = true): Live {
+  useEffect(() => (watching ? watch(core) : undefined), [core, watching]);
   return useHost(core, () => liveOf(core));
 }
 
-/** How a host is doing, worded as the screens show it; the device stays connected while this is mounted. */
-export function useHostStatus(core: string): HostStatus {
-  const live = useLive(core);
+/** How a host is doing, worded as the screens show it; the device stays connected while this is mounted and `watching`. */
+export function useHostStatus(core: string, watching = true): HostStatus {
+  const live = useLive(core, watching);
   const device = useSyncExternalStore(subscribe, () => devices.find((known) => known.core === core));
   return useMemo(() => hostStatus(live, device), [live, device]);
 }
