@@ -264,6 +264,12 @@
   .sent-files { align-self: flex-end; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: flex-end; gap: 6px; max-width: 84%; margin: 12px 0 -6px; }
   .sent-files .thumb { width: 132px; height: 99px; border-radius: 10px; border: 1px solid var(--border); }
   .sent-files .file { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--ink-dim); }
+  .viewer { background: rgba(0, 0, 0, .94); }
+  .viewer-bar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; }
+  .viewer-btn { flex: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--ink); display: grid; place-items: center; }
+  .viewer-name { flex: 1; min-width: 0; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .viewer-stage { flex: 1; display: grid; place-items: center; }
+  .viewer-stage .photo { width: 100%; aspect-ratio: 4 / 3; }
   .sources { display: grid; gap: 8px; padding-bottom: 4px; }
   .sources > span { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-raised); font-size: 15.5px; font-weight: 500; color: var(--ink); }
   .composer-wrap.jumps { position: relative; }
@@ -1628,7 +1634,17 @@
         </div>
       </div>
       <div class="home-bar"></div></div>
-      <figcaption><b>Sent with attachments</b><div class="note">The message carries its files above the bubble, at its right edge, as the Mac's chat shows them. A photo sent from this phone shows from the phone's own copy; a file, or anything sent from the computer, shows as a chip with its name. The agent gets the path of each, which the host keeps beside the pictures pasted into its own chats.</div></figcaption>
+      <figcaption><b>Sent with attachments</b><div class="note">The message carries its files above the bubble, at its right edge, as the Mac's chat shows them. A photo sent from this phone shows from the phone's own copy. A picture pasted on the computer is fetched from the host once and kept, showing as a chip with its name until it arrives; a file shows as a chip. A tap on a picture opens it over the whole screen. The agent gets the path of each, which the host keeps beside the pictures pasted into its own chats.</div></figcaption>
+    </figure>
+
+    <figure><div class="phone"><div class="island"></div>
+      <div class="status"><span>9:41</span><span class="bars"><i></i><i></i></span></div>
+      <div class="screen viewer">
+        <div class="viewer-bar"><span class="viewer-btn">{{IconClose:16}}</span><span class="viewer-name">84502.jpg</span><span class="viewer-btn">{{IconDownload:16}}</span></div>
+        <div class="viewer-stage"><span class="photo"></span></div>
+      </div>
+      <div class="home-bar"></div></div>
+      <figcaption><b>Picture, opened</b><div class="note">A picture a message carried, on near-black over the whole screen, with its name between Close and Save. On iPhone a pinch zooms it, and Save opens the share sheet, which has Save Image and Save to Files. On Android, Save asks for a folder and writes the picture there, so the app needs no access to storage.</div></figcaption>
     </figure>
 
     <figure><div class="phone"><div class="island"></div>

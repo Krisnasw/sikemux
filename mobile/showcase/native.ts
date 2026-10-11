@@ -145,6 +145,9 @@ class Connection {
   async saveBackdrop() {
     return undefined;
   }
+  async saveChatFile(): Promise<string> {
+    throw new Error('the showcase has no host files');
+  }
 }
 
 const PHONE_ID = 'a3f9c27e51d04b8e9c6f2a7d18e3b5c40f9e7a2d6b1c8e5f3a0d9c7b6e4f2a1d';
