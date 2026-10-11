@@ -1,7 +1,7 @@
 import { performanceTelemetry } from "../lib/performance";
 
 export type Event =
-    | { type: "open-file"; path: string; line?: number; character?: number; preview?: boolean }
+    | { type: "open-file"; path: string; line?: number; character?: number }
     | { type: "close-file"; paneId: string; path: string }
     | { type: "fs-changed"; repo: string; paths?: string[] }
     | { type: "path-renamed"; src: string; dest: string }

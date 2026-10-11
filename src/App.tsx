@@ -107,7 +107,6 @@ import "./plugins/builtin";
 import { recordAgentTurns } from "./state/activityRecorder";
 import { useInstalledPlugins } from "./plugins/installed";
 import { useRailDock } from "./rail/railMotion";
-import { FilesRail } from "./rail/FilesRail";
 
 const SettingsPanel = lazy(() => import("./settings/SettingsPanel").then((module) => ({ default: module.SettingsPanel })));
 
@@ -708,10 +707,8 @@ export default function App() {
     const sideRailVisible = useStore((s) => s.sideRailOpen);
     const agentRailVisible = useStore((s) => s.agentRailOpen);
     const activeSessionIsProject = useStore((s) => s.sessions[s.activeSessionId]?.kind === "project");
-    const fileTreeOpen = useStore((s) => s.fileTreeOpen);
     useRailDock(sideRailVisible, true, ".side-rail", bootReady);
     useRailDock(agentRailVisible, activeSessionIsProject, ".agent-rail", bootReady);
-    useRailDock(fileTreeOpen, activeSessionIsProject, ".files-rail", bootReady);
     const pickerOpen = useStore((s) => s.pickerOpen);
     const agentPaletteOpen = useStore((s) => s.agentPaletteOpen);
     const filePaletteOpen = useStore((s) => s.filePaletteOpen);
@@ -996,7 +993,6 @@ export default function App() {
                         <SideRail />
                     </RailPeek>
                 )}
-                {activeSessionIsProject && <FilesRail />}
                 <main className={`stage${settingsOpen ? " stage--settings" : ""}`}>
                     <Workspace />
                     {settingsOpen && (

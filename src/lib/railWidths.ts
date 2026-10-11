@@ -5,12 +5,6 @@ export const RAIL_WIDTH = {
     end: { min: 240, max: 560, initial: 288 },
 } as const satisfies Record<RailEdge, { min: number; max: number; initial: number }>;
 
-export const FILE_TREE_WIDTH = { min: 180, max: 520, initial: 260 } as const;
-
-export function clampFileTreeWidth(px: number): number {
-    return Math.round(Math.min(FILE_TREE_WIDTH.max, Math.max(FILE_TREE_WIDTH.min, px)));
-}
-
 export function clampRailWidth(edge: RailEdge, px: number): number {
     const { min, max } = RAIL_WIDTH[edge];
     return Math.round(Math.min(max, Math.max(min, px)));

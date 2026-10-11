@@ -78,25 +78,6 @@ describe("project windows", () => {
         });
     });
 
-    it("seeds a file opened from the tree as the preview tab", () => {
-        cmd.createProjectSession("/work/demo");
-
-        cmd.requestOpenFile("/work/demo/src/main.ts", undefined, undefined, true);
-
-        const editor = projectWindows().find((win) => win.role === "files")!;
-        expect(getState().editorViews[editor.activePaneId].preview).toBe("/work/demo/src/main.ts");
-    });
-
-    it("closes the editor window once its last file is closed", () => {
-        cmd.createProjectSession("/work/demo");
-        cmd.requestOpenFile("/work/demo/a.ts");
-        const editor = projectWindows().find((win) => win.role === "files")!;
-
-        cmd.closeEmptyEditorWindow(editor.activePaneId);
-
-        expect(roles()).not.toContain("files");
-    });
-
     it("does not re-seed an editor that is already open", () => {
         cmd.createProjectSession("/work/demo");
         cmd.requestOpenFile("/work/demo/a.ts");

@@ -154,7 +154,8 @@ export function documentsOf(win: Window, editorViews: StoreState["editorViews"])
  * renders them, so a tab would be a second handle on one surface. An editor,
  * and any plugin surface that holds documents, contributes one entry per open
  * document, which is what puts them in this strip rather than a second bar
- * inside the pane. With nothing open either contributes nothing. Everything else gets exactly one entry, and
+ * inside the pane. With nothing open a plugin surface contributes nothing, and
+ * an editor one entry for itself. Everything else gets exactly one entry, and
  * the list is derived rather than stored, so a window can never exist without
  * its tab.
  */
@@ -163,7 +164,7 @@ export function expandTabRefs(windowIds: readonly string[], windows: StoreState[
         const win = windows[id];
         if (!win) return [];
         const documents = documentsOf(win, editorViews);
-        if (documents) return documents.ids.map((doc): TabRef => ({ id, doc }));
+        if (documents && (documents.ids.length > 0 || win.role !== "files")) return documents.ids.map((doc): TabRef => ({ id, doc }));
         return roleHasTab(win.role) ? [{ id }] : [];
     });
 }

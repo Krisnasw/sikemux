@@ -668,5 +668,26 @@ body.is-sorting-tabs * {
     max-width: 100%;
     height: auto;
 }
+.ed-empty {
+    position: absolute;
+    inset: 32px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1h);
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+.ed-empty button {
+    pointer-events: auto;
+}
+.ed-empty p {
+    font-size: var(--text-sm);
+}
 /* This was painting text in --line, a border colour: the hint under an empty
  * editor was very nearly the same value as the background it sat on. */
+.ed-empty-sub {
+    font-size: var(--text-xs);
+    color: var(--text-disabled);
+}

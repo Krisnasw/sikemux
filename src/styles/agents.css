@@ -967,29 +967,6 @@
     border-radius: 0;
 }
 
-.workspace-rail.files-rail {
-    position: relative;
-    flex-direction: column;
-    width: var(--files-rail-w);
-}
-
-/* Inside the rail's own edge: the rail clips everything past it while it slides. */
-.files-rail-resizer {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 2;
-    width: 6px;
-    cursor: col-resize;
-}
-.files-rail-resizer:hover,
-.files-rail-resizer:active,
-.files-rail-resizer:focus-visible {
-    background: linear-gradient(var(--acc-line), var(--acc-line)) right / 2px 100% no-repeat;
-    outline: none;
-}
-
 .workspace-rail[data-density="compact"] .agent-row {
     height: 27px;
 }

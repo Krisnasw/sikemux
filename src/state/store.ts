@@ -9,7 +9,7 @@ import { DEFAULT_EDITOR_TEXT_SCALE } from "../editor/textScale";
 import type { KeybindingOverrides } from "../commands/keybindings";
 import type { CustomCommand } from "../commands/registry";
 import type { SettingsPageId } from "../settings/settingsIndex";
-import { FILE_TREE_WIDTH, RAIL_WIDTH } from "../lib/railWidths";
+import { RAIL_WIDTH } from "../lib/railWidths";
 import { DEFAULT_PROVIDER_PROFILES, DEFAULT_PROVIDER_PROFILE_SELECTION } from "./types";
 
 enableMapSet();
@@ -73,9 +73,6 @@ export interface DomainState {
     agentRailOpen: boolean;
     sideRailWidth: number;
     agentRailWidth: number;
-    /** The project file tree, opened beside whatever the stage shows. */
-    fileTreeOpen: boolean;
-    fileTreeWidth: number;
     diffTarget: Record<string, DiffTarget | null>;
     /** Each plugin's own settings, by plugin id, in whatever shape the plugin decodes. */
     pluginSettings: Readonly<Record<string, unknown>>;
@@ -257,8 +254,6 @@ export const useStore = create<StoreState>(() => {
         agentRailOpen: true,
         sideRailWidth: RAIL_WIDTH.start.initial,
         agentRailWidth: RAIL_WIDTH.end.initial,
-        fileTreeOpen: false,
-        fileTreeWidth: FILE_TREE_WIDTH.initial,
         diffTarget: {},
         pluginSettings: {},
         disabledPlugins: [],

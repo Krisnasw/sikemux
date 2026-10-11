@@ -281,7 +281,7 @@ export function runKeybindingAction(action: KeybindingActionId, event: KeyboardE
             if (!reachesBrowser(event)) return false;
             return cmd.browserHistory(1);
         case "window.files":
-            cmd.toggleFileTree();
+            cmd.openEditorPane();
             return true;
         case "window.terminal":
             cmd.selectWindowByRole("term");

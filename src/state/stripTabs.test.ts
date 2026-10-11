@@ -18,7 +18,7 @@ describe("selectSwipeOrder", () => {
             editorViews: { "e1-pane": { openTabs: [], activePath: null } },
         } as unknown as StoreState;
 
-        expect(selectSwipeOrder(state, "s")).toEqual(["a1", "g1", "a2"]);
+        expect(selectSwipeOrder(state, "s")).toEqual(["a1", "e1", "g1", "a2"]);
     });
 });
 
@@ -32,7 +32,7 @@ describe("expandTabRefs", () => {
             g1: win("g1", "git"),
         });
 
-        expect(refs.map(tabRefKey)).toEqual(["t1", "s1", "g1"]);
+        expect(refs.map(tabRefKey)).toEqual(["t1", "e1", "s1", "g1"]);
     });
 
     it("expands an editor into one tab per open document, in their open order", () => {
@@ -41,10 +41,10 @@ describe("expandTabRefs", () => {
         expect(refs.map(tabRefKey)).toEqual(["e1:/a.ts", "e1:/b.ts"]);
     });
 
-    it("gives an editor holding nothing no tab", () => {
+    it("gives an editor holding nothing one tab for itself", () => {
         const refs = expandTabRefs(["e1"], { e1: win("e1", "files") }, { "e1-pane": { openTabs: [], activePath: null } });
 
-        expect(refs.map(tabRefKey)).toEqual([]);
+        expect(refs.map(tabRefKey)).toEqual(["e1"]);
     });
 
     it("keeps a document's tab beside the terminals and agents it shares a strip with", () => {

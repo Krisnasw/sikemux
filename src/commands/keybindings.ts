@@ -319,8 +319,8 @@ const coreKeybindingActions = [
     },
     {
         id: "window.files",
-        label: "Toggle file tree",
-        detail: "Show or hide the project's files beside the stage",
+        label: "Focus files",
+        detail: "Jump to the files window",
         category: "Navigation",
         defaultBinding: on("Meta+KeyE", "Ctrl+Alt+KeyE"),
     },

@@ -13,7 +13,7 @@ import { holdStageMotion } from "../state/nativeViews";
 export const RAIL_MOTION_MS = 400;
 const EASE = "cubic-bezier(0.25, 1, 0.5, 1)";
 
-const isStart = (rail: HTMLElement) => rail.classList.contains("side-rail") || rail.classList.contains("files-rail");
+const isStart = (rail: HTMLElement) => rail.classList.contains("side-rail");
 
 /** How far the rail must tuck under the stage to give back all of its room, gap included. */
 function fullTuck(rail: HTMLElement): number {
@@ -55,8 +55,7 @@ const leavingFrom = new WeakMap<HTMLElement, { tuck: number; opacity: number }>(
 export const leavingRail = leavingRef<HTMLElement>(
     (rail) => {
         /* Whatever followed it, such as its resize handle, may have gone with it, and the rail must stay on its own side of the stage. */
-        if (rail.classList.contains("side-rail")) rail.parentElement?.prepend(rail);
-        else if (rail.classList.contains("files-rail")) rail.parentElement?.querySelector(":scope > .stage")?.before(rail);
+        if (isStart(rail)) rail.parentElement?.prepend(rail);
         else rail.parentElement?.append(rail);
         const from = leavingFrom.get(rail) ?? { tuck: 0, opacity: 1 };
         const full = fullTuck(rail);

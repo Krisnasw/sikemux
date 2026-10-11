@@ -16,19 +16,10 @@ function activeRole() {
     return state.windows[state.sessions[state.activeSessionId].activeWindowId].role;
 }
 
-it("toggles the file tree from Files without opening a window", () => {
-    setState({ fileTreeOpen: false });
-    render(<SideRail />);
-    fireEvent.click(screen.getByRole("button", { name: "Files" }));
-    expect(getState().fileTreeOpen).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Files" }));
-    expect(getState().fileTreeOpen).toBe(false);
-    expect(Object.values(getState().windows).some((window) => window.role === "files")).toBe(false);
-});
-
-it("opens and reuses Git and Search from the expanded project tree", () => {
+it("opens and reuses Files, Git and Search from the expanded project tree", () => {
     render(<SideRail />);
     for (const [label, role] of [
+        ["Files", "files"],
         ["Git", "git"],
         ["Search", "search"],
     ]) {

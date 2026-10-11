@@ -1,3 +1,4 @@
+import { FileTree } from "../rail/FileTree";
 import { relocatedPath } from "../state/editorPaths";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invokeCommand as invoke } from "../api/invoke";
@@ -42,7 +43,7 @@ import { useGitBaseline } from "../hooks/useGitBaseline";
 import { useGitBlame } from "../hooks/useGitBlame";
 import { refreshBlame } from "./gitBlame";
 import type { CliPendingEditorOpen, DeskReveal } from "../state/types";
-import { IconClose, IconEditor, IconEye } from "../ui/Icons";
+import { IconClose, IconEditor, IconEye, IconFile } from "../ui/Icons";
 import { FileIcon } from "../ui/FileIcon";
 import { TabBar } from "../workspace/TabBar";
 import { EditorFindBar } from "./EditorFindBar";
@@ -51,6 +52,7 @@ import { PaneField } from "../ui/ShaderField";
 import { basename, dirname, isPathWithin, joinPath, normalizePath } from "../lib/paths";
 import { localPath } from "../chat/imagePreview";
 import { safeWebUrl } from "../terminal/interactions";
+import { keybindingLabelForAction } from "../commands/keybindings";
 
 const FileViewer = lazy(() => import("./viewers/FileViewer"));
 
@@ -196,6 +198,7 @@ export function EditorPane({
     const showConflictRef = useRef<(path: string, detail: string) => void>(() => {});
     const reloadFromDiskRef = useRef<(path: string, announce?: boolean) => Promise<void>>(async () => {});
 
+    const [treeWidth, setTreeWidth] = useState(240);
     const [dirty, setDirty] = useState<ReadonlySet<string>>(() => new Set());
     const dirtyRef = useRef(dirty);
     dirtyRef.current = dirty;
@@ -242,7 +245,9 @@ export function EditorPane({
     };
 
     const view = useStore((s) => s.editorViews[paneId] ?? DEFAULT_VIEW);
+    const keybindingOverrides = useStore((s) => s.keybindingOverrides);
     const paneShader = useStore((s) => s.paneShader);
+    const filePaletteHint = keybindingLabelForAction(keybindingOverrides, "palette.files");
     const pendingCliOpens = useStore((s) => s.pendingEditorOpens[paneId] ?? EMPTY_CLI_OPENS);
     const tabs = view.openTabs;
     const activePath = view.activePath;
@@ -551,6 +556,13 @@ export function EditorPane({
     };
 
     const openPathRef = useRef<(path: string, preview?: boolean) => Promise<void>>(async () => {});
+    const previewTreeFile = useCallback((entry: { path: string }) => {
+        void openPathRef.current(entry.path, true).catch(reportError("open file"));
+    }, []);
+    const keepTreeFile = useCallback((entry: { path: string }) => {
+        void openPathRef.current(entry.path).catch(reportError("open file"));
+    }, []);
+
     const openLinkedFile = useCallback((path: string) => {
         void openPathRef.current(path).catch(reportError("open linked file"));
     }, []);
@@ -921,7 +933,7 @@ export function EditorPane({
             const belongsToAProject = Object.values(useStore.getState().sessions).some((s) => s?.kind === "project" && isPathWithin(e.path, s.cwd));
             if (!belongsHere && (belongsToAProject || !active)) return;
             void (async () => {
-                await openPathRef.current(e.path, e.preview);
+                await openPathRef.current(e.path);
                 if (e.line != null && viewRef.current && !showsViewer(e.path)) {
                     scrollToLine(viewRef.current, e.line, e.character ?? 0);
                 }
@@ -1035,7 +1047,6 @@ export function EditorPane({
             activePath: nextActive,
             preview: view.preview && closing.has(view.preview) ? undefined : view.preview,
         });
-        if (next.length === 0 && !bare && !onCloseWindow) cmd.closeEmptyEditorWindow(paneId);
     };
 
     const toggleMarkdownPreview = () => {
@@ -1052,6 +1063,17 @@ export function EditorPane({
 
     return (
         <div className="editor-pane">
+            {!onCloseWindow && !bare && (
+                <FileTree
+                    width={treeWidth}
+                    onResize={setTreeWidth}
+                    cwd={cwd}
+                    activePath={activePath}
+                    onOpenFile={previewTreeFile}
+                    onKeepFile={keepTreeFile}
+                    active={visible}
+                />
+            )}
             <div className="ed-main">
                 {!bare && <PaneField enabled={paneShader} />}
                 {/* An ordinary editor's documents are tabs in the session
@@ -1135,6 +1157,16 @@ export function EditorPane({
                         onNavigate={(path, line, character) => nav.push({ path, line, character })}
                         paneId={paneId}
                     />
+                )}
+                {tabs.length === 0 && !bare && (
+                    <div className="ed-empty">
+                        <IconFile size={22} />
+                        <p>Open a file to get started</p>
+                        <p className="ed-empty-sub">Browse the project tree or search by name.</p>
+                        <button type="button" className="settings-btn primary" onClick={cmd.openFilePalette}>
+                            Open file <kbd>{filePaletteHint}</kbd>
+                        </button>
+                    </div>
                 )}
             </div>
         </div>

@@ -1,4 +1,4 @@
-import { clampFileTreeWidth, clampRailWidth, type RailEdge } from "../../lib/railWidths";
+import { clampRailWidth, type RailEdge } from "../../lib/railWidths";
 import { invalidate } from "../resources";
 import { selectFocusMode } from "../selectors";
 import { getState, mutate, setState } from "../store";
@@ -54,8 +54,6 @@ export const toggleSettings = (): void => setState((s) => ({ settingsOpen: !s.se
 
 export const toggleSideRail = (): void => setState((s) => ({ sideRailOpen: !s.sideRailOpen }));
 export const toggleAgentRail = (): void => setState((s) => ({ agentRailOpen: !s.agentRailOpen }));
-export const toggleFileTree = (): void => setState((s) => ({ fileTreeOpen: !s.fileTreeOpen }));
-export const setFileTreeWidth = (px: number): void => setState({ fileTreeWidth: clampFileTreeWidth(px) });
 export const setRailWidth = (edge: RailEdge, px: number): void =>
     setState(edge === "start" ? { sideRailWidth: clampRailWidth(edge, px) } : { agentRailWidth: clampRailWidth(edge, px) });
 export const toggleZen = (): void =>

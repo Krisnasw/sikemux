@@ -1,34 +1,10 @@
 import { emit } from "../bus";
-import { collectPanes } from "../layout";
-import { getState, mutate, type StoreState } from "../store";
+import { mutate, type StoreState } from "../store";
 import { ensureRoleWindow } from "./shared";
-import { closeWindowById } from "./tabs";
 
-function activeFilesWindow() {
-    const st = getState();
-    return (st.windowsBySession[st.activeSessionId] ?? []).map((id) => st.windows[id]).find((win) => win?.role === "files");
-}
-
-/** A preview is the tab a single click in the file tree borrows; the next preview takes its place. */
-export function requestOpenFile(path: string, line?: number, character?: number, preview = false): void {
-    const existed = !!activeFilesWindow();
+export function requestOpenFile(path: string, line?: number, character?: number): void {
     ensureRoleWindow("files", "editor", "editor", path);
-    const created = !existed ? activeFilesWindow() : undefined;
-    if (created && preview)
-        mutate((d) => {
-            const view = d.editorViews[created.activePaneId];
-            if (view) view.preview = path;
-        });
-    emit({ type: "open-file", path, line, character, preview });
-}
-
-/** The editor has no page of its own to show, so it goes once its last file does. */
-export function closeEmptyEditorWindow(paneId: string): void {
-    const st = getState();
-    const win = Object.values(st.windows).find(
-        (candidate) => candidate.role === "files" && collectPanes(candidate.root).every((pane) => pane.id === paneId),
-    );
-    if (win) closeWindowById(win.id);
+    emit({ type: "open-file", path, line, character });
 }
 
 export const openEditorPane = (): void => ensureRoleWindow("files", "editor", "editor");

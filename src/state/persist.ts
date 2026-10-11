@@ -11,7 +11,7 @@ import { normaliseKeybindingOverrides } from "../commands/keybindings";
 import type { CommandContext, CustomCommand, CustomCommandPlacement } from "../commands/registry";
 import { registerCustomThemes } from "../themes/bus";
 import { normalizePermissionMode } from "../agents/agentLaunch";
-import { clampFileTreeWidth, clampRailWidth } from "../lib/railWidths";
+import { clampRailWidth } from "../lib/railWidths";
 import { mergePinnedIntoRoots, normaliseProjectRoots, pruneOnDemandWindows } from "./commands";
 import { agentPaneId } from "./selectors";
 import { collectPanes, newId, removePane } from "./layout";
@@ -109,8 +109,6 @@ const PERSISTED_KEYS = [
     "agentRailOpen",
     "sideRailWidth",
     "agentRailWidth",
-    "fileTreeOpen",
-    "fileTreeWidth",
     "pluginSettings",
     "disabledPlugins",
     "restoreAgentTabs",
@@ -178,8 +176,6 @@ function packPrefs(s: StoreState): PersistedPrefs {
         agentRailOpen: s.agentRailOpen,
         sideRailWidth: s.sideRailWidth,
         agentRailWidth: s.agentRailWidth,
-        fileTreeOpen: s.fileTreeOpen,
-        fileTreeWidth: s.fileTreeWidth,
         pluginSettings: s.pluginSettings,
         disabledPlugins: [...s.disabledPlugins],
         restoreAgentTabs: s.restoreAgentTabs,
@@ -1151,11 +1147,6 @@ export function applyHydrate(raw: string): HydrationResult {
             typeof prefs.agentRailWidth === "number" && Number.isFinite(prefs.agentRailWidth)
                 ? clampRailWidth("end", prefs.agentRailWidth)
                 : cur.agentRailWidth,
-        fileTreeOpen: typeof prefs.fileTreeOpen === "boolean" ? prefs.fileTreeOpen : cur.fileTreeOpen,
-        fileTreeWidth:
-            typeof prefs.fileTreeWidth === "number" && Number.isFinite(prefs.fileTreeWidth)
-                ? clampFileTreeWidth(prefs.fileTreeWidth)
-                : cur.fileTreeWidth,
         pluginSettings: normalisePluginSettings(prefs.pluginSettings),
         disabledPlugins: Array.isArray(prefs.disabledPlugins) ? [...new Set(prefs.disabledPlugins.filter(isPluginId))] : [],
         restoreAgentTabs,
