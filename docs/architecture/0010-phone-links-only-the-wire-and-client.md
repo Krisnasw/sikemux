@@ -38,9 +38,11 @@ phone never runs.
 - Changes to the core's server, its chat drivers, the harness, the terminal engine and the
   desktop's dependencies no longer change the phone's native code. Only a change to the
   wire format, the client, `sikemux-mobile` or a dependency they share needs a store build.
-- A field the core adds inside JSON the phone already passes through, such as a chat
-  update, reaches the phone with an over-the-air update. A field on a typed UniFFI record
-  in `sikemux-mobile` still needs a store build.
+- What the phone shows of a host crosses the bridge as the core's own JSON: chat events,
+  the device view and the host's info, read by TypeScript in `mobile/app/src/core`. A
+  field the core adds there reaches the phone with an over-the-air update. Only what the
+  native side acts on itself, such as a chat's place in its feed, stays a typed UniFFI
+  record, and a field on one of those still needs a store build.
 - The moves themselves changed the fingerprint once, so the release that carries them
   goes out as a store build.
 - `mobile/app/test/fingerprint.test.ts` pins the crates the phone counts, so a new

@@ -48,7 +48,7 @@ function fakeDevice() {
 }
 
 const VIEW = {
-  workspace: { projects: [], launchers: [], palette: new Map(), backdrop: { texture: false } },
+  workspace: { projects: [], launchers: [], palette: {}, backdrop: { texture: false } },
   sessions: [],
   chats: [],
   attentions: [],
@@ -106,10 +106,10 @@ describe('the hub', () => {
   it('keeps the view the host sends before the connection is handed over', async () => {
     hub.watch('host');
     await vi.waitFor(() => expect(fake.calls).toHaveLength(1));
-    fake.calls[0].listener.events([CoreEvent.View.new({ view: VIEW })] as never);
+    fake.calls[0].listener.events([CoreEvent.View.new({ viewJson: JSON.stringify(VIEW) })] as never);
     fake.calls[0].settle(new FakeConnection());
     await vi.waitFor(() => expect(hub.liveOf('host').status).toBe('open'));
-    expect(hub.liveOf('host').snapshot).toBe(VIEW);
+    expect(hub.liveOf('host').snapshot).toEqual(VIEW);
   });
 
   it('stops trying a host that forgot this phone, and tries an unreachable one again', async () => {
@@ -215,7 +215,7 @@ describe('the hub', () => {
   it('reads as reconnecting while a dropped connection comes back, and as unreachable only after a few tries', async () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     const connection = await opened();
-    fake.calls[0].listener.events([CoreEvent.View.new({ view: VIEW })] as never);
+    fake.calls[0].listener.events([CoreEvent.View.new({ viewJson: JSON.stringify(VIEW) })] as never);
     await vi.advanceTimersByTimeAsync(30_000);
     fake.calls[0].listener.closed();
     expect(connection.closed).toBe(true);
@@ -305,12 +305,12 @@ describe('the hub', () => {
     hub.onChatEvents('host', () => order.push(`chat with view ${hub.liveOf('host').snapshot ? 'set' : 'unset'}`));
     const last = { ...VIEW, chats: [] };
     fake.calls[0].listener.events([
-      CoreEvent.View.new({ view: VIEW }),
+      CoreEvent.View.new({ viewJson: JSON.stringify(VIEW) }),
       CoreEvent.Chat.new({ agentId: 'a', seq: 1n, eventJson: '{}' }),
-      CoreEvent.View.new({ view: last }),
+      CoreEvent.View.new({ viewJson: JSON.stringify(last) }),
     ] as never);
     expect(order).toEqual(['chat with view unset']);
-    expect(hub.liveOf('host').snapshot).toBe(last);
+    expect(hub.liveOf('host').snapshot).toEqual(last);
   });
 
   it('keeps showing a host that forgot this phone as such, until it is tried on purpose', async () => {

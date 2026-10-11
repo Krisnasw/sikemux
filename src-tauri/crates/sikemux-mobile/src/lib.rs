@@ -704,10 +704,10 @@ impl Connection {
 
 #[uniffi::export]
 impl Connection {
-    /// The computer the core runs on.
-    pub async fn host(&self) -> Result<HostInfo, MobileError> {
+    /// The computer the core runs on, as the core's `HostInfo` JSON.
+    pub async fn host(&self) -> Result<String, MobileError> {
         match self.ask(Request::Host).await? {
-            Response::Host { host } => Ok(host.into()),
+            Response::Host { host } => Ok(records::json(&host)),
             _ => Err(unexpected()),
         }
     }

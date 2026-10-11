@@ -2,7 +2,7 @@ import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { CoreEvent, MobileError, type ConnectionLike, type CoreListener } from '@sikemux/native';
 
-import { channelName, type Snapshot } from '@/core/protocol';
+import { readHost, readView, type Snapshot } from '@/core/protocol';
 import { goOffline, thisDevice } from '@/device/identity';
 import { onNetworkChange } from '@/network/connectivity';
 import { dismissHostCards, reconcileCards } from '@/notify/cards';
@@ -203,7 +203,7 @@ function listener(core: string, found: Entry, attempt: object): CoreListener {
       for (const event of events) {
         if (CoreEvent.Chat.instanceOf(event)) chats.push(event.inner);
         // Each view is whole, so of several in one batch only the last matters.
-        else if (CoreEvent.View.instanceOf(event)) view = event.inner.view;
+        else if (CoreEvent.View.instanceOf(event)) view = readView(event.inner.viewJson);
       }
       if (chats.length) {
         found.chats.forEach((listen) => {
@@ -265,7 +265,8 @@ async function connect(core: string, found: Entry) {
   shareKey(core, connection).then(() => withdrawIfForgotten(core));
   connection
     .host()
-    .then((host) => updateDevice(core, { name: host.name, model: host.model, channel: channelName(host.channel), lastSeen: Date.now() }))
+    .then(readHost)
+    .then((host) => updateDevice(core, { name: host.name, model: host.model, channel: host.channel, lastSeen: Date.now() }))
     .then(reloadDevices)
     .catch(() => {});
 }

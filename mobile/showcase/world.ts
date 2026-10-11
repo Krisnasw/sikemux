@@ -165,9 +165,9 @@ export const RECENT = [
 ];
 
 export const SESSIONS = [
-  { id: 11n, project: 'p-shop', task: { label: 'dev', command: 'pnpm dev', cwd: `${HOME}/acme-shop`, project: 'p-shop' } },
-  { id: 12n, project: 'p-shop' },
-  { id: 13n, project: 'p-api', task: { label: 'api', command: 'pnpm start', cwd: `${HOME}/payments-api`, project: 'p-api' } },
+  { id: 11, project: 'p-shop', task: { label: 'dev', command: 'pnpm dev', cwd: `${HOME}/acme-shop`, project: 'p-shop' } },
+  { id: 12, project: 'p-shop' },
+  { id: 13, project: 'p-api', task: { label: 'api', command: 'pnpm start', cwd: `${HOME}/payments-api`, project: 'p-api' } },
 ];
 
 /* A real chat's history says when each part of it happened, which is how a

@@ -3,10 +3,10 @@
  * showcase: one Mac is already paired and answers from the demo world instead
  * of the network.
  */
-import { BuildChannel, ChatAttachment, ChatState, CoreEvent, MobileError, SessionKind } from '../app/test/mocks/sikemux-native';
+import { ChatAttachment, CoreEvent, MobileError } from '../app/test/mocks/sikemux-native';
 import { CHATS, CORE, HOST, LAUNCHERS, PANE_PICTURE, PROJECTS, RECENT, SESSIONS, chatEvents, permissionPayload, setupOf } from './world';
 
-export { BuildChannel, ChatAttachment, ChatState, CoreEvent, MobileError, SessionKind };
+export { ChatAttachment, CoreEvent, MobileError };
 
 const files = ((globalThis as { sikemuxTestFiles?: Map<string, string> }).sikemuxTestFiles ??= new Map());
 files.set(
@@ -37,12 +37,12 @@ function view() {
     workspace: {
       projects: PROJECTS,
       launchers: LAUNCHERS,
-      palette: new Map<string, string>(),
+      palette: {},
       backdrop: { texture: true, image: 'pane' },
     },
     sessions: SESSIONS.map((session) => ({
       id: session.id,
-      kind: session.task ? SessionKind.Task : SessionKind.Terminal,
+      kind: session.task ? 'task' : 'terminal',
       running: true,
       cols: 120,
       rows: 34,
@@ -55,7 +55,7 @@ function view() {
       provider: chat.provider,
       title: chat.title,
       cwd: projectPath(chat.project),
-      state: ChatState.Ready,
+      state: 'ready',
       running: chat.running,
       pendingPermissions: chat.asking ? [`ask-${chat.agentId}`] : [],
       launcher: chat.provider,
@@ -71,8 +71,8 @@ function view() {
               agentId: chat.agentId,
               provider: chat.provider,
               cwd: projectPath(chat.project),
-              requestJson: JSON.stringify(request),
-              at: BigInt(Date.now() - 90_000),
+              request,
+              at: Date.now() - 90_000,
             },
           ]
         : [];
@@ -83,7 +83,7 @@ function view() {
       title: chat.title,
       project: chat.project,
       cwd: projectPath(chat.project),
-      activeAt: BigInt(Date.now() - chat.hours * 3_600_000),
+      activeAt: Date.now() - chat.hours * 3_600_000,
     })),
   };
 }
@@ -92,7 +92,7 @@ class Connection {
   private open = true;
 
   constructor(listener: Listener) {
-    setTimeout(() => listener.events([CoreEvent.View.new({ view: view() })]), 0);
+    setTimeout(() => listener.events([CoreEvent.View.new({ viewJson: JSON.stringify(view()) })]), 0);
   }
 
   isOpen() {
@@ -104,7 +104,7 @@ class Connection {
   }
 
   async host() {
-    return { ...HOST, version: '0.4.2', channel: BuildChannel.Stable };
+    return JSON.stringify({ ...HOST, version: '0.4.2', channel: 'stable' });
   }
 
   async wakeChat() {}

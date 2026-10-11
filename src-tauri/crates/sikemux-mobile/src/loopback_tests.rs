@@ -136,7 +136,7 @@ async fn loopback_device(key: SecretKey) -> Device {
 /// screen would.
 #[derive(Default)]
 struct Views {
-    views: Mutex<Vec<DeviceView>>,
+    views: Mutex<Vec<sikemux_wire::protocol::DeviceView>>,
     closed: AtomicBool,
 }
 
@@ -149,7 +149,8 @@ impl Views {
 impl CoreListener for Views {
     fn events(&self, events: Vec<CoreEvent>) -> Result<(), ListenerError> {
         for event in events {
-            if let CoreEvent::View { view } = event {
+            if let CoreEvent::View { view_json } = event {
+                let view = serde_json::from_str(&view_json).expect("the view is the core's JSON");
                 self.views.lock().unwrap().push(view);
             }
         }
