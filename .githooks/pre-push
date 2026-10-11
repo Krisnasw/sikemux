@@ -10,8 +10,8 @@ credited="$(
     else
       range="origin/main..$local_sha"
     fi
-    git log --format='%h %s%n%(trailers:key=Co-authored-by,valueonly)%b' "$range" |
-      awk '/^[0-9a-f]{7,} / { commit = $0; next } tolower($0) ~ /claude|anthropic\.com/ && commit != "" { print "  " commit; commit = "" }'
+    git log --format='commit %h %s%n%B' "$range" |
+      awk '/^commit [0-9a-f]+ / { commit = substr($0, 8); next }tolower($0) ~ /^co-authored-by:.*(claude|anthropic\.com)|generated with \[?claude code/ && commit != "" { print "  " commit; commit = "" }'
   done <<<"$refs"
 )"
 if [ -n "$credited" ]; then
