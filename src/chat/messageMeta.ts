@@ -43,21 +43,26 @@ function answerMeta(messages: ChatMessage[], endIndex: number): RowMeta {
     let chars = 0;
     let written = 0;
     let started: number | null = null;
+    // A turn the agent began by itself starts when the core said, not with the prompt before it.
+    let opened: number | null | undefined;
     let index = endIndex;
     for (; index >= 0 && messages[index].role === "assistant"; index -= 1) {
         const message = messages[index];
+        if (message.opensTurn && messages[index - 1]?.role === "assistant") opened = message.opensTurn.at;
         started = message.sentAt ?? started;
         const text = messageText(message);
         if (text) blocks.unshift(text);
         const span =
             message.streamStartedAt !== undefined && message.streamEndedAt !== undefined ? message.streamEndedAt - message.streamStartedAt : 0;
-        if (span <= 0) continue;
-        chars += message.streamChars ?? 0;
-        written += span;
+        if (span > 0) {
+            chars += message.streamChars ?? 0;
+            written += span;
+        }
+        if (opened !== undefined) break;
     }
     const rate = chars > 0 && written >= MIN_SAMPLE_MS ? chars / CHARS_PER_TOKEN / (written / 1000) : null;
     const at = messages[endIndex].endedAt ?? null;
-    started = messages[index]?.sentAt ?? started;
+    started = opened !== undefined ? opened : (messages[index]?.sentAt ?? started);
     return { text: blocks.join("\n\n"), rate, at, took: at !== null && started !== null ? at - started : null };
 }
 
@@ -72,7 +77,7 @@ const known = new WeakMap<ChatMessage, RowMeta>();
 
 export function rowMeta(messages: ChatMessage[], index: number): RowMeta {
     const message = messages[index];
-    if (message.role === "assistant" && messages[index + 1]?.role === "assistant") return NO_META;
+    if (message.role === "assistant" && messages[index + 1]?.role === "assistant" && !messages[index + 1].opensTurn) return NO_META;
     const held = known.get(message);
     if (held) return held;
     const meta =
