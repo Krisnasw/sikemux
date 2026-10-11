@@ -167,17 +167,21 @@ function scheduleRetry(core: string, found: Entry) {
   found.retrying = setTimeout(() => open(core), wait * (0.8 + Math.random() * 0.4));
 }
 
-function release(found: Entry) {
+function release(core: string, found: Entry) {
   stopTimers(found);
   found.current = undefined;
-  if (found.live.status === 'open') found.live.connection.close();
+  if (found.live.status === 'open') {
+    found.live.connection.close();
+    // "Seen 5m ago" means when the phone last had the host, which is when a live connection ends.
+    if (!forgotten.has(core)) updateDevice(core, { lastSeen: Date.now() }).then(reloadDevices, () => {});
+  }
   if (found.openedAt !== undefined && Date.now() - found.openedAt >= STEADY_MS) found.attempt = 0;
   found.openedAt = undefined;
 }
 
 function drop(core: string, reason: string, error?: unknown) {
   const found = entry(core);
-  release(found);
+  release(core, found);
   const unpaired = MobileError.Unpaired.instanceOf(error);
   const outdatedBy = outdated(error);
   found.failure = reason;
@@ -269,13 +273,16 @@ async function connect(core: string, found: Entry) {
   connection
     .host()
     .then(readHost)
-    .then((host) => updateDevice(core, { name: host.name, model: host.model, channel: host.channel, lastSeen: Date.now() }))
-    .then(reloadDevices)
+    .then((host) => {
+      const known = devices.find((device) => device.core === core);
+      if (known?.name === host.name && known.model === host.model && known.channel === host.channel) return;
+      return updateDevice(core, { name: host.name, model: host.model, channel: host.channel }).then(reloadDevices);
+    })
     .catch(() => {});
 }
 
 function close(core: string, found: Entry, reason: string) {
-  release(found);
+  release(core, found);
   found.failure = undefined;
   found.recovering = false;
   set(core, found, { status: 'closed', problem: reason, snapshot: found.live.snapshot });
@@ -454,7 +461,7 @@ export async function forget(core: string) {
   await Promise.race([goodbye, new Promise((settle) => setTimeout(settle, UNPAIR_WAIT_MS))]);
   dismissHostCards(core);
   if (found) {
-    release(found);
+    release(core, found);
     found.live = FORGOTTEN;
   }
   entries.delete(core);
