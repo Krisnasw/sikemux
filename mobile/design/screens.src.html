@@ -167,6 +167,7 @@
   .dot.idle { background: var(--gray-700); }
   .dot.off { border: 1.5px solid var(--gray-700); }
   .status-slot { width: 20px; display: grid; place-items: center; flex: none; }
+  .status-slot .still { color: var(--warn); display: grid; }
   .subagents { display: inline-flex; align-items: center; gap: 3px; flex: none; margin-right: 6px; font: 500 12px var(--ui); color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
   .subagents svg { width: 11px; height: 11px; fill: currentColor; stroke: none; color: color-mix(in srgb, var(--live) 75%, transparent); }
 
@@ -1215,6 +1216,7 @@
             <div class="row"><span class="mark codex">{{IconCodex:20}}</span><div class="body"><div class="t">Fix the flaky PTY replay test</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux · Running a command…</div></div><span class="subagents">{{IconAgent:11}}3</span><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
             <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Tighten the rail spacing</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux · Editing…</div></div><span class="status-slot"><span class="loader"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
             <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Download size on the hero</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux-front · Done</div></div><span class="status-slot"><span class="dot acc"></span></span></div>
+            <div class="row"><span class="mark claude">{{IconClaude:20}}</span><div class="body"><div class="t">Watch the release build</div><div class="s"><span class="place">{{IconFolder:11}}</span>sikemux · Ready</div></div><span class="status-slot"><span class="still">{{IconCommand:11}}</span></span></div>
           </div>
           <div class="glabel">Recent</div>
           <div class="rows">
@@ -1226,7 +1228,7 @@
         <div class="fab">{{IconPlus:18}}New chat</div>
       </div>
       <div class="home-bar"></div></div>
-      <figcaption><b>Agents</b><div class="note">The agent waiting on you is simply the first row, with a white pulsing dot. The rest sit under small-caps labels with a hairline running right, as on the Mac's rail, with no boxes or dividers: open chats with their state at the end, then the saved chats the host's rail lists as recent, newest first, with their project while all projects are shown and their age at the end. The first ten show, and Show more brings the rest. Tapping a recent chat resumes it on the host and opens it, the squares standing in for its age while it starts; a phone that can only watch is told so under the list instead, as is why a resume failed. The project picker and the agent filter narrow both lists. The header scrolls with the list: once the name passes under the top bar, the bar takes it as its title and the Agents / Terminals row stays pinned beneath it, floating on the backdrop with no band of its own, and rows fade out as they slide under it.</div></figcaption>
+      <figcaption><b>Agents</b><div class="note">The agent waiting on you is simply the first row, with a white pulsing dot. The rest sit under small-caps labels with a hairline running right, as on the Mac's rail, with no boxes or dividers: open chats with their state at the end (an idle one with shells or monitors still running gets the Mac tabs' amber terminal glyph), then the saved chats the host's rail lists as recent, newest first, with their project while all projects are shown and their age at the end. The first ten show, and Show more brings the rest. Tapping a recent chat resumes it on the host and opens it, the squares standing in for its age while it starts; a phone that can only watch is told so under the list instead, as is why a resume failed. The project picker and the agent filter narrow both lists. The header scrolls with the list: once the name passes under the top bar, the bar takes it as its title and the Agents / Terminals row stays pinned beneath it, floating on the backdrop with no band of its own, and rows fade out as they slide under it.</div></figcaption>
     </figure>
 
     <figure><div class="phone"><div class="island"></div>

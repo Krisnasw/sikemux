@@ -77,6 +77,8 @@ export type ChatInfo = {
   pendingPermissions: string[];
   /** Subagents still running for it. */
   subagents: number;
+  /** Background shells and monitors still running for it; hosts from before it was sent leave it out. */
+  tasks?: number;
   startedBy?: string;
   launcher?: string;
   permissionMode: string;

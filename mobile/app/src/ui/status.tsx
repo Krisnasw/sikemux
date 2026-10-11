@@ -61,6 +61,17 @@ export function NeedsYou() {
   );
 }
 
+/** Shells or monitors an agent left running, in the Mac's terminal glyph so it does not read as the dot that waits on you. */
+export function StillRunning() {
+  const colors = useColors();
+  const styles = useStyles(makeStyles);
+  return (
+    <View style={styles.dotBox} accessible accessibilityLabel="Shells or monitors still running">
+      <Icon name="IconCommand" size={11} color={colors.warn} />
+    </View>
+  );
+}
+
 /** The subagents an agent still has running, as the Mac's tabs and rail count them. */
 export function SubagentCount({ count }: { count: number }) {
   const colors = useColors();

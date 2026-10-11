@@ -19,7 +19,7 @@ import { AgentIcon, Icon } from '@/ui/Icon';
 import { Button, IconButton } from '@/ui/controls';
 import { Row, Rows, SectionLabel } from '@/ui/list';
 import { Nav, Screen, useBottomGap } from '@/ui/screen';
-import { NeedsYou, SubagentCount, Working } from '@/ui/status';
+import { NeedsYou, StillRunning, SubagentCount, Working } from '@/ui/status';
 import { fonts, isLight, type Palette, typeFor, useColors, useStyles, useType, translucent } from '@/ui/theme';
 
 type Tab = 'agents' | 'terminals';
@@ -70,6 +70,7 @@ function ProjectTail({ snapshot, project }: { snapshot: Snapshot; project: Proje
 function ChatStatus({ chat }: { chat: ChatInfo }) {
   if (chat.pendingPermissions.length) return <NeedsYou />;
   if (chat.running) return <Working />;
+  if (chat.tasks || chat.subagents) return <StillRunning />;
   return null;
 }
 
