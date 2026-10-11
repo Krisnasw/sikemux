@@ -101,11 +101,11 @@ describe("PairingPrompt", () => {
         expect(asking).toHaveTextContent("Signed in as contact@nodelike.com");
         expect(asking).toHaveTextContent(/waits 1:5\d/);
         expect(screen.getByRole("radio", { name: /Full control/ })).toHaveAttribute("aria-checked", "true");
-        expect(container.inert).toBe(true);
+        await waitFor(() => expect(container.inert).toBe(true));
 
         transport.emit(REMOTE_STATUS_EVENT, status());
         await waitFor(() => expect(takeover(PIXEL_ASKS)).not.toBeInTheDocument());
-        expect(container.inert).toBe(false);
+        await waitFor(() => expect(container.inert).toBe(false));
     });
 
     it("allows the phone with the access the person chose", async () => {

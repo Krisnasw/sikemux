@@ -1439,6 +1439,8 @@ describe("AgentChatPane", () => {
         const scroller = document.querySelector(".chat-scroll") as HTMLElement;
         const content = document.querySelector(".chat-scroll-content") as HTMLElement;
         const row = document.querySelector(".chat-row") as HTMLElement;
+        const reply = row.cloneNode() as HTMLElement;
+        row.after(reply);
         let box = { top: -40, bottom: 120 };
         scroller.getBoundingClientRect = () => ({ top: 0, left: 0, width: 600, height: 400, bottom: 400, right: 600 }) as DOMRect;
         row.getBoundingClientRect = () => box as DOMRect;
@@ -1455,6 +1457,7 @@ describe("AgentChatPane", () => {
         box = { top: -600, bottom: -80 };
         reportResize(content);
         expect(scroller.scrollTop).toBe(-1100);
+        reply.remove();
         Reflect.deleteProperty(document, "elementFromPoint");
     });
 

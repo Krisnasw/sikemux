@@ -18,7 +18,8 @@ const distanceFromBottom = (scroller: HTMLElement) => Math.max(0, -scroller.scro
  * push what they are reading up the screen, so the row at the top of the view
  * is noted on every scroll and put back where it was. It is held by its bottom
  * edge: laid out from the bottom, a row that grows grows upwards, and only
- * growth below it moves that edge.
+ * growth below it moves that edge. The last row is the exception, held by its
+ * top edge, since it grows as the reply streams into it while it is read.
  */
 export function useStickToBottom({
     scrollRef,
@@ -31,7 +32,7 @@ export function useStickToBottom({
 }) {
     const [atBottom, setAtBottom] = useState(true);
     const atBottomRef = useRef(true);
-    const anchorRef = useRef<{ row: Element; bottom: number } | null>(null);
+    const anchorRef = useRef<{ row: Element; edge: "top" | "bottom"; offset: number } | null>(null);
 
     const noteAnchor = useCallback(() => {
         const scroller = scrollRef.current;
@@ -41,7 +42,8 @@ export function useStickToBottom({
         for (const offset of [1, 24, 64]) {
             const row = document.elementFromPoint?.(view.left + view.width / 2, view.top + offset)?.closest(".chat-row");
             if (row && scroller.contains(row)) {
-                anchorRef.current = { row, bottom: row.getBoundingClientRect().bottom - view.top };
+                const edge = Array.from(scroller.querySelectorAll(".chat-row")).at(-1) === row ? "top" : "bottom";
+                anchorRef.current = { row, edge, offset: row.getBoundingClientRect()[edge] - view.top };
                 return;
             }
         }
@@ -54,7 +56,7 @@ export function useStickToBottom({
         const resized = new ResizeObserver(() => {
             const anchor = anchorRef.current;
             if (atBottomRef.current || !anchor?.row.isConnected) return;
-            const moved = anchor.row.getBoundingClientRect().bottom - scroller.getBoundingClientRect().top - anchor.bottom;
+            const moved = anchor.row.getBoundingClientRect()[anchor.edge] - scroller.getBoundingClientRect().top - anchor.offset;
             if (Math.abs(moved) >= 1) scroller.scrollTop += moved;
         });
         resized.observe(content);
