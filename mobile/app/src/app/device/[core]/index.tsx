@@ -259,15 +259,11 @@ const ChatRow = memo(function ChatRow({
     <Row
       mark={<AgentIcon provider={chat.provider} size={20} />}
       title={chatTitle(chat)}
+      place={asking && attention ? undefined : place}
       detail={
         asking && attention ? (
           <>
             Needs input · <Wants attention={attention} />
-          </>
-        ) : place ? (
-          <>
-            <Place name={place} />
-            {` · ${state}`}
           </>
         ) : (
           state
@@ -278,17 +274,6 @@ const ChatRow = memo(function ChatRow({
     />
   );
 });
-
-/** A chat's project, marked with the folder the Mac's rail puts beside it. */
-function Place({ name }: { name: string }) {
-  const colors = useColors();
-  return (
-    <>
-      <Icon name="IconFolder" size={11} color={colors.live} />
-      {` ${name}`}
-    </>
-  );
-}
 
 const RecentRow = memo(function RecentRow({
   chat,
@@ -310,7 +295,7 @@ const RecentRow = memo(function RecentRow({
     <Row
       mark={<AgentIcon provider={chat.provider} size={20} />}
       title={chat.title}
-      detail={place ? <Place name={place} /> : undefined}
+      place={place}
       end={resuming ? <Working /> : <Text style={[type.meta, styles.age]}>{age(Number(chat.activeAt), minute * 60_000)}</Text>}
       onPress={() => onResume(chat)}
     />
