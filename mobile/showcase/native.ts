@@ -145,8 +145,11 @@ class Connection {
   async saveBackdrop() {
     return undefined;
   }
-  async saveChatFile(): Promise<string> {
-    throw new Error('the showcase has no host files');
+  async call(method: string): Promise<string> {
+    throw new Error(`the showcase host does not know ${method}`);
+  }
+  async callToFile(method: string): Promise<string> {
+    throw new Error(`the showcase host does not know ${method}`);
   }
 }
 

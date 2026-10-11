@@ -37,11 +37,12 @@ export function useHostFile(path: string, wanted: boolean): string | undefined {
     let current = true;
     let fetch = fetching.get(key);
     if (!fetch) {
+      const file = saved(core, path);
       // The Rust client decodes and writes the file, so its bytes never pass through JavaScript.
-      const dir = decodeURIComponent(folder(core).uri.replace(/^file:\/\//, ''));
+      const target = decodeURIComponent(file.uri.replace(/^file:\/\//, ''));
       fetch = connection
-        .saveChatFile(dir, path)
-        .then((written) => new File(`file://${written}`).uri)
+        .callToFile('chatFile', JSON.stringify({ path }), 'data', target)
+        .then(() => file.uri)
         .finally(() => fetching.delete(key));
       fetching.set(key, fetch);
     }

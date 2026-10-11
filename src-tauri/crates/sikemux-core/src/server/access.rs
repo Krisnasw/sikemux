@@ -29,6 +29,7 @@ pub(crate) const UNPAIRED: &str = "this device is no longer paired with this hos
 
 pub(crate) fn needs(request: &Request) -> Needs {
     match request {
+        Request::Call { method, .. } => super::calls::needs(method),
         Request::List
         | Request::Attach { .. }
         | Request::Detach { .. }
@@ -40,7 +41,6 @@ pub(crate) fn needs(request: &Request) -> Needs {
         | Request::AcpDetach { .. }
         | Request::AcpWake { .. }
         | Request::BackdropImage
-        | Request::ChatFile { .. }
         | Request::Unpair
         | Request::SetNotifications { .. }
         | Request::ClearNotifications

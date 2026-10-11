@@ -47,6 +47,9 @@ const REDIAL_TIMEOUT: Duration = Duration::from_secs(6);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 /// Room for the largest file over a slow relay.
 const UPLOAD_TIMEOUT: Duration = Duration::from_secs(120);
+/// Long enough for a call that answers with a file of the largest size a chat
+/// keeps, over a slow relay.
+const CALL_TIMEOUT: Duration = Duration::from_secs(120);
 /// Past the host's own wait, so its reason for giving up reaches the app.
 const WAKE_TIMEOUT: Duration = Duration::from_secs(WAKE_WAIT.as_secs() + 15);
 
@@ -694,6 +697,22 @@ impl Connection {
         }
     }
 
+    async fn called(
+        &self,
+        method: String,
+        params_json: &str,
+    ) -> Result<serde_json::Value, MobileError> {
+        let params = serde_json::from_str(params_json)
+            .map_err(|error| invalid(format!("the call's params are not JSON: {error}")))?;
+        match self
+            .reply_within(Request::Call { method, params }, CALL_TIMEOUT)
+            .await?
+        {
+            Reply::Response(Response::Called { result }) => Ok(result),
+            _ => Err(unexpected()),
+        }
+    }
+
     async fn done(&self, request: Request) -> Result<(), MobileError> {
         match self.ask(request).await? {
             Response::Done => Ok(()),
@@ -842,24 +861,33 @@ impl Connection {
         }
     }
 
-    /// Writes a file the host keeps for its chats, at `path` there, into
-    /// `dir` under the same name, and answers with where it is now.
-    pub async fn save_chat_file(&self, dir: String, path: String) -> Result<String, MobileError> {
-        let name = Path::new(&path)
-            .file_name()
-            .map(|name| name.to_string_lossy().into_owned())
-            .ok_or_else(|| invalid("that is not a file"))?;
-        let request = Request::ChatFile { path: path.into() };
-        let Reply::Response(Response::ChatFile { data }) =
-            self.reply_within(request, UPLOAD_TIMEOUT).await?
-        else {
-            return Err(unexpected());
-        };
-        let bytes = base64::engine::general_purpose::STANDARD
-            .decode(data)
-            .map_err(|_| invalid("the host sent a file this app cannot read"))?;
-        let saved = Path::new(&dir).join(name);
-        let written = saved.clone();
+    /// Calls one of the core's methods with `params_json` and answers with
+    /// its result as JSON. A host too old to know calls, or the method,
+    /// refuses it.
+    pub async fn call(&self, method: String, params_json: String) -> Result<String, MobileError> {
+        Ok(records::json(&self.called(method, &params_json).await?))
+    }
+
+    /// [`Self::call`], for a method whose result carries a file: the base64
+    /// in its `field` is written to `path` rather than passed to JavaScript,
+    /// and the rest of the result is answered as JSON.
+    pub async fn call_to_file(
+        &self,
+        method: String,
+        params_json: String,
+        field: String,
+        path: String,
+    ) -> Result<String, MobileError> {
+        let mut result = self.called(method, &params_json).await?;
+        let data = result
+            .as_object_mut()
+            .and_then(|fields| fields.remove(&field))
+            .ok_or_else(|| invalid(format!("the host's answer has no {field}")))?;
+        let bytes = data
+            .as_str()
+            .and_then(|data| base64::engine::general_purpose::STANDARD.decode(data).ok())
+            .ok_or_else(|| invalid("the host sent a file this app cannot read"))?;
+        let written = PathBuf::from(path);
         on_runtime(async move {
             if let Some(parent) = written.parent() {
                 tokio::fs::create_dir_all(parent).await?;
@@ -868,7 +896,7 @@ impl Connection {
         })
         .await?
         .map_err(|error| invalid(format!("could not save the file: {error}")))?;
-        Ok(saved.display().to_string())
+        Ok(records::json(&result))
     }
 
     pub async fn cancel(&self, agent_id: String) -> Result<(), MobileError> {

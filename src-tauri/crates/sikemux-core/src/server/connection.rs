@@ -15,6 +15,7 @@ use crate::protocol::{
 };
 
 use super::access::{self, Needs, Peer};
+use super::calls;
 use super::host;
 use super::prepare::{prepare_task, prepare_terminal};
 use super::session::{self, PendingStart};
@@ -741,24 +742,11 @@ async fn run_requests(
                     Err(error) => client.respond(request_id, Err(error)),
                 }
             }
-            Request::ChatFile { path } => {
-                let dir = core
-                    .listening
-                    .get()
-                    .and_then(|listening| listening.config.attachment_dir.clone())
-                    .ok_or_else(|| CoreError::from("this host keeps no files for chats"));
-                match dir {
-                    Ok(dir) => {
-                        tokio::spawn(async move {
-                            let result = blocking(move || attachments::read(&dir, &path)).await;
-                            client.respond(
-                                request_id,
-                                result.map(|data| Response::ChatFile { data }),
-                            );
-                        });
-                    }
-                    Err(error) => client.respond(request_id, Err(error)),
-                }
+            Request::Call { method, params } => {
+                tokio::spawn(async move {
+                    let result = calls::call(core, &method, params).await;
+                    client.respond(request_id, result.map(|result| Response::Called { result }));
+                });
             }
             Request::AcpCancel { agent_id } => {
                 let result = chat::cancel(&core, &agent_id);

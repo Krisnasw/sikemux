@@ -344,10 +344,13 @@ pub enum Request {
         mime: String,
         data: String,
     },
-    /// A file kept beside the pictures pasted into the app's chats, such as
-    /// one a message carried, for a device to show. Answered in base64.
-    ChatFile {
-        path: PathBuf,
+    /// A request by name, its `params` and answer as JSON. The core alone
+    /// knows each method, so a device gains one without its native code
+    /// changing. A method is never removed or renamed once released.
+    Call {
+        method: String,
+        #[serde(default)]
+        params: Value,
     },
     AcpCancel {
         agent_id: String,
@@ -924,8 +927,8 @@ pub enum Response {
     Attached {
         path: PathBuf,
     },
-    ChatFile {
-        data: String,
+    Called {
+        result: Value,
     },
 }
 
