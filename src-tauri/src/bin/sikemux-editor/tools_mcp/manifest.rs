@@ -107,7 +107,8 @@ impl Manifest {
         if self.offers_simulator() {
             instructions.push_str(
                 " To check an iOS app, sim_attach a simulator, read it with sim_state and act with sim_tap, sim_type and sim_swipe; load them together. \
-                 sim_attach shows the device live on your desk beside the person, as browser_navigate does a page, so do not look for Simulator.app or open screenshots elsewhere to show it.",
+                 sim_attach shows the device live on your desk beside the person, as browser_navigate does a page, so do not look for Simulator.app or open screenshots elsewhere to show it. \
+                 Put a build on it with sim_install and sim_launch, never expo run:ios, react-native run-ios or flutter run, which open a second simulator window on the person's screen.",
             );
         }
         instructions

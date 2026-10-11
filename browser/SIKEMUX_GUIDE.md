@@ -675,6 +675,14 @@ the call; it then answers with `launching`, and calling `sim_launch` again
 waits for that launch instead of starting the app over. `sim_terminate` quits
 an app, and `sim_open_url` opens a URL or a deep link.
 
+Do not install with `expo run:ios`, `react-native run-ios`, `flutter run` or
+`open -a Simulator`: once the app is on the device they open Simulator.app,
+or DeviceHub from Xcode 27, over the person's screen. For an Expo or React
+Native app, build it with `xcodebuild` as above and start only the bundler as
+a task (`expo start --dev-client` or `react-native start`, without `--ios`).
+An Expo development build then reaches it through `sim_open_url` with
+`<scheme>://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081`.
+
 `sim_logs` reads the device's log, kept from when you attached it, by
 `cursor`: start at `0` and pass back the `cursor` and `generation` it
 returns, as with `task_read`. It holds what apps log through `Logger`, `os_log` or `NSLog` at
