@@ -133,7 +133,7 @@ pub(super) fn replay(
             if let Some(at) = at {
                 for (target, update) in &mut out[from..] {
                     if target == session {
-                        super::super::stamp_replayed(update, at);
+                        super::super::stamp_replayed(update, Some(at), false);
                     }
                 }
             }

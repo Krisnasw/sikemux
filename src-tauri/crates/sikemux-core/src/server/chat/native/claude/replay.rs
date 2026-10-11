@@ -744,6 +744,10 @@ pub fn replay(records: &[Value], session_id: &str, cwd: &Path) -> Vec<(String, V
         failure_revisions: HashMap::new(),
     };
     let mut turn_id: Option<String> = None;
+    // Claude answers messages from other sessions and finished background
+    // tasks by itself; the prompt that wakes it is hidden, so a reply that
+    // follows a finished turn begins a new one.
+    let mut turn_over = false;
     for record in records {
         let parent = parent_tool_use_id(record);
         if str_field(record, "type") == Some("user") && parent.is_none() {
@@ -780,11 +784,19 @@ pub fn replay(records: &[Value], session_id: &str, cwd: &Path) -> Vec<(String, V
         }
         let message_id = message_id_for_grouping(record);
         let at = str_field(record, "timestamp").and_then(crate::accounts::live::parse_rfc3339);
-        for mut update in replay.convert(&content, role, message_id.as_deref()) {
-            if let Some(at) = at {
-                super::super::stamp_replayed(&mut update, at);
+        let updates = replay.convert(&content, role, message_id.as_deref());
+        let main_thread = parent.is_none();
+        let mut opens_turn = is_assistant && main_thread && turn_over && !updates.is_empty();
+        for mut update in updates {
+            if main_thread && str_field(&update, "sessionUpdate") == Some("user_message_chunk") {
+                turn_over = false;
             }
+            super::super::stamp_replayed(&mut update, at, opens_turn);
+            opens_turn = false;
             replay.updates.push((target.clone(), update));
+        }
+        if is_assistant && main_thread {
+            turn_over = str_field(message, "stop_reason") == Some("end_turn");
         }
     }
     replay.finish()

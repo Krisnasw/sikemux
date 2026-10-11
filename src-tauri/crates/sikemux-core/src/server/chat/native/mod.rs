@@ -19,14 +19,29 @@ use crate::protocol::ChatLaunch;
 use super::rebind::{Outcome, Rebind};
 use super::{Chat, ChatCommand};
 
-/// When a replayed update first happened, in Unix milliseconds, so a client
-/// rebuilding the chat can tell how long each turn took.
-fn stamp_replayed(update: &mut Value, at: u64) {
-    if let Some(fields) = update.as_object_mut() {
-        let meta = fields.entry("_meta").or_insert_with(|| json!({}));
-        if let Some(meta) = meta.as_object_mut() {
-            meta.insert("sikemux".into(), json!({ "at": at }));
-        }
+/// What a client rebuilding a chat needs to tell its turns apart: when a
+/// replayed update first happened, in Unix milliseconds, and whether it began
+/// a turn the agent started by itself.
+fn stamp_replayed(update: &mut Value, at: Option<u64>, opens_turn: bool) {
+    let Some(fields) = update
+        .as_object_mut()
+        .filter(|_| at.is_some() || opens_turn)
+    else {
+        return;
+    };
+    let meta = fields.entry("_meta").or_insert_with(|| json!({}));
+    let Some(sikemux) = meta
+        .as_object_mut()
+        .map(|meta| meta.entry("sikemux").or_insert_with(|| json!({})))
+        .and_then(Value::as_object_mut)
+    else {
+        return;
+    };
+    if let Some(at) = at {
+        sikemux.insert("at".into(), json!(at));
+    }
+    if opens_turn {
+        sikemux.insert("opensTurn".into(), json!(true));
     }
 }
 
