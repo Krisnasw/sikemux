@@ -42,6 +42,31 @@ export function useStill(): boolean {
   return useSyncExternalStore(reduceMotion.subscribe, reduceMotion.get);
 }
 
+let minute = Math.floor(Date.now() / 60_000);
+const minuteListeners = new Set<() => void>();
+let minuteTimer: ReturnType<typeof setInterval> | undefined;
+
+/** The current minute, from one clock the whole app shares, for labels like "5m" that age as they sit. */
+export function useMinute(): number {
+  return useSyncExternalStore(
+    (listener) => {
+      minuteListeners.add(listener);
+      minuteTimer ??= setInterval(() => {
+        minute = Math.floor(Date.now() / 60_000);
+        minuteListeners.forEach((each) => each());
+      }, 60_000);
+      return () => {
+        minuteListeners.delete(listener);
+        if (minuteListeners.size === 0) {
+          clearInterval(minuteTimer);
+          minuteTimer = undefined;
+        }
+      };
+    },
+    () => minute,
+  );
+}
+
 /** Whether the app is in front. */
 export function useAppActive(): boolean {
   return useSyncExternalStore(appActive.subscribe, appActive.get);
