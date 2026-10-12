@@ -364,33 +364,43 @@ function stopSubagents(state: ChatState): ChatState {
     return changed ? { ...state, messages, revision: state.revision + 1 } : state;
 }
 
-function findSubagent(messages: ChatMessage[], sessionId: string): { messageIndex: number; partIndex: number } | null {
+/* A subagent can spawn subagents of its own, so its card holds theirs. */
+function patchSubagentIn(messages: ChatMessage[], sessionId: string, patch: (subagent: AcpSubagent) => AcpSubagent): ChatMessage[] | null {
     for (let messageIndex = messages.length - 1; messageIndex >= 0; messageIndex -= 1) {
-        const partIndex = messages[messageIndex].parts.findIndex((part) => part.kind === "subagent" && part.subagent.sessionId === sessionId);
-        if (partIndex >= 0) return { messageIndex, partIndex };
+        const message = messages[messageIndex];
+        for (let partIndex = message.parts.length - 1; partIndex >= 0; partIndex -= 1) {
+            const part = message.parts[partIndex];
+            if (part.kind !== "subagent") continue;
+            let subagent: AcpSubagent | null = null;
+            if (part.subagent.sessionId === sessionId) subagent = patch(part.subagent);
+            else {
+                const nested = patchSubagentIn(part.subagent.messages, sessionId, patch);
+                if (nested) subagent = { ...part.subagent, messages: nested };
+            }
+            if (!subagent) continue;
+            const parts = [...message.parts];
+            parts[partIndex] = { ...part, subagent };
+            const patched = [...messages];
+            patched[messageIndex] = { ...message, parts };
+            return patched;
+        }
     }
     return null;
 }
 
 function patchSubagent(state: ChatState, sessionId: string, patch: (subagent: AcpSubagent) => AcpSubagent): ChatState | null {
-    const found = findSubagent(state.messages, sessionId);
-    if (!found) return null;
-    const message = state.messages[found.messageIndex];
-    const current = message.parts[found.partIndex];
-    if (current.kind !== "subagent") return null;
-    const parts = [...message.parts];
-    parts[found.partIndex] = { ...current, subagent: patch(current.subagent) };
-    const messages = [...state.messages];
-    messages[found.messageIndex] = { ...message, parts };
-    return { ...state, messages, revision: state.revision + 1 };
+    const messages = patchSubagentIn(state.messages, sessionId, patch);
+    return messages ? { ...state, messages, revision: state.revision + 1 } : null;
 }
+
+const hasSubagent = (messages: ChatMessage[], sessionId: string) => patchSubagentIn(messages, sessionId, (subagent) => subagent) !== null;
 
 const SUBAGENT_STATES: AcpSubagent["state"][] = ["running", "completed", "failed", "cancelled", "disconnected"];
 const TASK_STATES: AcpAsyncTask["state"][] = ["running", "paused", "completed", "failed", "stopped"];
 
-function spawnSubagent(state: ChatState, update: Record<string, unknown>): ChatState {
+function withSubagent<T extends Transcript>(transcript: T, update: Record<string, unknown>, everywhere: ChatMessage[]): T | null {
     const sessionId = textOf(update.subagentSessionId);
-    if (!sessionId || findSubagent(state.messages, sessionId)) return state;
+    if (!sessionId || hasSubagent(everywhere, sessionId)) return null;
     const subagent: AcpSubagent = {
         sessionId,
         name: textOf(update.name) ?? "Subagent",
@@ -399,12 +409,19 @@ function spawnSubagent(state: ChatState, update: Record<string, unknown>): ChatS
         messages: [],
         nextId: 1,
     };
-    return {
-        ...state,
-        ...appendPart(state, { id: `subagent-${sessionId}`, kind: "subagent", subagent }),
-        suppressUserEcho: false,
-        revision: state.revision + 1,
-    };
+    return { ...transcript, ...appendPart(transcript, { id: `subagent-${sessionId}`, kind: "subagent", subagent }) };
+}
+
+function setSubagentState(state: ChatState, update: Record<string, unknown>): ChatState {
+    const subagentSessionId = textOf(update.subagentSessionId);
+    const subagentState = SUBAGENT_STATES.find((candidate) => candidate === update.state);
+    if (!subagentSessionId || !subagentState) return state;
+    return (
+        patchSubagent(state, subagentSessionId, (subagent) => {
+            const messages = subagentState === "running" ? null : settleMessages(subagent.messages, Date.now(), true);
+            return { ...subagent, state: subagentState, ...(messages ? { messages } : {}) };
+        }) ?? state
+    );
 }
 
 function spawnTask(state: ChatState, update: Record<string, unknown>): ChatState {
@@ -507,8 +524,12 @@ function endTurn(state: ChatState, stopReason: string | null, at = Date.now()): 
 }
 
 function sessionUpdate(state: ChatState, sessionId: string, update: Record<string, unknown>): ChatState {
+    if (update.sessionUpdate === "subagent_state_update") return setSubagentState(state, update);
     const inSubagent = patchSubagent(state, sessionId, (subagent) => {
-        const next = transcriptUpdate(subagent, update, state.running);
+        const next =
+            update.sessionUpdate === "subagent_spawned"
+                ? withSubagent(subagent, update, state.messages)
+                : transcriptUpdate(subagent, update, state.running);
         return next ? { ...subagent, ...next } : subagent;
     });
     if (inSubagent) return inSubagent;
@@ -530,18 +551,9 @@ function sessionUpdate(state: ChatState, sessionId: string, update: Record<strin
     }
 
     switch (update.sessionUpdate) {
-        case "subagent_spawned":
-            return spawnSubagent(state, update);
-        case "subagent_state_update": {
-            const subagentSessionId = textOf(update.subagentSessionId);
-            const subagentState = SUBAGENT_STATES.find((candidate) => candidate === update.state);
-            if (!subagentSessionId || !subagentState) return state;
-            return (
-                patchSubagent(state, subagentSessionId, (subagent) => {
-                    const messages = subagentState === "running" ? null : settleMessages(subagent.messages, Date.now(), true);
-                    return { ...subagent, state: subagentState, ...(messages ? { messages } : {}) };
-                }) ?? state
-            );
+        case "subagent_spawned": {
+            const spawned = withSubagent(state, update, state.messages);
+            return spawned ? { ...spawned, suppressUserEcho: false, revision: state.revision + 1 } : state;
         }
         case "async_task_spawned":
             return spawnTask(state, update);

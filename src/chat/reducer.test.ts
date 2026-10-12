@@ -328,6 +328,26 @@ describe("chat reducer", () => {
         expect(orphan.messages).toEqual([]);
     });
 
+    it("keeps a subagent's own subagents inside its card", () => {
+        const parent = update(initialChatState, {
+            sessionUpdate: "subagent_spawned",
+            subagentSessionId: "parent",
+            name: "Map pipeline",
+            task: "Map it",
+        });
+        const nested = update(parent, { sessionUpdate: "subagent_spawned", subagentSessionId: "child", name: "Explore", task: "Read" }, "parent");
+        const working = update(nested, { sessionUpdate: "tool_call", toolCallId: "tool-1", title: "Grep", status: "in_progress" }, "child");
+        const done = update(working, { sessionUpdate: "subagent_state_update", subagentSessionId: "child", state: "completed" }, "parent");
+
+        expect(done.messages).toHaveLength(1);
+        const [outer] = done.messages[0].parts;
+        if (outer.kind !== "subagent") throw new Error("expected the parent subagent");
+        const [inner] = outer.subagent.messages[0].parts;
+        if (inner.kind !== "subagent") throw new Error("expected the nested subagent");
+        expect(inner.subagent.state).toBe("completed");
+        expect(inner.subagent.messages[0].parts[0]).toMatchObject({ kind: "tool" });
+    });
+
     it("stops the calls a finished turn left mid-flight but not its subagents", () => {
         const spawned = update(initialChatState, {
             sessionUpdate: "subagent_spawned",
