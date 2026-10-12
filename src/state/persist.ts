@@ -14,7 +14,7 @@ import { effectiveMode, normalizePermissionMode } from "../agents/agentLaunch";
 import { ACCOUNT_AGENT_TYPES, AGENT_TYPES, hasAccounts, isAgentType } from "../agents/catalog";
 import { clampRailWidth } from "../lib/railWidths";
 import { mergePinnedIntoRoots, normaliseProjectRoots, pruneOnDemandWindows } from "./commands";
-import { agentPaneId } from "./selectors";
+import { agentInWindow } from "./selectors";
 import { collectPanes, newId, removePane } from "./layout";
 import { BROWSER_ACTIVE, deskEditorId, deskView, fileKey, simulatorKey } from "./desks";
 import { agentExecutablePath, relaunchSpec } from "./commands/agentLaunchCommand";
@@ -492,7 +492,7 @@ function withoutEmptyDesks(window: Window): Window | null {
 function durableWindow(s: StoreState, id: string): Window | null {
     const window = s.windows[id];
     if (!window || window.transient) return null;
-    const agent = window.role === "agent" ? s.agents[agentPaneId(window) ?? ""] : null;
+    const agent = agentInWindow(s.agents, window);
     if (window.role === "agent" && !agent?.resumeId && agent?.ptyId === undefined) return null;
     return withoutEmptyDesks(window);
 }
@@ -530,10 +530,8 @@ function snapshot(): string {
             return window ? [window] : [];
         });
         for (const window of windowsBySession[sess.id]) {
-            if (window.role === "agent") {
-                const agent = s.agents[agentPaneId(window) ?? ""];
-                if (agent) agents.push(persistedAgent(agent));
-            }
+            const agent = agentInWindow(s.agents, window);
+            if (agent) agents.push(persistedAgent(agent));
             const pending = [window.root];
             while (pending.length > 0) {
                 const node = pending.pop()!;
@@ -1022,7 +1020,7 @@ export function applyHydrate(raw: string): HydrationResult {
         windowsBySession[sid] = windowsBySession[sid].filter((id) => {
             const win = windows[id];
             if (win?.role !== "agent") return true;
-            if (sessions[sid].kind === "project" && agents[agentPaneId(win) ?? ""]) return true;
+            if (sessions[sid].kind === "project" && agentInWindow(agents, win)) return true;
             delete windows[id];
             return false;
         });

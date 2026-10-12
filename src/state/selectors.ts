@@ -91,6 +91,12 @@ export function projectSessionId(state: Pick<StoreState, "sessionOrder" | "sessi
     return state.sessionOrder.find((id) => state.sessions[id]?.kind === "project" && relativePath(state.sessions[id].cwd, cwd) === "") ?? null;
 }
 
+/** The agent an agent window holds; undefined for any other window. */
+export function agentInWindow(agents: Readonly<Record<string, Agent>>, win: Window | undefined): Agent | undefined {
+    const agentId = win?.role === "agent" ? agentPaneId(win) : null;
+    return agentId ? agents[agentId] : undefined;
+}
+
 /** The window an agent lives in, wherever it is. */
 export function agentWindowId(state: Pick<StoreState, "windows">, agentId: string): string | null {
     for (const win of Object.values(state.windows)) if (win.role === "agent" && agentPaneId(win) === agentId) return win.id;

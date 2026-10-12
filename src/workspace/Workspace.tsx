@@ -12,7 +12,7 @@ import { getState, useStore } from "../state/store";
 import {
     activeTabRef,
     agentDisplayOf,
-    agentPaneId,
+    agentInWindow,
     documentsOf,
     editorPaneOf,
     expandTabRefs,
@@ -154,8 +154,7 @@ export const Workspace = memo(function Workspace() {
                             const painted = isActive && pan.paints(wid);
                             // A live agent keeps its process whether or not it is on screen;
                             // a sleeping one has nothing to keep.
-                            const keepsProcess =
-                                win.role === "agent" ? agentsById[agentPaneId(win) ?? ""]?.launchState !== "dormant" : retained.has(wid);
+                            const keepsProcess = win.role === "agent" ? agentInWindow(agentsById, win)?.launchState !== "dormant" : retained.has(wid);
                             // A layer sliding out has to stay mounted for as long as it paints.
                             if (!live && !painted && wid !== session.activeWindowId && !keepsProcess) return null;
                             return (
@@ -383,7 +382,7 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
         const others = refs
             .flatMap((ref) => {
                 const win = ref.doc === undefined ? windowsById[ref.id] : undefined;
-                return win?.role === "agent" ? [agentsById[agentPaneId(win) ?? ""]] : [];
+                return win?.role === "agent" ? [agentInWindow(agentsById, win)] : [];
             })
             .filter((x): x is Agent => !!x && x.id !== agent.id);
         return agentMenu(agent, others, session, { close: closeShortcut, permissions: permissionsShortcut });
@@ -454,7 +453,7 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
                 ];
             }
             if (win.role === "agent") {
-                const agent = agentsById[agentPaneId(win) ?? ""];
+                const agent = agentInWindow(agentsById, win);
                 if (!agent) return [];
                 const display = agentDisplayOf({ agentActivity: activity, agentTasks, agentSubagents }, agent.id);
                 return [
@@ -605,7 +604,7 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
                 onRename={(key) => {
                     const win = windowsById[refByKey.get(key)?.id ?? paneOfTab.get(key)?.windowId ?? ""];
                     if (win?.role === "term") void renameTerminalTab(win, termTitles);
-                    const agent = win?.role === "agent" ? agentsById[agentPaneId(win) ?? ""] : undefined;
+                    const agent = agentInWindow(agentsById, win);
                     if (agent) void renameAgentPrompt(agent);
                 }}
                 onClose={(key) => {
@@ -632,7 +631,7 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
                     }
                     if (ref.doc !== undefined) return fileMenu(win, ref.doc);
                     if (win.role === "agent") {
-                        const agent = agentsById[agentPaneId(win) ?? ""];
+                        const agent = agentInWindow(agentsById, win);
                         return agent ? withSeparate(win, agentTabMenu(agent)) : [];
                     }
                     return withSeparate(win, windowMenu(win));
