@@ -56,7 +56,8 @@ impl Seen {
         state.active_at.insert(agent_id.to_owned(), unix_ms());
     }
 
-    pub(crate) fn opened(&self, agent_id: &str) {
+    /// The agent did something that leaves nothing new to look at.
+    pub(crate) fn active(&self, agent_id: &str) {
         self.lock().active_at.insert(agent_id.to_owned(), unix_ms());
     }
 
@@ -135,7 +136,7 @@ mod tests {
     fn an_agent_is_active_when_it_opens_works_or_wants_a_look() {
         let seen = Seen::default();
         assert_eq!(seen.active_at("a"), None);
-        seen.opened("a");
+        seen.active("a");
         let opened = seen.active_at("a").unwrap();
         seen.working("a");
         let worked = seen.active_at("a").unwrap();

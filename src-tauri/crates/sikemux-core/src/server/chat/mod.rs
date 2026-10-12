@@ -26,7 +26,7 @@ use crate::protocol::{
 };
 
 use super::connection::{ClientConn, ClientId};
-use super::notify::Signal;
+use super::activity::Activity;
 use super::remote::unix_ms;
 use super::{Core, CoreError, CoreResult};
 use feed::{Feed, Standing};
@@ -160,30 +160,22 @@ impl Chat {
             self.turned.store(true, Ordering::Release);
         }
         if let Some(core) = self.core.upgrade() {
-            let agent_id = self.agent_id().to_owned();
-            match kind {
-                ChatEventKind::TurnStarted => {
-                    core.seen.working(&agent_id);
-                    core.notify.send(Signal::TurnStarted { agent_id });
-                }
-                ChatEventKind::TurnCompleted => {
-                    core.seen.wants_a_look(&agent_id);
-                    let cancelled =
-                        payload.get("stopReason").and_then(Value::as_str) == Some("cancelled");
-                    core.notify.send(Signal::TurnCompleted {
-                        agent_id,
-                        cancelled,
-                    });
-                }
-                ChatEventKind::Error => {
-                    let message = payload
+            let activity = match kind {
+                ChatEventKind::TurnStarted => Some(Activity::Started),
+                ChatEventKind::TurnCompleted => Some(Activity::Finished {
+                    cancelled: payload.get("stopReason").and_then(Value::as_str)
+                        == Some("cancelled"),
+                }),
+                ChatEventKind::Error => Some(Activity::Problem(
+                    payload
                         .get("message")
                         .and_then(Value::as_str)
-                        .unwrap_or_default()
-                        .to_owned();
-                    core.notify.send(Signal::ChatError { agent_id, message });
-                }
-                _ => {}
+                        .unwrap_or_default(),
+                )),
+                _ => None,
+            };
+            if let Some(activity) = activity {
+                core.note_activity(self.agent_id(), activity);
             }
         }
         self.feed.emit(kind, payload);
@@ -264,7 +256,7 @@ impl Chat {
         permissions.insert(request_id, pending);
         drop(permissions);
         if let Some(core) = self.core.upgrade() {
-            core.seen.wants_a_look(self.agent_id());
+            core.note_activity(self.agent_id(), Activity::NeedsYou);
         }
         self.announce(&Event::Attention { attention });
         true
@@ -725,7 +717,7 @@ pub(crate) fn begin(
         launcher,
     };
     let (chat, queue) = core.chats.insert(core, launch_spec, origin)?;
-    core.seen.opened(chat.agent_id());
+    core.seen.active(chat.agent_id());
     if let Some(client) = subscriber {
         chat.feed.subscribe(client);
     }

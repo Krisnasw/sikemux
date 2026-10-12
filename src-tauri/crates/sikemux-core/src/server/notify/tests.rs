@@ -293,7 +293,7 @@ async fn a_problem_says_what_went_wrong_once_a_minute() {
     let host = host(NotifyWhen::Always);
     let error = |at: u64| {
         host.signal(
-            Signal::ChatError {
+            Signal::Problem {
                 agent_id: "chat-1".into(),
                 message: "the agent's process ended\nstack".into(),
             },

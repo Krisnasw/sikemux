@@ -752,10 +752,7 @@ pub(crate) fn report_exit(core: &Core, session: &Session, status: Option<&ExitSt
     if let Some(agent) = session.agent.as_ref() {
         agent::note_exit(core, agent, status);
         if let Some(reason) = failed.filter(|_| !session.is_killed()) {
-            core.notify.send(super::notify::Signal::AgentFailed {
-                agent_id: agent.agent_id().to_owned(),
-                reason,
-            });
+            core.note_activity(agent.agent_id(), super::activity::Activity::Problem(&reason));
         }
     }
     if let Some(exited_at) = exited_at {

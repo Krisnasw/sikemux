@@ -51,8 +51,7 @@ pub(crate) enum Signal {
     AgentState { agent_id: String, state: String },
     TurnStarted { agent_id: String },
     TurnCompleted { agent_id: String, cancelled: bool },
-    ChatError { agent_id: String, message: String },
-    AgentFailed { agent_id: String, reason: String },
+    Problem { agent_id: String, message: String },
 }
 
 #[derive(Default)]
@@ -255,15 +254,11 @@ fn apply(core: &Core, signal: Signal, now: u64) {
                 }
             }
         }
-        Signal::ChatError { agent_id, message } => {
-            if let Some(draft) = problem(core, &agent_id, &message, now) {
-                alert_all(core, &draft, now);
+        Signal::Problem { agent_id, message } => {
+            if core.notify.lock().waiting_for_input.remove(&agent_id) {
+                clear_all(core, &agent_id, &input_card(&agent_id), None, now);
             }
-        }
-        Signal::AgentFailed { agent_id, reason } => {
-            core.notify.lock().waiting_for_input.remove(&agent_id);
-            clear_all(core, &agent_id, &input_card(&agent_id), None, now);
-            if let Some(draft) = problem(core, &agent_id, &reason, now) {
+            if let Some(draft) = problem(core, &agent_id, &message, now) {
                 alert_all(core, &draft, now);
             }
         }
