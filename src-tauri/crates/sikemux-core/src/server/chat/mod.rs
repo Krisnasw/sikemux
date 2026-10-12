@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::acp::{bounded_text, current_choice, native as acp_native};
+use crate::acp::{bounded_text, current_choice, native as acp_native, permission};
 use crate::protocol::{
     Attention, AttentionKind, ChatAccount, ChatAttachment, ChatContext, ChatEventKind, ChatInfo,
     ChatLaunch, ChatMark, ChatStart, ChatState, Event, RequestId, Response,
@@ -313,6 +313,7 @@ impl Chat {
             agent_id: self.launch.agent_id.clone(),
             provider: self.launch.provider.clone(),
             cwd: self.launch.cwd.clone(),
+            choices: permission::choices(&pending.request),
             request: pending.request.clone(),
             at: pending.at,
         }
@@ -418,6 +419,9 @@ impl Chat {
             model: self.launch.model.clone(),
             effort: self.launch.effort.clone(),
             asleep: false,
+            group: Default::default(),
+            status: Default::default(),
+            attention_rank: 0,
             unread: false,
             active_at: None,
         }

@@ -12,7 +12,6 @@ use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Duration;
 
-use serde_json::Value;
 use tokio::sync::mpsc;
 
 use crate::accounts::live::Push;
@@ -46,7 +45,7 @@ const NEEDS_INPUT: &str = "blocked";
 /// Something that happened on this host that a phone may want to hear of.
 #[derive(Clone, Debug)]
 pub(crate) enum Signal {
-    Attention(Attention),
+    Attention(Box<Attention>),
     Cleared { id: String, agent_id: String },
     AgentState { agent_id: String, state: String },
     TurnStarted { agent_id: String },
@@ -202,7 +201,7 @@ fn apply(core: &Core, signal: Signal, now: u64) {
         Signal::Attention(attention) => {
             core.notify.lock().pending.insert(
                 (attention.agent_id.clone(), attention.id.clone()),
-                attention.clone(),
+                (*attention).clone(),
             );
             if let Some(draft) = permission(core, &attention) {
                 alert_all(core, &draft, now);
@@ -426,16 +425,8 @@ impl Named {
     }
 }
 
-fn option_of(request: &Value, kind: &str) -> Option<String> {
-    request
-        .get("options")?
-        .as_array()?
-        .iter()
-        .find(|option| option.get("kind").and_then(Value::as_str) == Some(kind))?
-        .get("optionId")?
-        .as_str()
-        .filter(|id| id.len() <= MAX_OPTION_ID)
-        .map(str::to_owned)
+fn option_id(id: &Option<String>) -> Option<String> {
+    id.clone().filter(|id| id.len() <= MAX_OPTION_ID)
 }
 
 fn permission(core: &Core, attention: &Attention) -> Option<Draft> {
@@ -452,15 +443,14 @@ fn permission(core: &Core, attention: &Attention) -> Option<Draft> {
         MAX_TITLE_CHARS,
     );
     draft.body = clip(&named.whereabouts(core, false), MAX_BODY_CHARS);
-    draft.detail = attention
-        .request
-        .pointer("/toolCall/title")
-        .and_then(Value::as_str)
-        .map(|title| clip(title, MAX_DETAIL_CHARS))
-        .filter(|title| !title.is_empty());
+    let choices = &attention.choices;
+    draft.detail = choices
+        .title
+        .as_deref()
+        .map(|title| clip(title, MAX_DETAIL_CHARS));
     draft.request_id = Some(attention.id.clone());
-    draft.allow_option_id = option_of(&attention.request, "allow_once");
-    draft.reject_option_id = option_of(&attention.request, "reject_once");
+    draft.allow_option_id = option_id(&choices.allow_once);
+    draft.reject_option_id = option_id(&choices.reject);
     Some(draft)
 }
 

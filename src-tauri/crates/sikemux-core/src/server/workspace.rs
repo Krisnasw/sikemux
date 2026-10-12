@@ -292,6 +292,9 @@ impl Workspaces {
                 asleep: chat.asleep,
                 unread: false,
                 active_at: None,
+                group: Default::default(),
+                status: Default::default(),
+                attention_rank: 0,
             })
             .collect();
         running.extend(stopped);
@@ -662,6 +665,9 @@ mod tests {
             asleep: false,
             unread: false,
             active_at: None,
+            group: Default::default(),
+            status: Default::default(),
+            attention_rank: 0,
         };
         assert_eq!(workspaces.recent(std::slice::from_ref(&live)).len(), 1);
         live.provider = "codex".into();

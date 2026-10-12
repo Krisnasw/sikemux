@@ -17,7 +17,7 @@ use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
 use crate::acp::account::{self, Failure, FailureKind};
-use crate::acp::{air, native, permission_mode_id, prompt_blocks, SessionEnd};
+use crate::acp::{air, native, permission, permission_mode_id, prompt_blocks, SessionEnd};
 use crate::protocol::{ChatEventKind, ChatLaunch, ChatStart};
 
 use super::rebind::{
@@ -247,11 +247,12 @@ pub(super) async fn run(
         .on_receive_request(
             async move |request: RequestPermissionRequest, responder, _connection| {
                 let chat = &permission_chat;
+                let mut payload = serde_json::to_value(&request).unwrap_or_else(|_| json!({}));
                 if chat.approves() {
-                    if let Some(option) = native::approval(&request.options) {
+                    if let Some(option_id) = permission::approval(&payload) {
                         return responder.respond(RequestPermissionResponse::new(
                             RequestPermissionOutcome::Selected(SelectedPermissionOutcome::new(
-                                option.option_id.clone(),
+                                option_id,
                             )),
                         ));
                     }
@@ -262,7 +263,6 @@ pub(super) async fn run(
                     .iter()
                     .map(|option| option.option_id.to_string())
                     .collect();
-                let mut payload = serde_json::to_value(&request).unwrap_or_else(|_| json!({}));
                 if let Some(object) = payload.as_object_mut() {
                     object.insert("requestId".into(), Value::String(request_id.clone()));
                 }

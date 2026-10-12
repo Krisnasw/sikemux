@@ -678,6 +678,39 @@ pub enum ChatState {
     /// failed to start.
     Stopped,
 }
+/// Where an agent stands for the person, in the order lists show the groups:
+/// waiting on them first. Only a running turn is Working; subagents and
+/// shells left running are counted beside the agent instead.
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+#[serde(rename_all = "camelCase")]
+pub enum AgentGroup {
+    /// It waits on a permission or an answer.
+    Blocked,
+    Working,
+    /// It finished a turn the person has not seen.
+    Done,
+    #[default]
+    Idle,
+}
+
+/// What a list says an agent is doing: its group, unless it is not running.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AgentStatus {
+    Blocked,
+    Working,
+    Done,
+    #[default]
+    Idle,
+    /// The app stopped it while idle; it starts again when opened.
+    Asleep,
+    /// It ended or failed to start.
+    Stopped,
+    Starting,
+}
+
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -711,6 +744,14 @@ pub struct ChatInfo {
     pub unread: bool,
     /// When it last opened, started work, finished or asked for something,
     /// in Unix milliseconds. Unknown for chats from before the core started.
+    #[serde(default)]
+    pub group: AgentGroup,
+    #[serde(default)]
+    pub status: AgentStatus,
+    /// Its place among the open agents, chats and agent terminals together,
+    /// in the order they want the person: 0 first.
+    #[serde(default)]
+    pub attention_rank: u32,
     pub active_at: Option<u64>,
 }
 
@@ -1297,6 +1338,13 @@ pub struct SessionInfo {
     pub unread: bool,
     /// When the agent last started work, finished or asked for something, in
     /// Unix milliseconds.
+    /// For an agent terminal the device view lists, as for a chat.
+    #[serde(default)]
+    pub group: Option<AgentGroup>,
+    #[serde(default)]
+    pub status: Option<AgentStatus>,
+    #[serde(default)]
+    pub attention_rank: Option<u32>,
     pub active_at: Option<u64>,
 }
 
@@ -1426,6 +1474,24 @@ pub struct Attention {
     /// The agent's own request, with what it wants to do and the options.
     pub request: Value,
     /// Milliseconds since the Unix epoch.
+    #[serde(default)]
+    pub choices: PermissionChoices,
+}
+
+/// What a permission request comes down to for a client that offers only
+/// allow, always allow and deny: the option each answers with, and what the
+/// agent wants to do.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PermissionChoices {
+    pub allow_once: Option<String>,
+    /// The allow that lasts longest, beyond the session when one does.
+    pub allow_always: Option<String>,
+    pub reject: Option<String>,
+    /// The shell command it wants to run, when it is one.
+    pub command: Option<String>,
+    /// What its tool call is called.
+    pub title: Option<String>,
     pub at: u64,
 }
 

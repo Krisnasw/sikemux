@@ -81,6 +81,9 @@ struct SessionInfo: Decodable, Equatable {
     let title: String?
     let unread: Bool
     let activeAt: Double?
+    let group: AgentState?
+    let status: AgentStatus?
+    let attentionRank: Int?
 }
 
 struct ChatInfo: Decodable, Equatable {
@@ -97,6 +100,9 @@ struct ChatInfo: Decodable, Equatable {
     let asleep: Bool
     let unread: Bool
     let activeAt: Double?
+    let group: AgentState
+    let status: AgentStatus
+    let attentionRank: Int
 }
 
 struct Attention: Decodable, Equatable {
@@ -104,17 +110,37 @@ struct Attention: Decodable, Equatable {
     let agentId: String
     let provider: String
     let cwd: String
-    let request: JSONValue
     let at: Double
+    let choices: PermissionChoices
 }
 
-enum AgentState: Int, Comparable {
-    case idle = 0
-    case done = 1
-    case working = 2
-    case blocked = 3
+/// A permission request as the core reads it for the island's three buttons.
+struct PermissionChoices: Decodable, Equatable {
+    let allowOnce: String?
+    let allowAlways: String?
+    let reject: String?
+    let command: String?
+    let title: String?
+}
 
-    static func < (lhs: AgentState, rhs: AgentState) -> Bool { lhs.rawValue < rhs.rawValue }
+/// The group the core puts an agent in, most in need of the person first.
+enum AgentState: String, Decodable {
+    case blocked, working, done, idle
+}
+
+/// What the core says an agent is doing: its group, or why it is not running.
+enum AgentStatus: String, Decodable {
+    case blocked, working, done, idle, asleep, stopped, starting
+
+    /// The word for an agent that is not running, which its group does not say.
+    var word: String? {
+        switch self {
+        case .asleep: "Sleeping"
+        case .stopped: "Stopped"
+        case .starting: "Starting"
+        default: nil
+        }
+    }
 }
 
 /// One group on the closed island's right wing.
@@ -141,12 +167,16 @@ struct AgentItem: Identifiable, Equatable {
     let title: String
     let project: String
     let state: AgentState
+    let status: AgentStatus
     let subagents: Int
-    /// Shells, monitors or subagents still going once its turn is over.
-    let background: Bool
+    /// Shells and monitors it still has going.
+    let tasks: Int
     /// A chat agent can be answered from the notch; a terminal agent only in Sikemux.
     let isChat: Bool
     let ask: Ask?
+
+    /// Subagents, shells or monitors still going once its turn is over.
+    var background: Bool { subagents > 0 || tasks > 0 }
 }
 
 func agentName(_ provider: String) -> String {
@@ -162,73 +192,54 @@ extension DeviceView {
         return URL(fileURLWithPath: value).lastPathComponent
     }
 
-    /// Every agent open in the app, most in need of the person first, then
-    /// the most recently active.
+    /// Every agent open in the app, in the core's order: most in need of the person first.
     var agents: [AgentItem] {
-        var items: [(agent: AgentItem, activeAt: Double)] = []
+        var items: [(agent: AgentItem, rank: Int)] = []
         // A sleeping chat is still open in the app; it starts again when opened there.
         for chat in chats {
-            let ask = attentions.first { $0.agentId == chat.agentId }.map(Self.ask)
-            let state: AgentState =
-                !chat.pendingPermissions.isEmpty ? .blocked : chat.running ? .working : chat.unread ? .done : .idle
             items.append((AgentItem(
                 id: chat.agentId,
                 provider: chat.provider,
                 title: chat.title ?? "New \(agentName(chat.provider)) chat",
                 project: projectName(chat.cwd),
-                state: state,
+                state: chat.group,
+                status: chat.status,
                 subagents: chat.subagents,
-                background: chat.tasks > 0 || chat.subagents > 0,
+                tasks: chat.tasks,
                 isChat: true,
-                ask: ask
-            ), chat.activeAt ?? 0))
+                ask: attentions.first { $0.agentId == chat.agentId }.map(Self.ask)
+            ), chat.attentionRank))
         }
-        for session in sessions where session.kind == "terminal" && session.running {
-            guard let agentId = session.agentId, !items.contains(where: { $0.agent.id == agentId }) else { continue }
+        for session in sessions {
+            guard let agentId = session.agentId, let rank = session.attentionRank,
+                  let state = session.group, let status = session.status
+            else { continue }
             let provider = session.agentType ?? "agent"
-            let state: AgentState
-            switch session.agentState {
-            case "blocked": state = .blocked
-            case "working": state = .working
-            case "idle" where session.unread: state = .done
-            default: state = .idle
-            }
             items.append((AgentItem(
                 id: agentId,
                 provider: provider,
                 title: session.title ?? agentName(provider),
                 project: projectName(session.project),
                 state: state,
+                status: status,
                 subagents: 0,
-                background: false,
+                tasks: 0,
                 isChat: false,
                 ask: nil
-            ), session.activeAt ?? 0))
+            ), rank))
         }
-        return items.enumerated()
-            .sorted { a, b in
-                if a.element.agent.state != b.element.agent.state { return a.element.agent.state > b.element.agent.state }
-                if a.element.activeAt != b.element.activeAt { return a.element.activeAt > b.element.activeAt }
-                return a.offset < b.offset
-            }
-            .map(\.element.agent)
+        return items.sorted { $0.rank < $1.rank }.map(\.agent)
     }
 
     private static func ask(_ attention: Attention) -> Ask {
-        let toolCall = attention.request["toolCall"]
-        let raw = toolCall?["rawInput"]
-        let shell = raw?["command"]?.string ?? raw?["cmd"]?.string
-        let command = shell ?? toolCall?["title"]?.string ?? "a tool"
-        func option(_ kind: String) -> String? {
-            attention.request["options"]?.array.first { $0["kind"]?.string == kind }?["optionId"]?.string
-        }
+        let choices = attention.choices
         return Ask(
             attentionId: attention.id,
-            command: command,
-            isCommand: shell != nil,
-            allowOnce: option("allow_once"),
-            allowAlways: option("allow_always"),
-            reject: option("reject_once") ?? option("reject_always")
+            command: choices.command ?? choices.title ?? "a tool",
+            isCommand: choices.command != nil,
+            allowOnce: choices.allowOnce,
+            allowAlways: choices.allowAlways,
+            reject: choices.reject
         )
     }
 }

@@ -22,7 +22,7 @@ impl Core {
         let agent_id = agent_id.to_owned();
         match activity {
             Activity::Started => {
-                self.seen.working(&agent_id);
+                self.seen.started(&agent_id);
                 self.notify.send(Signal::TurnStarted { agent_id });
             }
             Activity::Working => self.seen.working(&agent_id),
