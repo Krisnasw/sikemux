@@ -4,8 +4,9 @@ import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'reac
 import { durationLabel } from '@mac/chat/durationLabel';
 import { rateLabel, sentLabel, type RowMeta } from '@mac/chat/messageMeta';
 import { cutLongText } from '@mac/chat/longText';
-import { isReply, subagentTask } from '@mac/chat/transcript';
-import type { AcpContentBlock, AcpSubagent, AcpTaskNotice, ChatMessage, ChatPart } from '@mac/chat/types';
+import { isReply, outlivesFold, subagentTask } from '@mac/chat/transcript';
+import type { PageRef } from '@mac/api/pages';
+import type { AccountMove, AcpContentBlock, AcpSubagent, AcpTaskNotice, AgentNotice, ChatMessage, ChatPart } from '@mac/chat/types';
 import { CopyButton } from '@/ui/CopyButton';
 import { haptics } from '@/ui/haptics';
 import { AgentIcon, Icon } from '@/ui/Icon';
@@ -148,6 +149,58 @@ function Notice({ id, notice }: { id: string; notice: AcpTaskNotice }) {
   );
 }
 
+function AgentNoticeLine({ notice }: { notice: AgentNotice }) {
+  const colors = useColors();
+  const styles = useStyles(makeStyles);
+  const tint = notice.severity === 'error' ? colors.danger : notice.severity === 'warning' ? colors.warn : colors.inkFaint;
+  return (
+    <View style={styles.notice} accessible accessibilityLabel={`${notice.title}${notice.description ? `. ${notice.description}` : ''}`}>
+      <View style={styles.noticeHead}>
+        <Icon name={notice.severity === 'info' ? 'IconInfo' : 'IconWarning'} size={12} color={tint} />
+        <Text style={[styles.noticeState, notice.severity !== 'info' && { color: tint }]}>{notice.title}</Text>
+      </View>
+      {notice.description ? (
+        <Text style={styles.noticeSummary} selectable>
+          {notice.description}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function AccountLine({ move }: { move: AccountMove }) {
+  const colors = useColors();
+  const styles = useStyles(makeStyles);
+  const why = move.reason === 'limit' && move.from ? `${move.from} reached its usage limit` : null;
+  return (
+    <View style={styles.notice} accessible accessibilityLabel={`Moved to ${move.label}${why ? `. ${why}` : ''}`}>
+      <View style={styles.noticeHead}>
+        <Icon name="IconUser" size={12} color={colors.inkFaint} />
+        <Text style={styles.noticeState}>Moved to</Text>
+        <Text style={styles.noticeName} numberOfLines={1}>
+          {move.label}
+        </Text>
+      </View>
+      {why ? <Text style={styles.noticeSummary}>{why}</Text> : null}
+    </View>
+  );
+}
+
+/** A page the agent showed. The phone has no web view to draw it in, so it names the page and where it is. */
+function PageCard({ page }: { page: PageRef }) {
+  const colors = useColors();
+  const styles = useStyles(makeStyles);
+  return (
+    <View style={styles.resource} accessible accessibilityLabel={`Page ${page.title}, open on the computer`}>
+      <Icon name="IconWindow" size={14} color={colors.inkDim} />
+      <Text style={styles.pageTitle} numberOfLines={1}>
+        {page.title}
+      </Text>
+      <Text style={styles.pageWhere}>on the computer</Text>
+    </View>
+  );
+}
+
 function userText(message: ChatMessage): string {
   return message.parts.flatMap((part) => (part.kind === 'text' ? [part.text] : [])).join('\n');
 }
@@ -158,7 +211,7 @@ function Parts({ id, parts, untimed, live }: { id: string; parts: ChatPart[]; un
   const runs: (ChatPart | ToolPart[])[] = [];
   for (const part of parts) {
     const previous = runs[runs.length - 1];
-    if (part.kind === 'tool') {
+    if (part.kind === 'tool' && !part.page) {
       if (Array.isArray(previous)) previous.push(part);
       else runs.push([part]);
     } else runs.push(part);
@@ -183,6 +236,12 @@ function Parts({ id, parts, untimed, live }: { id: string; parts: ChatPart[]; un
             return <Notice key={run.id} id={run.id} notice={run.notice} />;
           case 'content':
             return <Content key={run.id} block={run.content} />;
+          case 'agent_notice':
+            return <AgentNoticeLine key={run.id} notice={run.notice} />;
+          case 'account':
+            return <AccountLine key={run.id} move={run.move} />;
+          case 'tool':
+            return run.page ? <PageCard key={run.id} page={run.page} /> : null;
           default:
             return <View key={index} />;
         }
@@ -311,7 +370,12 @@ export function Message({
   }
   return (
     <Pressable onPress={tap} onLongPress={keepLongPress} accessibilityHint={tap ? 'Tap for copy and how long it took' : undefined}>
-      <Parts id={message.id} parts={from > 0 ? message.parts.slice(from).filter(isReply) : message.parts} untimed={untimed} live={live} />
+      <Parts
+        id={message.id}
+        parts={from > 0 ? message.parts.filter((part, at) => (at >= from && isReply(part)) || outlivesFold(part)) : message.parts}
+        untimed={untimed}
+        live={live}
+      />
       {strip ? <Strip meta={strip} mine={false} /> : null}
     </Pressable>
   );
@@ -476,6 +540,8 @@ const makeStyles = (colors: Palette) => {
       backgroundColor: colors.raised,
     },
     resourceText: { flexShrink: 1, fontFamily: fonts.mono, fontSize: 12, color: colors.ink },
+    pageTitle: { flexShrink: 1, fontFamily: fonts.uiMedium, fontSize: 13, color: colors.ink },
+    pageWhere: { fontFamily: fonts.ui, fontSize: 12, color: colors.inkFaint },
     retry: { color: colors.ink, fontFamily: fonts.uiMedium },
     queued: { alignItems: 'flex-end', alignSelf: 'stretch', opacity: 0.55, marginBottom: 6 },
     queuedLabel: { fontFamily: fonts.ui, fontSize: 11, color: colors.inkFaint, marginTop: 4 },

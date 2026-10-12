@@ -20,7 +20,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { activityText, composerPlaceholder } from '@mac/chat/chatStatus';
 import { sentPrompts } from '@mac/chat/promptHistory';
 import { activeToolLabel } from '@mac/chat/toolLabels';
-import { workFolds, type WorkFold } from '@mac/chat/transcript';
+import { outlivesFold, workFolds, type WorkFold } from '@mac/chat/transcript';
 import type { ChatMessage, ChatState } from '@mac/chat/types';
 import { ChatMenu } from '@/chat/ChatMenu';
 import { askTitle, Composer, RecentSheet } from '@/chat/Composer';
@@ -313,7 +313,9 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
                       getItemType={(message, index) => {
                         const fold = folds.get(index);
                         // Folded work draws nothing, so it is never recycled into a whole answer.
-                        return fold && index < fold.end && !openWork.has(fold.id) ? 'folded' : message.role;
+                        return fold && index < fold.end && !openWork.has(fold.id) && !message.parts.some(outlivesFold)
+                          ? 'folded'
+                          : message.role;
                       }}
                       extraData={marks}
                       renderItem={({ item, index }) => {
@@ -330,7 +332,7 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
                               onToggle={() => toggleWork(workId)}
                             />
                           ) : null;
-                        if (fold && folded && index < fold.end) return summary ?? <View />;
+                        if (fold && folded && index < fold.end && !item.parts.some(outlivesFold)) return summary ?? <View />;
                         return (
                           <>
                             {summary}
@@ -343,7 +345,7 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
                               onTap={onTap}
                               strip={item.id === open ? openStrip : undefined}
                               sentFiles={chat.sentFiles}
-                              from={fold && folded ? fold.from : 0}
+                              from={fold && folded ? (index < fold.end ? item.parts.length : fold.from) : 0}
                             />
                           </>
                         );
