@@ -314,9 +314,27 @@
  * A bordered card, like the diff and the code block beside it, with a ruled
  * grid inside. It scrolls in its own box so a wide one cannot stretch the turn.
  */
+.chat-table-frame {
+    position: relative;
+    margin: 10px 0;
+}
+
+.chat-table-copy {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: var(--surface-raised, var(--bg));
+    opacity: 0;
+}
+
+.chat-table-frame:hover .chat-table-copy,
+.chat-table-copy:focus-visible,
+.chat-table-copy.copied {
+    opacity: 1;
+}
+
 .chat-table {
     overflow-x: auto;
-    margin: 10px 0;
     border: 1px solid var(--border, var(--line));
     border-radius: var(--radius-2);
 }
