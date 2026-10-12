@@ -36,17 +36,7 @@ export function agentIdsToAutoSleep(state: StoreState, hiddenSince: HiddenAgentT
         .flatMap((agent) => {
             const hiddenAt = hiddenSince.get(agent.id);
             const activity = state.agentActivity[agent.id];
-            if (
-                hiddenAt === undefined ||
-                agent.launchState === "dormant" ||
-                !agent.resumeId ||
-                agent.keepAlive ||
-                cmd.agentHasBackgroundWork(state, agent.id) ||
-                activity?.backendState !== "idle" ||
-                activity.confidence === "low"
-            ) {
-                return [];
-            }
+            if (hiddenAt === undefined || !activity || !cmd.isAgentSleepable(state, agent)) return [];
             return [{ id: agent.id, hiddenAt, activityAt: activity.updatedAt }];
         })
         .sort((left, right) => left.hiddenAt - right.hiddenAt || left.activityAt - right.activityAt || left.id.localeCompare(right.id));

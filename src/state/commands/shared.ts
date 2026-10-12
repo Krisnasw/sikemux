@@ -9,6 +9,7 @@ import { deskEditorId } from "../desks";
 import { notify, reportError } from "../toast";
 import { confirmDialog } from "../dialog";
 import { editorPaneOf } from "../selectors";
+import { isAgentBusy } from "../agentStatus";
 import { collectPanes, makePane, newId } from "../layout";
 import type { PaneKind, Session, SessionKind, Window, WindowRole } from "../types";
 import { focusPane } from "./panes";
@@ -196,11 +197,14 @@ export function guardDiscardDirty(paths: string[], action: string, proceed: () =
     });
 }
 
-export function busyAgentIds(state: Pick<StoreState, "agentActivity">, agentIds: readonly string[]): string[] {
-    return agentIds.filter((id) => {
-        const backend = state.agentActivity[id]?.backendState;
-        return backend === "working" || backend === "blocked";
-    });
+/** Closing an agent's tab stops it, so it asks first when the agent is busy. */
+export function guardCloseAgents(agentIds: readonly string[], title: string, proceed: () => void): void {
+    const { agentActivity } = getState();
+    guardStopAgents(
+        agentIds.filter((id) => isAgentBusy(agentActivity[id])),
+        title,
+        proceed,
+    );
 }
 
 /** Closing whatever holds these agents stops them, so it asks first. */

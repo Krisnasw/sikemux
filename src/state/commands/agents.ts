@@ -4,7 +4,7 @@ import { profileOfLauncher } from "../../remote/workspace";
 import { isAgentType } from "../../agents/catalog";
 import { agentSupportsChat, MAX_AGENT_MODEL_LENGTH, normalizePermissionMode, type ChatAgentType } from "../../agents/agentLaunch";
 import { emit } from "../bus";
-import { reduceAgentState } from "../agentStatus";
+import { isAgentBusy, reduceAgentState } from "../agentStatus";
 import { confirmDialog } from "../dialog";
 import { invalidate, peekResource } from "../resources";
 import { agentSessionsR } from "../resources.defs";
@@ -19,7 +19,7 @@ import { newId } from "../layout";
 import type { Agent, AgentEffort, AgentPermissionMode, AgentType, AgentWorktree, ProviderProfile } from "../types";
 import { selectSession } from "./sessions";
 import { keepOpenedProjectInView, openProjectSession, projectSessionInBackground, withActiveSession } from "./shared";
-import { closeWindowById } from "./tabs";
+import { closeWindowsById } from "./tabs";
 
 const FALLBACK_AGENT_TITLE_MAX = 13;
 /** Providers list a session under at most this many characters. */
@@ -51,8 +51,7 @@ export function agentSessionMetadataPending(agent: Agent): boolean {
 export function configureEmptyAgent(id: string, type: ChatAgentType, profileId?: string): void {
     mutate((d) => {
         const agent = d.agents[id];
-        const activity = d.agentActivity[id];
-        if (!agent || activity?.backendState === "working" || activity?.backendState === "blocked") return;
+        if (!agent || isAgentBusy(d.agentActivity[id])) return;
         const profile = profileId ? d.providerProfiles.find((item) => item.id === profileId && item.provider === type) : undefined;
         if (profileId && !profile) return;
         const mode = normalizePermissionMode(type, agent.permissionMode ?? d.defaultAgentPermissionMode);
@@ -589,6 +588,22 @@ export function agentHasBackgroundWork(state: StoreState, id: string): boolean {
     return (state.agentTasks[id] ?? 0) + (state.agentSubagents[id] ?? 0) > 0;
 }
 
+/**
+ * Whether an agent can be put to sleep without losing anything: it can be resumed, nothing it
+ * started is still running, and it is surely idle rather than guessed idle from a quiet terminal.
+ */
+export function isAgentSleepable(state: StoreState, agent: Agent): boolean {
+    const activity = state.agentActivity[agent.id];
+    return (
+        agent.launchState !== "dormant" &&
+        !!agent.resumeId &&
+        !agent.keepAlive &&
+        !agentHasBackgroundWork(state, agent.id) &&
+        activity?.backendState === "idle" &&
+        activity.confidence !== "low"
+    );
+}
+
 export function sleepAgents(ids: readonly string[]): string[] {
     const sleeping = new Set(ids);
     const slept: string[] = [];
@@ -626,14 +641,7 @@ export function setAgentKeepAlive(id: string, keepAlive: boolean): void {
 export async function sleepIdleAgents(): Promise<number> {
     const state = getState();
     const ids = Object.values(state.agents)
-        .filter(
-            (agent) =>
-                agent.launchState !== "dormant" &&
-                !!agent.resumeId &&
-                !agent.keepAlive &&
-                !agentHasBackgroundWork(state, agent.id) &&
-                state.agentActivity[agent.id]?.backendState === "idle",
-        )
+        .filter((agent) => isAgentSleepable(state, agent))
         .map((agent) => agent.id);
     const live = await agentIdsWithLiveSessions(state, ids);
     const count = sleepAgents(ids.filter((id) => !live.has(id))).length;
@@ -683,10 +691,23 @@ export function clearAgentUnread(id: string): void {
     });
 }
 
-/** An agent closes as its window does; the window's close handles its browser. */
+/** An agent closes as its window does; the window's close handles its browser and asks first if the agent is busy. */
 export function closeAgent(id: string): void {
-    const winId = agentWindowId(getState(), id);
-    if (winId) closeWindowById(winId);
+    closeAgents([id]);
+}
+
+export function closeAgents(ids: readonly string[]): void {
+    const state = getState();
+    closeWindowsById(ids.flatMap((id) => agentWindowId(state, id) ?? []));
+}
+
+/** Closes agents the core no longer has, without asking: there is nothing left running to stop. */
+export function dropAgents(ids: readonly string[]): void {
+    const state = getState();
+    closeWindowsById(
+        ids.flatMap((id) => agentWindowId(state, id) ?? []),
+        false,
+    );
 }
 
 export function focusAgents(): void {

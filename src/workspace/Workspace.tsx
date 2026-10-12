@@ -345,7 +345,7 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
             ...naming,
             { label: "Duplicate", run: () => cmd.duplicateWindow(win.id) },
             { label: "Close", hint: closeShortcut, disabled: win.fixed, run: () => cmd.closeWindowById(win.id) },
-            { label: "Close Others", disabled: others.length === 0, run: () => others.forEach((t) => cmd.closeWindowById(t.id)) },
+            { label: "Close Others", disabled: others.length === 0, run: () => cmd.closeWindowsById(others.map((t) => t.id)) },
         ];
     };
 

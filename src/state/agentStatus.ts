@@ -96,6 +96,10 @@ export function rollupAgentDisplays(displays: readonly AgentDisplay[]): AgentDis
     return best && { ...best, subagents, tasks };
 }
 
+/** Mid-turn or waiting on an answer: stopping it now loses work, so closing it asks first. */
+export const isAgentBusy = (activity: AgentRuntimeState | undefined): boolean =>
+    activity?.backendState === "working" || activity?.backendState === "blocked";
+
 export const lastWorkedAt = (activity: AgentRuntimeState | undefined): number => activity?.lastWorkedAt ?? 0;
 
 /**
