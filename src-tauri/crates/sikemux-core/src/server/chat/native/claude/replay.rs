@@ -835,7 +835,13 @@ fn first_non_blank(input: &Value, keys: &[&str]) -> Option<String> {
 fn collect_children(records: &[Value], session_id: &str) -> Vec<Child> {
     let mut children: Vec<Child> = Vec::new();
     let mut terminal_states: Vec<(String, &'static str)> = Vec::new();
+    let mut agent_ids: HashMap<String, String> = HashMap::new();
+    let mut notified: Vec<(String, &'static str)> = Vec::new();
     for record in records {
+        if let Some((agent_id, state)) = task_notification(record) {
+            notified.push((agent_id, state));
+            continue;
+        }
         let Some(blocks) = record
             .get("message")
             .and_then(|message| message.get("content"))
@@ -848,6 +854,21 @@ fn collect_children(records: &[Value], session_id: &str) -> Vec<Child> {
             let kind = str_field(block, "type").unwrap_or_default();
             if matches!(kind, "tool_result" | "mcp_tool_result") {
                 if let Some(id) = str_field(block, "tool_use_id") {
+                    let said = content_text(block.get("content"));
+                    if let Some(agent_id) = said
+                        .split("agentId: ")
+                        .nth(1)
+                        .and_then(|rest| rest.split_whitespace().next())
+                    {
+                        agent_ids.insert(
+                            agent_id.trim_end_matches(['.', ')']).to_string(),
+                            id.to_string(),
+                        );
+                    }
+                    // A background agent's launch is not its end; its notification is.
+                    if said.contains("Async agent launched") {
+                        continue;
+                    }
                     let state = terminal_state(block);
                     match terminal_states.iter_mut().find(|(known, _)| known == id) {
                         Some(entry) => entry.1 = state,
@@ -895,7 +916,43 @@ fn collect_children(records: &[Value], session_id: &str) -> Vec<Child> {
             child.terminal_state = Some(state);
         }
     }
+    for (agent_id, state) in notified {
+        let Some(spawner) = agent_ids.get(&agent_id) else {
+            continue;
+        };
+        if let Some(child) = children
+            .iter_mut()
+            .find(|child| &child.tool_use_id == spawner)
+        {
+            child.terminal_state = Some(state);
+        }
+    }
     children
+}
+
+/// The agent and end state a `<task-notification>` Claude Code wrote to itself reports.
+fn task_notification(record: &Value) -> Option<(String, &'static str)> {
+    if str_field(record, "type") != Some("user") {
+        return None;
+    }
+    let said = content_text(record.pointer("/message/content"));
+    let tag = |name: &str| {
+        said.split(&format!("<{name}>"))
+            .nth(1)?
+            .split(&format!("</{name}>"))
+            .next()
+            .map(str::trim)
+    };
+    if !said.contains("<task-notification>") {
+        return None;
+    }
+    let state = match tag("status")? {
+        "completed" => "completed",
+        "failed" => "failed",
+        "killed" | "stopped" | "cancelled" => "cancelled",
+        _ => return None,
+    };
+    Some((tag("task-id")?.to_string(), state))
 }
 
 fn terminal_state(result: &Value) -> &'static str {
