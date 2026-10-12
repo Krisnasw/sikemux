@@ -9,19 +9,13 @@ use tauri::{AppHandle, State};
 use crate::error::AppResult;
 use crate::pty::PtyManager;
 
-/// The Notch section of the settings. The helper reads all but `enabled`.
+/// The Notch section of the settings, named in `src/notch/settings.json`.
+/// The app only starts or stops the helper; the helper reads the rest.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct NotchSettings {
     enabled: bool,
-    displays: String,
-    open_with: String,
-    full_screen: String,
-    peeks: String,
-    answer_in_notch: bool,
-    sound: bool,
-    haptics: bool,
-    yield_to_dev: bool,
+    #[serde(flatten)]
+    helper: serde_json::Map<String, serde_json::Value>,
 }
 
 /// Writes the settings the helper reads, then starts or stops it to match.
