@@ -2,15 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 /** A sent message opened again for writing. Sending it takes the chat back to
     before it and asks again with the new text. */
-export function MessageEditor({
-    initial,
-    onSend,
-    onCancel,
-}: {
-    initial: string;
-    onSend: (text: string) => void;
-    onCancel: () => void;
-}) {
+export function MessageEditor({ initial, onSend, onCancel }: { initial: string; onSend: (text: string) => void; onCancel: () => void }) {
     const [text, setText] = useState(initial);
     const field = useRef<HTMLTextAreaElement>(null);
 
