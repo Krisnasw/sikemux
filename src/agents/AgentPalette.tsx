@@ -10,6 +10,7 @@ import { agentCatalogR, agentSessionsR } from "../state/resources.defs";
 import { useStore } from "../state/store";
 import type { AgentPermissionMode, AgentType } from "../state/types";
 import { AgentIcon, IconSearch, IconShield, IconShieldBolt } from "../ui/Icons";
+import { formatAge } from "../lib/format";
 import { leavingOverlay } from "../lib/motion";
 
 type Row = AgentSession & { type: AgentType };
@@ -35,15 +36,6 @@ function sortRows(rows: Row[]): Row[] {
 
 function typeForItem(item: AgentItem): AgentType {
     return item.kind === "new" ? item.type : item.row.type;
-}
-
-function ago(unixSecs: number): string {
-    if (!unixSecs) return "";
-    const delta = Math.max(0, Date.now() / 1000 - unixSecs);
-    if (delta < 90) return "now";
-    if (delta < 3600) return `${Math.round(delta / 60)}m`;
-    if (delta < 86400) return `${Math.round(delta / 3600)}h`;
-    return `${Math.round(delta / 86400)}d`;
 }
 
 export function AgentPalette() {
@@ -293,7 +285,7 @@ export function AgentPalette() {
                                                 ? provider?.status?.state === "signedOut"
                                                     ? "signed out"
                                                     : ""
-                                                : `${labelForType(type, agents)} · ${ago(item.row.mtime)}`}
+                                                : `${labelForType(type, agents)} · ${formatAge(item.row.mtime * 1000)}`}
                                     </span>
                                 </button>
                             </Fragment>

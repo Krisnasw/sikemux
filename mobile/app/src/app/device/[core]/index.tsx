@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import MaskedView from '@react-native-masked-view/masked-view';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import { formatAge } from '@mac/lib/format';
 import type { Attention, ChatInfo, ProjectInfo, RecentInfo, SessionInfo, Snapshot } from '@/core/protocol';
 import { problem as problemOf, reloadDevices, retry, useDevices, useHostStatus, useLive } from '@/devices/hub';
 import { deviceName, type PairedDevice, updateDevice } from '@/devices/paired';
@@ -11,7 +12,7 @@ import { ForgetSheet, useForget } from '@/devices/ForgetSheet';
 import { ProjectSheet } from '@/devices/ProjectSheet';
 import { asking as askingOf } from '@/devices/asking';
 import { summary } from '@/devices/status';
-import { age, chatState, chatTitle, folder } from '@/devices/words';
+import { chatState, chatTitle, folder } from '@/devices/words';
 import { Wants } from '@/screens/Wants';
 import { haptics } from '@/ui/haptics';
 import { useMinute, useScrollPause } from '@/ui/motion';
@@ -297,7 +298,7 @@ const RecentRow = memo(function RecentRow({
       mark={<AgentIcon provider={chat.provider} size={20} />}
       title={chat.title}
       place={place}
-      end={resuming ? <Working /> : <Text style={[type.meta, styles.age]}>{age(Number(chat.activeAt), minute * 60_000)}</Text>}
+      end={resuming ? <Working /> : <Text style={[type.meta, styles.age]}>{formatAge(Number(chat.activeAt), minute * 60_000)}</Text>}
       onPress={() => onResume(chat)}
     />
   );

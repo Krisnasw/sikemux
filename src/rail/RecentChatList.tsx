@@ -8,18 +8,8 @@ import type { AgentType } from "../state/types";
 import { AgentIcon } from "../ui/Icons";
 import { Panel, PanelHeader } from "../ui/Panel";
 import { TreeContextMenu } from "./FileTree";
-import type { RecentChats } from "./useRecentChats";
-
-function ago(unixSecs: number): string {
-    if (!unixSecs) return "";
-    const d = Math.max(0, Date.now() / 1000 - unixSecs);
-    if (d < 90) return "now";
-    if (d < 3600) return `${Math.round(d / 60)}m`;
-    if (d < 86400) return `${Math.round(d / 3600)}h`;
-    return `${Math.round(d / 86400)}d`;
-}
-
-const chatKey = (chat: RecentChat) => `${chat.agent}\0${chat.id}`;
+import { chatKey, type RecentChats } from "./useRecentChats";
+import { formatAge } from "../lib/format";
 
 const DELETABLE: ReadonlySet<AgentType> = new Set(["claude", "codex"]);
 
@@ -99,7 +89,7 @@ export function RecentChatList({ recent, providers }: { recent: RecentChats; pro
                             onSave={(value) => rename(chat, value)}
                             onDone={() => setRenaming(null)}
                         />
-                        <span className="agent-ago">{ago(chat.mtime)}</span>
+                        <span className="agent-ago">{formatAge(chat.mtime * 1000)}</span>
                     </div>
                 ) : (
                     <button
@@ -113,7 +103,7 @@ export function RecentChatList({ recent, providers }: { recent: RecentChats; pro
                         }}>
                         {glyph}
                         <span className="agent-title">{chat.title}</span>
-                        <span className="agent-ago">{ago(chat.mtime)}</span>
+                        <span className="agent-ago">{formatAge(chat.mtime * 1000)}</span>
                     </button>
                 );
             })}

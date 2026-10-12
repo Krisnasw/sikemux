@@ -5,7 +5,6 @@ import { EmptyState, IconInfo, IconPlus, SkeletonRows, Tooltip } from "../../plu
 import { GitColumns } from "../../git/GitColumns";
 import { hostApi, failureMessage, type Issue, type RepoRef } from "../api";
 import { issueR, issuesR } from "../resources";
-import { formatAgo } from "../runStatus";
 import { compose, setListState, showItem, updateView } from "../state";
 import { Comments, Labels, PageHead, StateMark, stateLabel, Who } from "./Bits";
 import { CommentThread } from "./CommentThread";
@@ -13,6 +12,7 @@ import { useBusy, useNow } from "./hooks";
 import { NewIssueForm } from "./NewIssueForm";
 import { IconAgent } from "../../ui/Icons";
 import { workOnIssue } from "../workOnIssue";
+import { formatAgo } from "../../lib/format";
 
 const LIST_STATES = ["open", "closed", "all"];
 

@@ -28,7 +28,7 @@ import { useStore } from "../../state/store";
 import { DEFAULT_GIT_VIEW } from "../../state/types";
 import { hostApi, failureMessage, type MergeMethod, type Pull, type RepoRef, type Run } from "../api";
 import { pullCommitsR, pullFilesR, pullR, pullReviewsR, pullsR, runsR, timelineR } from "../resources";
-import { checksSummary, formatAgo, isUnfinished, OUTCOME_LABEL, overallOutcome, type Outcome } from "../runStatus";
+import { checksSummary, isUnfinished, OUTCOME_LABEL, overallOutcome, type Outcome } from "../runStatus";
 import { needsPull } from "../compose";
 import { compose, openRunFrom, setListState, showItem } from "../state";
 import { CommentThread, Face } from "./CommentThread";
@@ -38,6 +38,7 @@ import { useBusy, useEvery, useNow } from "./hooks";
 import { NewPullForm } from "./NewPullForm";
 import { PullFiles } from "./PullFiles";
 import { PullChecks } from "./PullChecks";
+import { formatAgo } from "../../lib/format";
 
 const LIST_STATES = ["open", "closed", "all"];
 const LIVE_REFRESH_MS = 10_000;

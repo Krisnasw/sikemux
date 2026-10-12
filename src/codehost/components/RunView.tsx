@@ -7,18 +7,7 @@ import { EmptyState, IconChevron, IconExternal, IconRefresh, SkeletonRows, Toolt
 import { hostApi, failureMessage, type Job, type RepoRef, type Run } from "../api";
 import { useHost } from "../registry";
 import { artifactsR, runAttemptR, runR, timingR } from "../resources";
-import {
-    elapsedMs,
-    eventLabel,
-    failedStep,
-    formatAgo,
-    formatDuration,
-    isUnfinished,
-    outcomeOf,
-    OUTCOME_LABEL,
-    summaryJobs,
-    watchIsNewer,
-} from "../runStatus";
+import { elapsedMs, eventLabel, failedStep, isUnfinished, outcomeOf, OUTCOME_LABEL, summaryJobs, watchIsNewer } from "../runStatus";
 import { closeRun, leaveRun, showJob, updateView, useHostView, type RunTab } from "../state";
 import { OutcomeIcon } from "./ActionsIcon";
 import { Annotations } from "./Annotations";
@@ -32,6 +21,7 @@ import { JobSummary } from "./JobSummary";
 import { RunMenu } from "./RunMenu";
 import { billedMinutes } from "./RunUsage";
 import { WorkflowFile } from "./WorkflowFile";
+import { formatAgo, formatDuration } from "../../lib/format";
 
 const WATCH_RETRY_MS = 30_000;
 const WATCH_RETRY_MAX_MS = 5 * 60_000;
