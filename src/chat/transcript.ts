@@ -182,7 +182,8 @@ export function runningSubagents(messages: ChatMessage[]): AcpSubagent[] {
 /* A task whose description repeats its name would print the same words twice,
    once in each voice, so the detail takes the first thing that says more. */
 export function taskDetail(task: AcpAsyncTask): string | undefined {
-    return [task.summary, task.description, task.lastToolName, task.taskType].find((text) => text && text !== task.name);
+    const detail = [task.summary, task.description, task.lastToolName, task.taskType].find((text) => text && text !== task.name);
+    return [task.owner && `from ${task.owner}`, detail].filter(Boolean).join(" · ") || undefined;
 }
 
 /* An agent names its own task types — "shell", "monitor" — and they are the

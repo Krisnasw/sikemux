@@ -435,6 +435,7 @@ function spawnTask(state: ChatState, update: Record<string, unknown>): ChatState
         state: "running",
         canStop: update.canStop === true,
         outputFilePath: textOf(update.outputFilePath),
+        owner: textOf(update.owner),
     };
     return { ...state, tasks: [...state.tasks, task], revision: state.revision + 1 };
 }

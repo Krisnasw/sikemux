@@ -806,6 +806,7 @@ impl Reader {
             "showInTranscript": true,
             "canStop": true,
             "toolCallId": tool_id,
+            "owner": self.owner_of(Some(tool_id)),
         });
         if let Some(output) = output {
             update["outputFilePath"] = json!(output);
@@ -1215,10 +1216,22 @@ impl Reader {
             "showInTranscript": message.get("skip_transcript").and_then(Value::as_bool) != Some(true),
             "canStop": true,
         });
+        if let Some(owner) = self.owner_of(spawner.as_deref()) {
+            update["owner"] = json!(owner);
+        }
         if let Some(spawner) = spawner {
             update["toolCallId"] = json!(spawner);
         }
         self.sink.update(&self.session_id, update);
+    }
+
+    /// The subagent whose tool call started a background task, since the task
+    /// is listed with the chat's own and would otherwise look like the chat's.
+    fn owner_of(&self, tool_id: Option<&str>) -> Option<String> {
+        let session = &self.tools.get(tool_id?)?.session;
+        (session != &self.session_id)
+            .then(|| self.subagents.get(session).map(|child| child.name.clone()))
+            .flatten()
     }
 
     fn spawn_child(&mut self, task_id: &str, spawner: &str, message: &Value) {
