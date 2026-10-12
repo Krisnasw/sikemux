@@ -254,7 +254,7 @@ export function disposePaneState(d: StoreState, paneId: string): void {
     delete d.agents[paneId];
     forgetAgentDeliveries(paneId);
     delete d.agentActivity[paneId];
-    delete d.agentBackgroundWork[paneId];
+    delete d.agentTasks[paneId];
     delete d.agentSubagents[paneId];
 }
 

@@ -1109,7 +1109,7 @@ export function applyHydrate(raw: string): HydrationResult {
         sessionOrder,
         windowsBySession,
         agentActivity: {},
-        agentBackgroundWork: {},
+        agentTasks: {},
         agentSubagents: {},
         activeSessionId,
         recent: Array.isArray(decoded.recent) ? decoded.recent.filter(isRecent) : [],

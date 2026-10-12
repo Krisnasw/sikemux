@@ -11,6 +11,7 @@ import * as cmd from "../state/commands";
 import { getState, useStore } from "../state/store";
 import {
     activeTabRef,
+    agentDisplayOf,
     agentPaneId,
     documentsOf,
     editorPaneOf,
@@ -31,7 +32,7 @@ import { agentMenu, renameAgentPrompt } from "./agentMenu";
 import { TabBar, type TabDescriptor } from "./TabBar";
 import type { TabDragOut, TabPoint } from "./useTabReorder";
 import { AgentIcon, IconArrowUp, IconPlus, WindowIcon } from "../ui/Icons";
-import { AgentStateIndicator, SubagentCount } from "../agents/AgentStateIndicator";
+import { AgentStateIndicator, showsAgentState, SubagentCount } from "../agents/AgentStateIndicator";
 import { renderWorkbenchItem } from "../workbench/renderers";
 import { FileIcon } from "../ui/FileIcon";
 import { fsapi } from "../api/fs";
@@ -294,8 +295,8 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
     const windowsById = useStore((s) => s.windows);
     const agentsById = useStore((s) => s.agents);
     const activity = useStore((s) => s.agentActivity);
-    const backgroundWork = useStore((s) => s.agentBackgroundWork);
-    const subagentCounts = useStore((s) => s.agentSubagents);
+    const agentTasks = useStore((s) => s.agentTasks);
+    const agentSubagents = useStore((s) => s.agentSubagents);
     const windowIds = useStore((s) => s.windowsBySession[session.id]);
     const editorViews = useStore((s) => s.editorViews);
     const dirtyEditorPaths = useStore((s) => s.dirtyEditorPaths);
@@ -452,9 +453,7 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
             if (win.role === "agent") {
                 const agent = agentsById[agentPaneId(win) ?? ""];
                 if (!agent) return [];
-                const state = activity[agent.id];
-                const background = (backgroundWork[agent.id] ?? 0) > 0;
-                const subagents = subagentCounts[agent.id] ?? 0;
+                const display = agentDisplayOf({ agentActivity: activity, agentTasks, agentSubagents }, agent.id);
                 return [
                     {
                         id: key,
@@ -466,8 +465,8 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
                                 <AgentIcon type={agent.type} size={19} />
                             </span>
                         ),
-                        badge: subagents > 0 ? <SubagentCount count={subagents} /> : undefined,
-                        accessory: state || background ? <AgentStateIndicator state={state?.state ?? "idle"} background={background} /> : undefined,
+                        badge: display.subagents > 0 ? <SubagentCount count={display.subagents} /> : undefined,
+                        accessory: showsAgentState(display) ? <AgentStateIndicator display={display} /> : undefined,
                     },
                 ];
             }
@@ -532,8 +531,8 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
         windowsById,
         agentsById,
         activity,
-        backgroundWork,
-        subagentCounts,
+        agentTasks,
+        agentSubagents,
         termTitles,
         dirtyEditorPaths,
         activeKey,

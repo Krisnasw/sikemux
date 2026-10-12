@@ -17,7 +17,7 @@ import { keybindingLabelForAction, type KeybindingActionId } from "../commands/k
 import type { Agent, AgentRuntimeState, Session, SessionKind, Window, WindowRole } from "../state/types";
 import * as cmd from "../state/commands";
 import { animate, EASE_IN, EASE_SWAP, foldedFrames, leavingRef, prefersReducedMotion } from "../lib/motion";
-import { rollupAgentStates } from "../state/agentStatus";
+import { rollupAgentDisplays, type AgentDisplay } from "../state/agentStatus";
 import { getState, useStore } from "../state/store";
 import { AgentIcon, IconClose, IconCommand, IconFolder, IconPencil, IconPlus, WindowIcon } from "../ui/Icons";
 import { Tooltip } from "../ui/Tooltip";
@@ -25,7 +25,7 @@ import { EmptyState, Panel, PanelHeader } from "../ui/Panel";
 import { RailMasthead } from "./RailMasthead";
 import { UpdateChip } from "./UpdateChip";
 import { AgentStateIndicator, showsAgentState } from "../agents/AgentStateIndicator";
-import { agentIdsOf } from "../state/selectors";
+import { agentDisplayOf, agentIdsOf } from "../state/selectors";
 import { pluginSurface, type FrontendPlugin } from "../plugins/registry";
 import { useInstalledPlugins } from "../plugins/installed";
 import { railGroupOf, type RailGroup } from "../state/railGroups";
@@ -114,7 +114,7 @@ interface RailContextValue {
     windowsBySession: Record<string, string[]>;
     agentsById: Record<string, Agent>;
     activityById: Record<string, AgentRuntimeState>;
-    backgroundById: Record<string, number>;
+    displayOf: (agentId: string) => AgentDisplay;
     draggingProjectId: string | null;
     projectDragClass: (id: string) => string;
     onProjectPointerDown: (event: ReactPointerEvent<HTMLButtonElement>, sourceId: string) => void;
@@ -212,7 +212,7 @@ function useProjectUnfold(tree: RefObject<HTMLDivElement | null>, active: boolea
 
 function ProjectBlock({ s }: { s: Session }) {
     const rail = useRail();
-    const { activeSessionId, agentsById, activityById, backgroundById, windowsById, windowsBySession, draggingProjectId, kb } = rail;
+    const { activeSessionId, agentsById, activityById, displayOf, windowsById, windowsBySession, draggingProjectId, kb } = rail;
     const active = s.id === activeSessionId;
     // Active or not, a project is one tree root holding its row, so the row survives the switch and its tint cross-fades.
     const treeRef = useRef<HTMLDivElement>(null);
@@ -222,8 +222,7 @@ function ProjectBlock({ s }: { s: Session }) {
     const agents = agentIdsOf({ windowsBySession, windows: windowsById }, s.id)
         .map((id) => agentsById[id])
         .filter(Boolean);
-    const rollup = rollupAgentStates(agents.map((agent) => activityById[agent.id]));
-    const rollupBackground = agents.some((agent) => (backgroundById[agent.id] ?? 0) > 0);
+    const rollup = rollupAgentDisplays(agents.map((agent) => displayOf(agent.id)));
 
     const visibleAgents = agents.slice(0, MAX_BADGE_ICONS);
     const agentOverflow = agents.length - visibleAgents.length;
@@ -239,9 +238,9 @@ function ProjectBlock({ s }: { s: Session }) {
                     {agentOverflow > 0 && <span className="proj-child-icons-more">+{agentOverflow}</span>}
                 </span>
             )}
-            {showsAgentState(rollup ?? "idle", rollupBackground) && (
+            {rollup && showsAgentState(rollup) && (
                 <span className="proj-row-status">
-                    <AgentStateIndicator state={rollup ?? "idle"} background={rollupBackground} />
+                    <AgentStateIndicator display={rollup} />
                 </span>
             )}
         </>
@@ -455,7 +454,8 @@ export const SideRail = memo(function SideRail() {
     const windowsBySession = useStore((s) => s.windowsBySession);
     const agentsById = useStore((s) => s.agents);
     const activityById = useStore((s) => s.agentActivity);
-    const backgroundById = useStore((s) => s.agentBackgroundWork);
+    const tasksById = useStore((s) => s.agentTasks);
+    const subagentsById = useStore((s) => s.agentSubagents);
     const rawActiveSessionId = useStore((s) => s.activeSessionId);
     const settingsOpen = useStore((s) => s.settingsOpen);
     const keybindingOverrides = useStore((s) => s.keybindingOverrides);
@@ -688,7 +688,7 @@ export const SideRail = memo(function SideRail() {
         windowsBySession,
         agentsById,
         activityById,
-        backgroundById,
+        displayOf: (agentId) => agentDisplayOf({ agentActivity: activityById, agentTasks: tasksById, agentSubagents: subagentsById }, agentId),
         draggingProjectId,
         projectDragClass,
         onProjectPointerDown,

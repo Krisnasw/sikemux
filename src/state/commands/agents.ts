@@ -578,16 +578,15 @@ export function resumeAgent(id: string): void {
 export function noteAgentBackgroundWork(id: string, tasks: number, subagents: number): void {
     mutate((d) => {
         if (!d.agents[id]) return;
-        const count = tasks + subagents;
-        if (count > 0) d.agentBackgroundWork[id] = count;
-        else delete d.agentBackgroundWork[id];
+        if (tasks > 0) d.agentTasks[id] = tasks;
+        else delete d.agentTasks[id];
         if (subagents > 0) d.agentSubagents[id] = subagents;
         else delete d.agentSubagents[id];
     });
 }
 
 export function agentHasBackgroundWork(state: StoreState, id: string): boolean {
-    return (state.agentBackgroundWork[id] ?? 0) > 0;
+    return (state.agentTasks[id] ?? 0) + (state.agentSubagents[id] ?? 0) > 0;
 }
 
 export function sleepAgents(ids: readonly string[]): string[] {
@@ -598,7 +597,7 @@ export function sleepAgents(ids: readonly string[]): string[] {
             const agent = d.agents[id];
             if (!agent?.resumeId || agent.launchState === "dormant") continue;
             agent.launchState = "dormant";
-            delete d.agentBackgroundWork[id];
+            delete d.agentTasks[id];
             delete d.agentSubagents[id];
             slept.push(id);
         }

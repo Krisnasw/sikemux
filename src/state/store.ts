@@ -184,9 +184,9 @@ export interface ViewState {
 
     /** Runtime-only PTY activity for live agents. Never persisted or hydrated. */
     agentActivity: Record<string, import("./types").AgentRuntimeState>;
-    /** How many background shells, monitors and subagents each agent still has going. */
-    agentBackgroundWork: Record<string, number>;
-    /** How many of those are subagents, counted on their own so a tab can show them. */
+    /** How many background shells and monitors each agent still has going. */
+    agentTasks: Record<string, number>;
+    /** How many subagents each agent still has going. */
     agentSubagents: Record<string, number>;
 
     commandPaletteOpen: boolean;
@@ -313,7 +313,7 @@ export const useStore = create<StoreState>(() => {
         gitCmdLogOpen: false,
         globalSearchBySession: {},
         agentActivity: {},
-        agentBackgroundWork: {},
+        agentTasks: {},
         agentSubagents: {},
         commandPaletteOpen: false,
         onboardingOpen: false,
