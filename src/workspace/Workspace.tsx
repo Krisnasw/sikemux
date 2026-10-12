@@ -35,6 +35,7 @@ import type { TabDragOut, TabPoint } from "./useTabReorder";
 import { AgentIcon, IconArrowUp, IconPlus, WindowIcon } from "../ui/Icons";
 import { AgentStateIndicator, BackgroundCounts, showsAgentState } from "../agents/AgentStateIndicator";
 import { renderWorkbenchItem } from "../workbench/renderers";
+import { PROJECT_SURFACES } from "../workbench/surfaces";
 import { FileIcon } from "../ui/FileIcon";
 import { fsapi } from "../api/fs";
 import { useStageMotion } from "../state/nativeViews";
@@ -198,10 +199,10 @@ const EMPTY_IDS: readonly string[] = [];
 
 const CORE_ROLE_LABEL: Record<Exclude<WindowRole, PluginKind>, string> = {
     term: "Terminal",
-    files: "Editor",
-    git: "Git",
+    files: PROJECT_SURFACES.files.label,
+    git: PROJECT_SURFACES.git.label,
     diff: "Diff",
-    search: "Search",
+    search: PROJECT_SURFACES.search.label,
     "ssh-config": "SSH config",
     named: "Window",
     agent: "Agent",

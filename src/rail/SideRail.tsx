@@ -26,6 +26,7 @@ import { RailMasthead } from "./RailMasthead";
 import { UpdateChip } from "./UpdateChip";
 import { AgentStateIndicator, showsAgentState } from "../agents/AgentStateIndicator";
 import { agentDisplayOf, agentIdsOf } from "../state/selectors";
+import { PROJECT_SURFACE_ORDER, PROJECT_SURFACES } from "../workbench/surfaces";
 import { pluginSurface, type FrontendPlugin } from "../plugins/registry";
 import { useInstalledPlugins } from "../plugins/installed";
 import { railGroupOf, type RailGroup } from "../state/railGroups";
@@ -273,23 +274,10 @@ function ProjectBlock({ s }: { s: Session }) {
     const activeRole = sessionWindows.find((w) => w.id === s.activeWindowId)?.role;
     const isSubActive = (role: WindowRole): boolean => activeRole === role;
 
-    const onSubClick = (role: WindowRole) => {
-        if (role === "files") {
-            cmd.openEditorPane();
-            return;
-        }
-        if (role === "git") {
-            cmd.openGitWorkbench();
-            return;
-        }
-        if (role === "search") cmd.focusGlobalSearch();
-    };
-
-    const children: SubRow[] = [
-        { role: "files", label: "Files", kbd: kb("window.files"), title: `Files — ${kb("window.files")}` },
-        { role: "git", label: "Git", kbd: kb("window.git"), title: `Git — ${kb("window.git")}` },
-        { role: "search", label: "Search", kbd: kb("window.search"), title: `Search — ${kb("window.search")}` },
-    ];
+    const children: SubRow[] = PROJECT_SURFACE_ORDER.map((role) => {
+        const { label, shortcut, open } = PROJECT_SURFACES[role];
+        return { role, label, kbd: kb(shortcut), title: `${label} — ${kb(shortcut)}`, open };
+    });
     return (
         <div ref={treeRef} className={`proj-tree active${rail.projectDragClass(s.id)}`} data-project-id={s.id}>
             <div className="session-row-shell project-row-shell" onContextMenu={(event) => rail.openSpaceMenu(event, s)}>
@@ -321,7 +309,7 @@ function ProjectBlock({ s }: { s: Session }) {
                                 aria-current={subActive ? "page" : undefined}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onSubClick(c.role);
+                                    c.open();
                                 }}>
                                 <span className="proj-child-tick" />
                                 <span className="proj-child-ic">
@@ -343,6 +331,7 @@ interface SubRow {
     label: string;
     kbd?: string;
     title: string;
+    open: () => void;
 }
 
 function renderSession(s: Session) {
