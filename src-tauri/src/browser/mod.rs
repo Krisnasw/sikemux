@@ -1342,12 +1342,7 @@ fn window_error(error: tauri::Error) -> AppError {
 }
 
 pub(crate) fn validate_agent_id(agent_id: &str) -> AppResult<()> {
-    if agent_id.is_empty()
-        || agent_id.len() > 128
-        || !agent_id
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b':'))
-    {
+    if !sikemux_core::cli::protocol::is_tool_agent_id(agent_id) {
         return Err(AppError::BadArg("invalid browser agent id"));
     }
     Ok(())
