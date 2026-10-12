@@ -53,12 +53,15 @@ export function AllProjectsAgents() {
         return rows;
     }, [sessionOrder, sessions, windows, windowsBySession, agents, activity, background]);
 
+    const lastWorked = (row: OpenAgent) => activity[row.agent.id]?.lastWorkedAt ?? 0;
+
     if (open.length === 0) return <div className="agent-empty">no agents open in any project</div>;
 
     return (
         <>
             {BUCKETS.map(({ id, label }) => {
                 const rows = open.filter((row) => row.bucket === id);
+                if (id === "done" || id === "idle") rows.sort((x, y) => lastWorked(y) - lastWorked(x));
                 if (rows.length === 0) return null;
                 return (
                     <Panel key={id} variant="group" className={`agent-group${id === "blocked" ? " agent-attention" : ""}`}>
