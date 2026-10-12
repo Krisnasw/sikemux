@@ -577,8 +577,11 @@ export function rust(definitions) {
   return out;
 }
 
-const AUTH = new Set(["none", "session", "device", "webhook"]);
+const AUTH = new Set(["none", "signedIn", "session", "device", "webhook"]);
+const SIGNED_IN = new Set(["signedIn", "session"]);
 const AUTH_NOTES = {
+  session:
+    "Only the phone's and the web app's sign-ins; the Mac app's OAuth token is refused with 403.",
   device:
     "A WebSocket. The device proves who it is in its first message, since browsers cannot set headers on one. `send` is what the device sends; `receive` is what the server sends.",
   webhook: "Called by Clerk, signed with Svix's headers.",
@@ -693,7 +696,7 @@ export function openapi(definitions, routes) {
     paths[route.path][route.method] = {
       operationId: route.operationId,
       summary: route.summary,
-      ...(route.auth === "session" ? {} : { security: [] }),
+      ...(SIGNED_IN.has(route.auth) ? {} : { security: [] }),
       ...(AUTH_NOTES[route.auth]
         ? { description: AUTH_NOTES[route.auth] }
         : {}),
@@ -721,7 +724,8 @@ export function openapi(definitions, routes) {
         session: {
           type: "http",
           scheme: "bearer",
-          description: "A Clerk session token.",
+          description:
+            "A Clerk sign-in: a session token from the phone or the web app, or the Mac app's OAuth access token.",
         },
       },
     },

@@ -278,7 +278,7 @@ describe("PUT /v1/devices/{key}/push", () => {
 
   it("refuses hosts and the Mac app's sign-in", async () => {
     const mac = await registered(app, "user_a", "host");
-    expect((await putToken("user_a", mac, "fcm-token")).status).toBe(400);
+    expect((await putToken("user_a", mac, "fcm-token")).status).toBe(404);
     const phone = await registered(app, "user_a", "client");
     const response = await call(
       `/v1/devices/${phone.key}/push`,
@@ -358,6 +358,18 @@ describe("DELETE /v1/devices/{key}/push", () => {
       { method: "DELETE" },
     );
     expect(response.status).toBe(404);
+    expect(await storedTokens()).toHaveLength(1);
+  });
+
+  it("refuses the Mac app's sign-in, as setting one does", async () => {
+    const phone = await registered(app, "user_a", "client");
+    await putToken("user_a", phone, "fcm-token");
+    const response = await call(
+      `/v1/devices/${phone.key}/push`,
+      await macToken("user_a"),
+      { method: "DELETE" },
+    );
+    expect(response.status).toBe(403);
     expect(await storedTokens()).toHaveLength(1);
   });
 });

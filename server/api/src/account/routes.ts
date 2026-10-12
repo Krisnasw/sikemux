@@ -1,7 +1,13 @@
 import type { Account, AccountDeletion, PushApp } from "@sikemux/protocol";
 import { Hono } from "hono";
 
-import { requireIdentity, type AuthEnv, type Verifier } from "../auth.ts";
+import {
+  isWeb,
+  requireIdentity,
+  requireSession,
+  type AuthEnv,
+  type Verifier,
+} from "../auth.ts";
 import type { Database } from "../db.ts";
 import { ApiFailure, readOptionalBody } from "../http.ts";
 import { limit, type RateLimiter } from "../limits.ts";
@@ -20,17 +26,9 @@ export function accountRoutes(
   apple: AppleSignIn | null,
   app: PushApp,
 ) {
-  const sessionOnly = (identity: AuthEnv["Variables"]["identity"]) => {
-    if (identity.via !== "session")
-      throw new ApiFailure(
-        403,
-        "forbidden",
-        "Manage the account in the phone app or at app.sikemux.com.",
-      );
-  };
-
   return new Hono<AuthEnv>()
     .use(requireIdentity(verifier, db, { allowDeleted: true }))
+    .use(requireSession())
     .get("/", async (c) => {
       const { userId } = c.get("identity");
       const user = await db
@@ -54,7 +52,6 @@ export function accountRoutes(
       ),
       async (c) => {
         const identity = c.get("identity");
-        sessionOnly(identity);
         if (!(await restoreAccount(db, identity.userId)))
           throw new ApiFailure(
             404,
@@ -76,7 +73,6 @@ export function accountRoutes(
       ),
       async (c) => {
         const identity = c.get("identity");
-        sessionOnly(identity);
         if (
           identity.factorAgeMinutes === undefined ||
           identity.factorAgeMinutes > REVERIFY_MINUTES
@@ -87,7 +83,7 @@ export function accountRoutes(
         const deletion = await markDeleted(db, {
           userId: identity.userId,
           actor: `user:${identity.userId}`,
-          via: identity.origin ? "web" : "phone",
+          via: isWeb(identity) ? "web" : "phone",
           deletedInClerk: false,
         });
         const log = c.get("log");

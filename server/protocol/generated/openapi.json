@@ -192,6 +192,7 @@
       "put": {
         "operationId": "setPushToken",
         "summary": "Deliver this phone's notifications to a push token",
+        "description": "Only the phone's and the web app's sign-ins; the Mac app's OAuth token is refused with 403.",
         "parameters": [
           {
             "name": "key",
@@ -218,7 +219,7 @@
             }
           },
           "400": {
-            "description": "The challenge is unknown, used or expired; the device is a host; or this server does not deliver to that app or APNs environment.",
+            "description": "The challenge is unknown, used or expired, or this server does not deliver to that app or APNs environment.",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ApiError" }
@@ -234,7 +235,7 @@
             }
           },
           "404": {
-            "description": "None of your devices has that key.",
+            "description": "None of your phones has that key.",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ApiError" }
@@ -254,6 +255,7 @@
       "delete": {
         "operationId": "clearPushToken",
         "summary": "Stop delivering notifications to this phone",
+        "description": "Only the phone's and the web app's sign-ins; the Mac app's OAuth token is refused with 403.",
         "parameters": [
           {
             "name": "key",
@@ -267,7 +269,7 @@
             "description": "The phone has no push token, whether or not it had one."
           },
           "404": {
-            "description": "None of your devices has that key.",
+            "description": "None of your phones has that key.",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ApiError" }
@@ -289,6 +291,7 @@
       "post": {
         "operationId": "createJoinTicket",
         "summary": "A ticket for this phone to join one of your hosts without a code",
+        "description": "Only the phone's and the web app's sign-ins; the Mac app's OAuth token is refused with 403.",
         "parameters": [
           {
             "name": "key",
@@ -311,14 +314,6 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/JoinTicket" }
-              }
-            }
-          },
-          "403": {
-            "description": "Only the phone and web app's sign-ins may ask; a host's sign-in cannot.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/ApiError" }
               }
             }
           },
@@ -386,6 +381,7 @@
       "get": {
         "operationId": "getAccount",
         "summary": "Whether your account is in use or waiting to be deleted",
+        "description": "Only the phone's and the web app's sign-ins; the Mac app's OAuth token is refused with 403.",
         "responses": {
           "200": {
             "description": "The account's status. A deleted account still answers, so an app can offer to restore it.",
@@ -408,6 +404,7 @@
       "delete": {
         "operationId": "deleteAccount",
         "summary": "Delete your account and take every device off it",
+        "description": "Only the phone's and the web app's sign-ins; the Mac app's OAuth token is refused with 403.",
         "requestBody": {
           "required": false,
           "content": {
@@ -436,7 +433,7 @@
             }
           },
           "403": {
-            "description": "Only the phone and web app may delete an account, after verifying the sign-in again in the last 10 minutes (message reverify).",
+            "description": "The sign-in was not verified again in the last 10 minutes (message reverify).",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ApiError" }
@@ -458,6 +455,7 @@
       "post": {
         "operationId": "restoreAccount",
         "summary": "Take back a deletion before it is final",
+        "description": "Only the phone's and the web app's sign-ins; the Mac app's OAuth token is refused with 403.",
         "responses": {
           "200": {
             "description": "The account is in use again, with no devices on it; each signs in again. Restoring an account in use changes nothing.",
@@ -1222,7 +1220,7 @@
       "session": {
         "type": "http",
         "scheme": "bearer",
-        "description": "A Clerk session token."
+        "description": "A Clerk sign-in: a session token from the phone or the web app, or the Mac app's OAuth access token."
       }
     }
   },

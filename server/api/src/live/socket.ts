@@ -11,7 +11,13 @@ import { LiveCloseCode, validator } from "@sikemux/protocol";
 import { sql, type Kysely } from "kysely";
 import type { RawData, WebSocket } from "ws";
 
-import { checkStanding, type Identity, type Verifier } from "../auth.ts";
+import {
+  checkStanding,
+  isSession,
+  isWeb,
+  type Identity,
+  type Verifier,
+} from "../auth.ts";
 import type { Tables } from "../db.ts";
 import { removeDevice } from "../devices/removal.ts";
 import { liveMessage, signedBy } from "../devices/signature.ts";
@@ -31,7 +37,6 @@ export interface LiveContext {
   limiter: RateLimiter;
   log: Logger;
   options: LiveOptions;
-  appOrigin: string;
   pusher: Pusher;
 }
 
@@ -388,7 +393,7 @@ export class LiveSocket implements Member {
     if (hello.role === "client") {
       if (!hello.token) throw new HelloRefused("a client sends its session");
       identity = await verifier.verify(hello.token);
-      if (identity.via !== "session")
+      if (!isSession(identity))
         throw new HelloRefused("a client signs in with a session token");
     }
 
@@ -435,9 +440,7 @@ export class LiveSocket implements Member {
   }
 
   private checkWebIdentity(identity: Identity) {
-    if (identity.via !== "session")
-      throw new HelloRefused("the web app signs in with a session token");
-    if (identity.origin !== this.context.appOrigin)
+    if (!isWeb(identity))
       throw new HelloRefused("the token was not issued to the web app");
   }
 

@@ -22,6 +22,7 @@ import type { JoinSigner } from "../join/signer.ts";
 import { limit, type RateLimiter } from "../limits.ts";
 import { pushTokenRoutes } from "../push/routes.ts";
 import type { PushSettings } from "../push/settings.ts";
+import { ownedDevice } from "./owned.ts";
 import { removeDevice } from "./removal.ts";
 import { registrationMessage, signedBy } from "./signature.ts";
 
@@ -218,42 +219,23 @@ export function deviceRoutes(
     .delete("/:key", perUser("remove", 30), async (c) => {
       const { userId, via, sessionId } = c.get("identity");
       const key = c.req.param("key");
-      const { removed, reason } = await db
-        .transaction()
-        .execute(async (trx) => {
-          const device = await trx
-            .selectFrom("devices")
-            .select("clerk_session_id")
-            .where("key", "=", key)
-            .where("user_id", "=", userId)
-            .forUpdate()
-            .executeTakeFirst();
-          const reason =
-            sessionId !== undefined && device?.clerk_session_id === sessionId
-              ? ("signed_out" as const)
-              : ("removed" as const);
-          const removed = device
-            ? await removeDevice(trx, {
-                userId,
-                key,
-                reason,
-                actor: `user:${userId}`,
-                detail: { via },
-              })
-            : undefined;
-          return { removed, reason };
+      const { device, reason } = await db.transaction().execute(async (trx) => {
+        const device = await ownedDevice(trx, userId, key, { lock: true });
+        const reason =
+          sessionId !== undefined && device.clerk_session_id === sessionId
+            ? ("signed_out" as const)
+            : ("removed" as const);
+        await removeDevice(trx, {
+          userId,
+          key,
+          reason,
+          actor: `user:${userId}`,
+          detail: { via },
         });
-      if (!removed)
-        throw new ApiFailure(
-          404,
-          "not_found",
-          "None of your devices has that key.",
-        );
-      c.get("log").info(
-        { key, role: removed.role, reason },
-        "removed a device",
-      );
-      if (reason === "removed" && removed.clerkSessionId)
+        return { device, reason };
+      });
+      c.get("log").info({ key, role: device.role, reason }, "removed a device");
+      if (reason === "removed" && device.clerk_session_id)
         await revokeRemovedSession(db, clerk, c.get("log"), key).catch(
           (error: unknown) =>
             c.get("log").warn({ err: error }, "could not revoke the session"),

@@ -82,7 +82,6 @@ export function attachLive(server: Server, services: LiveServices): Live {
     limiter,
     log,
     options,
-    appOrigin,
     pusher: services.pusher,
   };
   let stopping = false;
