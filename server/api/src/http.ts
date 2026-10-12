@@ -39,6 +39,16 @@ export class ApiFailure extends Error {
   }
 }
 
+/** The body of every error the API answers, HTTP or a refused WebSocket upgrade. */
+export function errorBody(
+  requestId: string,
+  code: ErrorCode,
+  message: string,
+  extras: ErrorExtras = {},
+): ApiError {
+  return { error: { code, message, requestId, ...extras } };
+}
+
 export function errorResponse(
   c: Context<Env>,
   status: ContentfulStatusCode,
@@ -46,10 +56,7 @@ export function errorResponse(
   message: string,
   extras: ErrorExtras = {},
 ) {
-  const body: ApiError = {
-    error: { code, message, requestId: c.get("requestId"), ...extras },
-  };
-  return c.json(body, status);
+  return c.json(errorBody(c.get("requestId"), code, message, extras), status);
 }
 
 /** Gives each request an id, a logger that carries it, and one log line when it finishes. */
