@@ -14,7 +14,7 @@ import { CodeTokens, fenceLanguage, useCodeTokens, useDiffTokens } from "./codeH
 import { localImagePath, useImagePreview } from "./imagePreview";
 import { ChatFileRef, useFileRef } from "./FileRef";
 import { pathComponents, type PathGuess } from "./markdownPaths";
-import { cutLongText, useLongTextFold } from "./longText";
+import { cutLongText, showRestLabel, useLongTextFold } from "./longText";
 import { ChatAgentContext, openLink } from "./chatAgent";
 import { ChatImage } from "./ChatImage";
 import { DiffText } from "./DiffView";
@@ -162,7 +162,7 @@ export function FoldedMarkdown({ id, text, live, typed = false }: { id: string; 
         <>
             <LiveMarkdown text={cut.head} live={false} typed={typed} />
             <button type="button" className="chat-show-rest" onClick={expand}>
-                Show the rest — {Math.round(cut.hidden / 1000)}k more characters
+                {showRestLabel(cut.hidden)}
             </button>
         </>
     );

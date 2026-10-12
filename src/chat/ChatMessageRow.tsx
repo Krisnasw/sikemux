@@ -1,4 +1,4 @@
-import { memo, useContext, useMemo, useState } from "react";
+import { memo, useContext, useMemo, useState, type ReactNode } from "react";
 import { CopyButton } from "../ui/CopyButton";
 import { basename } from "../lib/paths";
 import {
@@ -27,7 +27,17 @@ import { ChatPage } from "./ChatPage";
 import { ToolGroup } from "./ToolGroup";
 import { ToolRow } from "./ToolRow";
 import { callCount } from "./toolView";
-import { attachmentName, formatDetail, groupParts, sentParts, shownParts, subagentTask } from "./transcript";
+import {
+    attachmentName,
+    formatDetail,
+    groupParts,
+    sentParts,
+    shownParts,
+    SUBAGENT_MARKS,
+    SUBAGENT_WORDS,
+    subagentTask,
+    type SubagentMark,
+} from "./transcript";
 import type { AccountMove, AcpSubagent, AcpTaskNotice, AgentNotice, ChatMessage, ChatPart } from "./types";
 import { ContextChipLabel } from "./ContextChip";
 import { Shimmer } from "./Shimmer";
@@ -180,29 +190,19 @@ function AccountPart({ move }: { move: AccountMove }) {
     );
 }
 
-const SUBAGENT_WORDS: Record<AcpSubagent["state"], string> = {
-    running: "working",
-    completed: "done",
-    failed: "failed",
-    cancelled: "stopped",
-    disconnected: "lost",
+const SUBAGENT_ICONS: Record<Exclude<SubagentMark, "spinner">, ReactNode> = {
+    check: <IconCheck size={13} />,
+    warning: <IconWarning size={12} />,
+    plug: <IconPlug size={12} />,
+    close: <IconClose size={11} />,
 };
 
 function SubagentStateMark({ state }: { state: AcpSubagent["state"] }) {
     const word = SUBAGENT_WORDS[state];
+    const mark = SUBAGENT_MARKS[state];
     return (
         <span className="chat-subagent-state" role="img" aria-label={word} title={word}>
-            {state === "running" ? (
-                <span className="chat-subagent-spinner" aria-hidden="true" />
-            ) : state === "completed" ? (
-                <IconCheck size={13} />
-            ) : state === "failed" ? (
-                <IconWarning size={12} />
-            ) : state === "disconnected" ? (
-                <IconPlug size={12} />
-            ) : (
-                <IconClose size={11} />
-            )}
+            {mark === "spinner" ? <span className="chat-subagent-spinner" aria-hidden="true" /> : SUBAGENT_ICONS[mark]}
         </span>
     );
 }

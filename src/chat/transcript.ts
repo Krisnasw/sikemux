@@ -189,6 +189,25 @@ export function workFolds(messages: ChatMessage[], running: boolean, previous?: 
     return folds;
 }
 
+export const SUBAGENT_WORDS: Readonly<Record<AcpSubagent["state"], string>> = {
+    running: "working",
+    completed: "done",
+    failed: "failed",
+    cancelled: "stopped",
+    disconnected: "lost",
+};
+
+export type SubagentMark = "spinner" | "check" | "warning" | "plug" | "close";
+
+/** The mark beside a subagent's row; each side draws it with its own icon. */
+export const SUBAGENT_MARKS: Readonly<Record<AcpSubagent["state"], SubagentMark>> = {
+    running: "spinner",
+    completed: "check",
+    failed: "warning",
+    cancelled: "close",
+    disconnected: "plug",
+};
+
 /* A subagent is handed a whole prompt as its task, and a prompt is paragraphs.
    The row is one line, so it opens with the first line and the tooltip keeps
    the rest. */

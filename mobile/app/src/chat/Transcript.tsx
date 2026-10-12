@@ -2,10 +2,11 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { durationLabel } from '@mac/chat/durationLabel';
+import { basename } from '@mac/lib/paths';
 import { rateLabel, sentLabel, type RowMeta } from '@mac/chat/messageMeta';
-import { cutLongText } from '@mac/chat/longText';
+import { cutLongText, showRestLabel } from '@mac/chat/longText';
 import { contextChip, type SentContext } from '@mac/chat/promptContext';
-import { groupParts, sentParts, shownParts, subagentTask } from '@mac/chat/transcript';
+import { groupParts, sentParts, shownParts, SUBAGENT_MARKS, SUBAGENT_WORDS, subagentTask, type SubagentMark } from '@mac/chat/transcript';
 import { callCount, callsLabel, workedLabel } from '@mac/chat/toolView';
 import type { PageRef } from '@mac/api/pages';
 import type { AccountMove, AcpContentBlock, AcpSubagent, AcpTaskNotice, AgentNotice, ChatMessage, ChatPart } from '@mac/chat/types';
@@ -42,27 +43,20 @@ function LongText({ id, text, live, style }: { id: string; text: string; live: b
       <Markdown text={cut ? cut.head : text} style={style} />
       {cut ? (
         <Pressable onPress={() => setWhole(true)} hitSlop={6} style={styles.showRest} accessibilityRole="button">
-          <Text style={styles.showRestText}>Show the rest · {Math.round(cut.hidden / 1000)}k more characters</Text>
+          <Text style={styles.showRestText}>{showRestLabel(cut.hidden)}</Text>
         </Pressable>
       ) : null}
     </>
   );
 }
 
-const SUBAGENT_WORDS: Record<AcpSubagent['state'], string> = {
-  running: 'working',
-  completed: 'done',
-  failed: 'failed',
-  cancelled: 'stopped',
-  disconnected: 'lost',
-};
-
-function SubagentMark({ state }: { state: AcpSubagent['state'] }) {
+function SubagentMarkView({ state }: { state: AcpSubagent['state'] }) {
   const colors = useColors();
-  if (state === 'running') return <Working />;
-  if (state === 'completed') return <Icon name="IconCheck" size={13} color={colors.live} />;
-  if (state === 'failed') return <Icon name="IconWarning" size={12} color={colors.danger} />;
-  if (state === 'disconnected') return <Icon name="IconPlug" size={12} color={colors.danger} />;
+  const mark: SubagentMark = SUBAGENT_MARKS[state];
+  if (mark === 'spinner') return <Working />;
+  if (mark === 'check') return <Icon name="IconCheck" size={13} color={colors.live} />;
+  if (mark === 'warning') return <Icon name="IconWarning" size={12} color={colors.danger} />;
+  if (mark === 'plug') return <Icon name="IconPlug" size={12} color={colors.danger} />;
   return <Icon name="IconClose" size={11} color={colors.inkFaint} />;
 }
 
@@ -101,7 +95,7 @@ function Subagent({ subagent, untimed }: { subagent: AcpSubagent; untimed: boole
         )}
         {calls ? <Text style={styles.subagentCalls}>{callCount(calls)}</Text> : null}
         <View style={styles.subagentMark}>
-          <SubagentMark state={subagent.state} />
+          <SubagentMarkView state={subagent.state} />
         </View>
       </Pressable>
       {open ? (
@@ -287,7 +281,7 @@ function Content({ block }: { block: AcpContentBlock }) {
   }
   const resource = typeof block.resource === 'object' && block.resource !== null ? (block.resource as { uri?: unknown }) : null;
   const uri = block.uri ?? (typeof resource?.uri === 'string' ? resource.uri : undefined);
-  const name = block.title ?? block.name ?? uri?.split('/').pop();
+  const name = block.title ?? block.name ?? (uri ? basename(uri) : undefined);
   if (!name) return null;
   return (
     <View style={styles.resource} accessible accessibilityLabel={`File ${name}`}>
