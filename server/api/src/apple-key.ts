@@ -1,6 +1,7 @@
 import { createPrivateKey, type KeyObject } from "node:crypto";
 import { readFileSync } from "node:fs";
 
+import { settingsFrom } from "./env.ts";
 import { signJwt } from "./jwt.ts";
 
 /** A signing key Apple hands out as a .p8 file, and who it belongs to. */
@@ -47,10 +48,11 @@ export function readAppleKeySettings(
   prefix: string,
   problems: string[],
 ): AppleKey | null {
-  const path = env[`${prefix}_KEY_FILE`]?.trim();
+  const { optional } = settingsFrom(env, problems);
+  const path = optional(`${prefix}_KEY_FILE`);
   if (!path) return null;
-  const keyId = env[`${prefix}_KEY_ID`]?.trim() ?? "";
-  const teamId = env[`${prefix}_TEAM_ID`]?.trim() ?? "";
+  const keyId = optional(`${prefix}_KEY_ID`) ?? "";
+  const teamId = optional(`${prefix}_TEAM_ID`) ?? "";
   const before = problems.length;
   if (!APPLE_ID.test(keyId))
     problems.push(`${prefix}_KEY_ID is not a key id like ABC123DEFG`);
