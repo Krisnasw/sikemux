@@ -383,7 +383,13 @@ export function AgentChatPane({
                                         const workId = fold ? fold.id : "";
                                         const folded = fold !== undefined && findRequest === 0 && !openWork.has(workId);
                                         const summary = fold && index === Math.max(fold.start, firstRow) && (
-                                            <WorkSummary took={fold.took} calls={fold.calls} open={!folded} onToggle={() => toggleWork(workId)} />
+                                            <WorkSummary
+                                                took={fold.took}
+                                                calls={fold.calls}
+                                                thought={fold.thought}
+                                                open={!folded}
+                                                onToggle={() => toggleWork(workId)}
+                                            />
                                         );
                                         if (fold && folded && index < fold.end && !message.parts.some(outlivesFold))
                                             return (

@@ -318,10 +318,23 @@ export function Message({
 }
 
 /** A finished answer's work, folded above the reply it closed with, as on the Mac. */
-export function WorkSummary({ took, calls, open, onToggle }: { took: number | null; calls: number; open: boolean; onToggle: () => void }) {
+export function WorkSummary({
+  took,
+  calls,
+  thought,
+  open,
+  onToggle,
+}: {
+  took: number | null;
+  calls: number;
+  thought: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
   const colors = useColors();
   const styles = useStyles(makeStyles);
-  const worked = took === null ? 'Worked' : `Worked for ${durationLabel(took)}`;
+  const verb = thought ? 'Thought' : 'Worked';
+  const worked = took === null ? verb : `${verb} for ${durationLabel(took)}`;
   const counted = `${calls} tool call${calls === 1 ? '' : 's'}`;
   return (
     <View style={styles.work}>

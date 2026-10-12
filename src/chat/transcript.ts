@@ -58,6 +58,8 @@ export interface WorkFold {
     from: number;
     calls: number;
     took: number | null;
+    /** Everything folded is thinking, so the turn thought rather than worked. */
+    thought: boolean;
 }
 
 export const isReply = (part: ChatPart) => part.kind === "text" || part.kind === "content";
@@ -99,16 +101,18 @@ function workFold(messages: ChatMessage[], start: number, end: number): WorkFold
     const from = answerBeforeAside(parts, closing);
     let calls = 0;
     let worked = false;
+    let acted = false;
     for (let index = start; index <= end; index += 1) {
         const work = messages[index].parts;
         for (let at = 0; at < work.length; at += 1) {
             if (index === end && at >= from && isReply(work[at])) continue;
             if (work[at].kind === "tool") calls += 1;
             worked ||= !isReply(work[at]);
+            acted ||= !isReply(work[at]) && work[at].kind !== "thought";
         }
     }
     if (!worked) return null;
-    return { id: messages[start].id, start, end, from, calls, took: workTime(messages, start, end) };
+    return { id: messages[start].id, start, end, from, calls, took: workTime(messages, start, end), thought: !acted };
 }
 
 /* A prompted turn starts with its prompt; one the agent began by itself starts
@@ -121,7 +125,14 @@ function workTime(messages: ChatMessage[], start: number, end: number): number |
 }
 
 const sameFold = (a: WorkFold | undefined, b: WorkFold) =>
-    a !== undefined && a.id === b.id && a.start === b.start && a.end === b.end && a.from === b.from && a.calls === b.calls && a.took === b.took;
+    a !== undefined &&
+    a.id === b.id &&
+    a.start === b.start &&
+    a.end === b.end &&
+    a.from === b.from &&
+    a.calls === b.calls &&
+    a.took === b.took &&
+    a.thought === b.thought;
 
 /**
  * Every finished turn worth folding, by the index of each message in it. A list redraws its rows when this

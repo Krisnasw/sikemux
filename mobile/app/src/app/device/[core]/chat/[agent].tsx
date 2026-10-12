@@ -321,7 +321,13 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
                         const folded = fold !== undefined && !openWork.has(workId);
                         const summary =
                           fold && index === fold.start ? (
-                            <WorkSummary took={fold.took} calls={fold.calls} open={!folded} onToggle={() => toggleWork(workId)} />
+                            <WorkSummary
+                              took={fold.took}
+                              calls={fold.calls}
+                              thought={fold.thought}
+                              open={!folded}
+                              onToggle={() => toggleWork(workId)}
+                            />
                           ) : null;
                         if (fold && folded && index < fold.end) return summary ?? <View />;
                         return (
