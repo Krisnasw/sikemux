@@ -112,16 +112,16 @@ function workFold(messages: ChatMessage[], start: number, end: number): WorkFold
         }
     }
     if (!worked) return null;
-    return { id: messages[start].id, start, end, from, calls, took: workTime(messages, start, end), thought: !acted };
+    return { id: messages[start].id, start, end, from, calls, took: turnSpan(messages, start, end), thought: !acted };
 }
 
-/* A prompted turn starts with its prompt; one the agent began by itself starts
-   when the core said it did. */
-function workTime(messages: ChatMessage[], start: number, end: number): number | null {
+/** How long the turn of assistant messages `start`..`end` took. A prompted turn starts with its prompt; one the
+    agent began by itself starts when the core said it did. Null when either end is unknown. */
+export function turnSpan(messages: readonly ChatMessage[], start: number, end: number): number | null {
     const before = messages[start - 1];
     const began = (before?.role === "user" ? before.sentAt : undefined) ?? messages[start].opensTurn?.at ?? null;
     const ended = messages[end].endedAt ?? null;
-    return began !== null && ended !== null && ended >= began ? ended - began : null;
+    return began !== null && ended !== null && ended > began ? ended - began : null;
 }
 
 const sameFold = (a: WorkFold | undefined, b: WorkFold) =>
