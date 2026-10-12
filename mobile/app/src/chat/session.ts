@@ -1,13 +1,13 @@
 import { ChatAttachment, MobileError, type ChatMark, type ConnectionLike } from '@sikemux/native';
 import { File } from 'expo-file-system';
 
-import { recordOf } from '@mac/chat/acpEvents';
+import { chatActions, recordOf } from '@mac/chat/acpEvents';
 import { chatReducer, initialChatState } from '@mac/chat/reducer';
 import type { AcpPermissionRequest, ChatAction, ChatMessage, ChatState } from '@mac/chat/types';
 
 import type { ChatInfo, CoreChatEvent } from '@/core/protocol';
 import type { ChatDelivery } from '@/devices/hub';
-import { actions, parsed } from './chatEvents';
+import { parsed } from './chatEvents';
 import { earlierMessages, PAGE_TURNS, withEarlier } from './earlier';
 import { Folds } from './folds';
 
@@ -555,7 +555,7 @@ export class ChatSession {
   private take(deliveries: ChatDelivery[]) {
     for (const delivery of deliveries) {
       if (this.taken !== undefined && delivery.seq <= this.taken) continue;
-      const taken = actions(JSON.parse(delivery.eventJson) as CoreChatEvent);
+      const taken = chatActions(JSON.parse(delivery.eventJson) as CoreChatEvent);
       for (const action of taken) {
         if (action.type !== 'permission_requested') continue;
         this.arrived.set(action.request.requestId, this.now());
