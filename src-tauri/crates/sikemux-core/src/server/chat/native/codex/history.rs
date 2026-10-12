@@ -9,11 +9,7 @@ use super::super::super::states::Subagent;
 use super::items;
 use super::subagents::{Addressed, Route, Subagents};
 
-/// A title as the chat shows it: one line, or none when blank.
-pub(super) fn title(text: &str) -> Option<String> {
-    let title = text.split_whitespace().collect::<Vec<_>>().join(" ");
-    (!title.is_empty()).then_some(title)
-}
+pub(super) use super::super::super::feed::title;
 
 fn user_messages(turns: &[Value]) -> impl Iterator<Item = (&Value, &Value)> {
     turns.iter().flat_map(|turn| {

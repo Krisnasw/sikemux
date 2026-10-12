@@ -10,6 +10,7 @@ use tokio::task::AbortHandle;
 
 use crate::acp::account::{Failure, FailureKind};
 
+use super::super::super::feed;
 use super::super::super::states::{self, Held, Subagent, Task as TaskState};
 use super::super::json::{self, text};
 use super::super::session::{Sink, TurnEnd};
@@ -877,16 +878,8 @@ impl Reader {
                 .await;
             let title = named
                 .ok()
-                .and_then(|named| {
-                    named
-                        .get("title")
-                        .and_then(Value::as_str)
-                        .map(str::to_owned)
-                })
-                .map(|title| title.split_whitespace().collect::<Vec<_>>().join(" "))
-                .filter(|title| !title.is_empty());
+                .and_then(|named| feed::title(text(&named, "title")?));
             if let Some(title) = title {
-                let title: String = title.chars().take(256).collect();
                 sink.update(
                     &session_id,
                     json!({ "sessionUpdate": "session_info_update", "title": title }),

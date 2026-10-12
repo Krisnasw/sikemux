@@ -112,16 +112,28 @@ fn only_keys(object: &serde_json::Map<String, Value>, allowed: &[&str]) -> bool 
     object.keys().all(|key| allowed.contains(&key.as_str()))
 }
 
-fn session_title(payload: &Value) -> Option<&str> {
+/// The most of a chat's title that is kept.
+const MAX_TITLE_CHARS: usize = 256;
+
+/// A title as the chat shows it: one line of bounded length, or none when
+/// blank.
+pub(crate) fn title(text: &str) -> Option<String> {
+    let title: String = text
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(MAX_TITLE_CHARS)
+        .collect();
+    (!title.is_empty()).then_some(title)
+}
+
+fn session_title(payload: &Value) -> Option<String> {
     let update = payload.get("update")?;
     if update.get("sessionUpdate")?.as_str()? != "session_info_update" {
         return None;
     }
-    update
-        .get("title")?
-        .as_str()
-        .map(str::trim)
-        .filter(|title| !title.is_empty())
+    title(update.get("title")?.as_str()?)
 }
 
 /// A subagent or background task the agent has going.
@@ -875,7 +887,7 @@ impl Feed {
         let bytes = inner.replay.push(kind, &payload);
         if kind == ChatEventKind::SessionUpdate {
             if let Some(title) = session_title(&payload) {
-                inner.title = Some(title.to_owned());
+                inner.title = Some(title);
             }
             inner.pending.push(payload);
             inner.pending_bytes += bytes;
@@ -1207,7 +1219,7 @@ mod tests {
             })
         };
         assert_eq!(
-            session_title(&info("Fix the flaky test")),
+            session_title(&info("Fix the flaky test")).as_deref(),
             Some("Fix the flaky test")
         );
         assert_eq!(session_title(&info("  ")), None);
