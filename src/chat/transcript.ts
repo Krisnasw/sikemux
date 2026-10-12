@@ -60,28 +60,49 @@ export interface WorkFold {
     took: number | null;
 }
 
-const isReply = (part: ChatPart) => part.kind === "text" || part.kind === "content";
+export const isReply = (part: ChatPart) => part.kind === "text" || part.kind === "content";
 
 /* A page the agent showed and a subagent still at work stay in view when the turn around them folds. */
 export const outlivesFold = (part: ChatPart) =>
     (part.kind === "tool" && part.page !== undefined) || (part.kind === "subagent" && part.subagent.state === "running");
 
+const replyStart = (parts: ChatPart[], end: number) => {
+    let start = end;
+    while (start > 0 && isReply(parts[start - 1])) start -= 1;
+    return start;
+};
+
+const writtenLength = (parts: ChatPart[], start: number, end: number) => {
+    let length = 0;
+    for (let index = start; index < end; index += 1) {
+        const part = parts[index];
+        if (part.kind === "text") length += part.text.length;
+    }
+    return length;
+};
+
+/* An agent often answers, makes one more call, such as stopping a server, and
+   closes with a line about it. The answer before that call is still the reply. */
+function answerBeforeAside(parts: ChatPart[], from: number): number {
+    let aside = from;
+    while (aside > 0 && !isReply(parts[aside - 1])) aside -= 1;
+    if (aside === from || aside === 0) return from;
+    const answer = replyStart(parts, aside);
+    return writtenLength(parts, answer, aside) > writtenLength(parts, from, parts.length) ? answer : from;
+}
+
 /* Runs while a reply streams in, so it walks the turn's parts in place rather than gathering them. */
 function workFold(messages: ChatMessage[], start: number, end: number): WorkFold | null {
     const parts = messages[end].parts;
-    let from = parts.length;
-    let said = false;
-    while (from > 0 && isReply(parts[from - 1])) {
-        from -= 1;
-        said ||= parts[from].kind === "text";
-    }
-    if (!said) return null;
+    const closing = replyStart(parts, parts.length);
+    if (!parts.slice(closing).some((part) => part.kind === "text")) return null;
+    const from = answerBeforeAside(parts, closing);
     let calls = 0;
     let worked = false;
     for (let index = start; index <= end; index += 1) {
         const work = messages[index].parts;
-        const until = index === end ? from : work.length;
-        for (let at = 0; at < until; at += 1) {
+        for (let at = 0; at < work.length; at += 1) {
+            if (index === end && at >= from && isReply(work[at])) continue;
             if (work[at].kind === "tool") calls += 1;
             worked ||= !isReply(work[at]);
         }

@@ -4,7 +4,7 @@ import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'reac
 import { durationLabel } from '@mac/chat/durationLabel';
 import { rateLabel, sentLabel, type RowMeta } from '@mac/chat/messageMeta';
 import { cutLongText } from '@mac/chat/longText';
-import { subagentTask } from '@mac/chat/transcript';
+import { isReply, subagentTask } from '@mac/chat/transcript';
 import type { AcpContentBlock, AcpSubagent, AcpTaskNotice, ChatMessage, ChatPart } from '@mac/chat/types';
 import { CopyButton } from '@/ui/CopyButton';
 import { haptics } from '@/ui/haptics';
@@ -311,7 +311,7 @@ export function Message({
   }
   return (
     <Pressable onPress={tap} onLongPress={keepLongPress} accessibilityHint={tap ? 'Tap for copy and how long it took' : undefined}>
-      <Parts id={message.id} parts={from > 0 ? message.parts.slice(from) : message.parts} untimed={untimed} live={live} />
+      <Parts id={message.id} parts={from > 0 ? message.parts.slice(from).filter(isReply) : message.parts} untimed={untimed} live={live} />
       {strip ? <Strip meta={strip} mine={false} /> : null}
     </Pressable>
   );

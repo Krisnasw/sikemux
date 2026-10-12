@@ -26,7 +26,7 @@ import { FoldedMarkdown, warmChatMarkdown } from "./ChatMarkdown";
 import { ChatPage } from "./ChatPage";
 import { ToolGroup } from "./ToolGroup";
 import { ToolRow } from "./ToolRow";
-import { attachmentName, formatDetail, groupParts, outlivesFold, subagentTask } from "./transcript";
+import { attachmentName, formatDetail, groupParts, isReply, outlivesFold, subagentTask } from "./transcript";
 import type { AccountMove, AcpSubagent, AcpTaskNotice, AgentNotice, ChatMessage, ChatPart } from "./types";
 import { ContextChipLabel } from "./ContextChip";
 import { Shimmer } from "./Shimmer";
@@ -306,7 +306,10 @@ export const ChatMessageRow = memo(function ChatMessageRow({
     from?: number;
 }) {
     const { parts, context } = useMemo(() => sentParts(message), [message]);
-    const shown = useMemo(() => (from > 0 ? parts.filter((part, index) => index >= from || outlivesFold(part)) : parts), [parts, from]);
+    const shown = useMemo(
+        () => (from > 0 ? parts.filter((part, index) => (index >= from && isReply(part)) || outlivesFold(part)) : parts),
+        [parts, from],
+    );
     const [editing, setEditing] = useState(false);
     const attachments = message.attachments ?? [];
     if (editing && onEdit) {
