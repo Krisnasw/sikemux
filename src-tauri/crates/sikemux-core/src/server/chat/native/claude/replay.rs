@@ -841,11 +841,15 @@ fn collect_children(records: &[Value], session_id: &str) -> Vec<Child> {
             if matches!(kind, "tool_result" | "mcp_tool_result") {
                 if let Some(id) = str_field(block, "tool_use_id") {
                     let reported = record.get("toolUseResult");
-                    if let Some(agent_id) = reported.and_then(|reported| str_field(reported, "agentId")) {
+                    if let Some(agent_id) =
+                        reported.and_then(|reported| str_field(reported, "agentId"))
+                    {
                         agent_ids.insert(agent_id.to_string(), id.to_string());
                     }
                     // A background agent's launch is not its end; its notification is.
-                    if reported.and_then(|reported| str_field(reported, "status")) == Some("async_launched") {
+                    if reported.and_then(|reported| str_field(reported, "status"))
+                        == Some("async_launched")
+                    {
                         continue;
                     }
                     let state = terminal_state(record, block);
