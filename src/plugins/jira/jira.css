@@ -194,7 +194,7 @@
 }
 
 .jira-detail-key {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 2px;
 }
@@ -317,7 +317,7 @@
 }
 
 .jira-pane.board.with-issue {
-    grid-template-columns: 200px minmax(0, 1fr) minmax(320px, 0.75fr);
+    grid-template-columns: 200px minmax(0, 1fr) minmax(480px, 1.125fr);
 }
 
 .jira-pane.board .jira-detail {
@@ -391,9 +391,9 @@
 
 .jira-column {
     display: flex;
-    flex: 1 0 210px;
+    flex: 1 0 262px;
     flex-direction: column;
-    max-width: 340px;
+    max-width: 425px;
     gap: 6px;
     min-height: 0;
     padding: 8px;
