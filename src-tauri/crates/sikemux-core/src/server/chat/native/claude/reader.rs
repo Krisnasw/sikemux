@@ -1305,18 +1305,21 @@ impl Reader {
         summary: Option<&str>,
         output: Option<&str>,
     ) {
-        if let Some(child) = self.children.values_mut().find(|child| {
-            child.session_id == task_id
-                || child
-                    .session_id
-                    .starts_with(&format!("{task_id}:generation:"))
-        }) {
+        let generation_prefix = format!("{task_id}:generation:");
+        let of_task = |child: &Child| {
+            child.session_id == task_id || child.session_id.starts_with(&generation_prefix)
+        };
+        if self.children.values().any(of_task) {
             let Some(state) = subagent_state(status) else {
                 return;
             };
-            if child.ended {
+            let Some(child) = self
+                .children
+                .values_mut()
+                .find(|child| !child.ended && of_task(child))
+            else {
                 return;
-            }
+            };
             child.ended = true;
             let session_id = child.session_id.clone();
             let parent = self
