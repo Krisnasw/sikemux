@@ -27,6 +27,7 @@ on:
       - "mobile/app/scripts/rust-sources.js"
       - "src/agents/agentLaunch.ts"
       - "src/chat/**"
+      - "src/lib/format.ts"
       - "src/lib/paths.ts"
       - "src/lib/platform.ts"
       - "src/terminal/interactions.ts"
