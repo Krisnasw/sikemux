@@ -238,14 +238,14 @@ export function AgentChatPane({
 
     const editable = state.capabilities.editing === true && state.connection === "ready" && !state.running;
     const editMessage = useCallback(
-        (message: ChatMessage, text: string, restoreFiles: boolean) => {
+        (message: ChatMessage, text: string) => {
             const messageId = message.promptId;
             if (!messageId) return;
             const paths = message.attachments ?? [];
             setComposerError(null);
             dispatch({ type: "rewind", messageId });
             dispatch({ type: "local_prompt", text, paths, messageId });
-            acpApi.edit(agentRef.current.id, messageId, text, paths, [], restoreFiles).catch((error: unknown) => {
+            acpApi.edit(agentRef.current.id, messageId, text, paths, []).catch((error: unknown) => {
                 dispatch({ type: "error", message: error instanceof Error ? error.message : String(error) });
             });
         },
@@ -414,7 +414,6 @@ export function AgentChatPane({
                                                     at={meta.at}
                                                     took={meta.took}
                                                     onEdit={editable && message.role === "user" && message.promptId ? editMessage : undefined}
-                                                    canRestoreFiles={state.capabilities.restoreFiles === true}
                                                 />
                                             </div>
                                         );

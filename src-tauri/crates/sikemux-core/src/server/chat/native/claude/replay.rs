@@ -719,19 +719,6 @@ pub fn resumed_model(records: &[Value]) -> Option<String> {
     })
 }
 
-/// The uuid of the record a rewind to just before user message `message_uuid` resumes at (its parentUuid, skipping back over records that are not user/assistant chain entries if needed), or None when it is the first message.
-pub fn rewind_point(records: &[Value], message_uuid: &str) -> Option<String> {
-    let index = records
-        .iter()
-        .position(|record| uuid_of(record) == message_uuid)?;
-    let parent = str_field(&records[index], "parentUuid")?;
-    if records.iter().any(|record| uuid_of(record) == parent) {
-        return Some(parent.to_string());
-    }
-    let previous = records[..index].last()?;
-    Some(uuid_of(previous).to_string())
-}
-
 /// The updates to replay, in order, as (session_id, update) pairs: root session id for top-level records, `<sid>:replay-subagent:<toolUseId>` children with subagent_spawned / subagent_state_update exactly as §11.2, user records as user_message_chunk with messageId = record uuid (after stripLocalCommandMetadata), assistant records via content_chunk/tool_call/tool_result, TodoWrite → plan, skipping Agent/Task calls, synthetic login/usage-limit handling.
 pub fn replay(records: &[Value], session_id: &str, cwd: &Path) -> Vec<(String, Value)> {
     let mut replay = Replay {

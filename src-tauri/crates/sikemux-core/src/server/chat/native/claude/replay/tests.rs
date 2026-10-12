@@ -87,20 +87,7 @@ fn read_chain_follows_the_latest_branch() {
     let chain = read_chain(&path).expect("chain");
     let uuids: Vec<&str> = chain.iter().filter_map(|r| r["uuid"].as_str()).collect();
     assert_eq!(uuids, ["u1", "a1", "u3", "a3"]);
-    assert_eq!(rewind_point(&chain, "u3"), Some("a1".to_string()));
-    assert_eq!(rewind_point(&chain, "u1"), None);
-    assert_eq!(rewind_point(&chain, "missing"), None);
     assert!(read_chain(&dir.path().join("nope.jsonl")).is_err());
-}
-
-#[test]
-fn rewind_point_skips_records_the_chain_dropped() {
-    let records = [
-        user("u1", None, json!("first")),
-        assistant("a1", Some("u1"), "m1", "m", json!("one")),
-        user("u2", Some("dropped-attachment"), json!("second")),
-    ];
-    assert_eq!(rewind_point(&records, "u2"), Some("a1".to_string()));
 }
 
 #[test]

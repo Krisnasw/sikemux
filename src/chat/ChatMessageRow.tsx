@@ -255,7 +255,6 @@ export const ChatMessageRow = memo(function ChatMessageRow({
     at,
     took,
     onEdit,
-    canRestoreFiles = false,
     from = 0,
 }: {
     message: ChatMessage;
@@ -265,8 +264,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
     at: number | null;
     took: number | null;
     /** Given when the person may write this message again. */
-    onEdit?: (message: ChatMessage, text: string, restoreFiles: boolean) => void;
-    canRestoreFiles?: boolean;
+    onEdit?: (message: ChatMessage, text: string) => void;
     /** Where the shown parts start, when the work before them is folded away. */
     from?: number;
 }) {
@@ -281,11 +279,10 @@ export const ChatMessageRow = memo(function ChatMessageRow({
                 <div className="chat-message-content">
                     <MessageEditor
                         initial={written}
-                        canRestoreFiles={canRestoreFiles}
                         onCancel={() => setEditing(false)}
-                        onSend={(text, restoreFiles) => {
+                        onSend={(text) => {
                             setEditing(false);
-                            onEdit(message, text, restoreFiles);
+                            onEdit(message, text);
                         }}
                     />
                 </div>

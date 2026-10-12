@@ -536,7 +536,6 @@ impl Backend for Codex {
                 "loadSession": true,
                 "steering": true,
                 "editing": true,
-                "restoreFiles": false,
                 "promptCapabilities": { "image": true, "embeddedContext": true },
             }),
             setup: json!({
@@ -631,14 +630,7 @@ impl Backend for Codex {
         Err("Codex has no background tasks to stop".into())
     }
 
-    async fn rewind(
-        &mut self,
-        message_id: &str,
-        restore_files: bool,
-    ) -> Result<Option<String>, String> {
-        if restore_files {
-            return Err("Codex cannot undo file changes yet".into());
-        }
+    async fn rewind(&mut self, message_id: &str) -> Result<(), String> {
         let turn_id = self
             .driver
             .lock()
@@ -654,7 +646,7 @@ impl Backend for Codex {
             )
             .await?;
         self.driver.lock().rewound(&turn_id);
-        Ok(None)
+        Ok(())
     }
 
     async fn closed(&self) -> String {

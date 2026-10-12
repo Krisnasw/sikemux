@@ -81,8 +81,6 @@ pub(crate) enum ChatCommand {
         text: String,
         paths: Vec<String>,
         context: Vec<ChatContext>,
-        /// Puts the files back as they were before that message too.
-        restore_files: bool,
         reply: oneshot::Sender<Result<(), String>>,
     },
     Cancel,
@@ -313,9 +311,9 @@ impl Chat {
             agent_id: self.launch.agent_id.clone(),
             provider: self.launch.provider.clone(),
             cwd: self.launch.cwd.clone(),
-            choices: permission::choices(&pending.request),
             request: pending.request.clone(),
             at: pending.at,
+            choices: permission::choices(&pending.request),
         }
     }
 
@@ -419,11 +417,11 @@ impl Chat {
             model: self.launch.model.clone(),
             effort: self.launch.effort.clone(),
             asleep: false,
+            unread: false,
+            active_at: None,
             group: Default::default(),
             status: Default::default(),
             attention_rank: 0,
-            unread: false,
-            active_at: None,
         }
     }
 
@@ -889,7 +887,6 @@ pub(crate) fn prompt(
     })
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn edit(
     core: &Core,
     from: ClientId,
@@ -898,7 +895,6 @@ pub(crate) async fn edit(
     text: String,
     paths: Vec<String>,
     context: Vec<ChatContext>,
-    restore_files: bool,
 ) -> CoreResult<()> {
     bounded_text("message id", &message_id, 256)?;
     let (reply, answer) = oneshot::channel();
@@ -908,7 +904,6 @@ pub(crate) async fn edit(
         text,
         paths,
         context,
-        restore_files,
         reply,
     })?;
     answer

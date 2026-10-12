@@ -163,12 +163,6 @@
     opacity: 0.45;
 }
 
-.chat-message-editor-restore.on {
-    border-color: var(--acc-line);
-    background: color-mix(in srgb, var(--acc) 14%, transparent);
-    color: var(--ink);
-}
-
 .chat-message-time {
     font-size: calc(10.5px * var(--chat-text-em, 1));
     font-variant-numeric: tabular-nums;

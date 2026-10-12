@@ -679,8 +679,7 @@ pub async fn acp_prompt(
 }
 
 /// Takes the chat back to before the person's message `message_id` and sends
-/// `text` in its place, putting the files back too when `restore_files`.
-#[allow(clippy::too_many_arguments)]
+/// `text` in its place.
 #[tauri::command]
 pub async fn acp_edit(
     pty: State<'_, PtyManager>,
@@ -689,11 +688,10 @@ pub async fn acp_edit(
     text: String,
     paths: Vec<String>,
     context: Vec<ChatContext>,
-    restore_files: bool,
 ) -> Result<(), String> {
     core(&pty)
         .await?
-        .acp_edit(agent_id, message_id, text, paths, context, restore_files)
+        .acp_edit(agent_id, message_id, text, paths, context)
         .await
         .map_err(failure)
 }

@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub const PROTOCOL: &str = "sikemux-core";
-pub const PROTOCOL_VERSION: u32 = 10;
+pub const PROTOCOL_VERSION: u32 = 11;
 /// The oldest version a device may speak and still be served. A change a
 /// device from an older release can still read bumps only `PROTOCOL_VERSION`,
 /// so phones waiting on an app store review keep working.
@@ -318,14 +318,13 @@ pub enum Request {
         context: Vec<ChatContext>,
     },
     /// Takes the chat back to before the person's message `message_id`, and
-    /// sends `text` in its place. `restore_files` puts the files back too.
+    /// sends `text` in its place.
     AcpEdit {
         agent_id: String,
         message_id: String,
         text: String,
         paths: Vec<String>,
         context: Vec<ChatContext>,
-        restore_files: bool,
     },
     /// Puts a message into the running turn. Answered with `promptRequired`
     /// when the turn ended first and the message should be a prompt instead.
@@ -678,6 +677,7 @@ pub enum ChatState {
     /// failed to start.
     Stopped,
 }
+
 /// Where an agent stands for the person, in the order lists show the groups:
 /// waiting on them first. Only a running turn is Working; subagents and
 /// shells left running are counted beside the agent instead.
@@ -711,7 +711,6 @@ pub enum AgentStatus {
     Starting,
 }
 
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatInfo {
@@ -744,6 +743,7 @@ pub struct ChatInfo {
     pub unread: bool,
     /// When it last opened, started work, finished or asked for something,
     /// in Unix milliseconds. Unknown for chats from before the core started.
+    pub active_at: Option<u64>,
     #[serde(default)]
     pub group: AgentGroup,
     #[serde(default)]
@@ -752,7 +752,6 @@ pub struct ChatInfo {
     /// in the order they want the person: 0 first.
     #[serde(default)]
     pub attention_rank: u32,
-    pub active_at: Option<u64>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -1031,6 +1030,29 @@ pub struct LauncherInfo {
     /// Whether the agent is ready, signed out, missing or broken; absent when the app has not said.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+    /// The models in `config_options`, as a picker shows them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<ConfigPicker>,
+    /// How hard the model thinks, as a picker shows it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effort: Option<ConfigPicker>,
+}
+
+/// One of a session's select options, read for a picker.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigPicker {
+    /// The config id to set it with.
+    pub id: String,
+    pub current: String,
+    pub choices: Vec<ConfigChoice>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigChoice {
+    pub value: String,
+    pub label: String,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -1338,6 +1360,7 @@ pub struct SessionInfo {
     pub unread: bool,
     /// When the agent last started work, finished or asked for something, in
     /// Unix milliseconds.
+    pub active_at: Option<u64>,
     /// For an agent terminal the device view lists, as for a chat.
     #[serde(default)]
     pub group: Option<AgentGroup>,
@@ -1345,7 +1368,6 @@ pub struct SessionInfo {
     pub status: Option<AgentStatus>,
     #[serde(default)]
     pub attention_rank: Option<u32>,
-    pub active_at: Option<u64>,
 }
 
 /// A task's launch request without its environment.
@@ -1474,6 +1496,7 @@ pub struct Attention {
     /// The agent's own request, with what it wants to do and the options.
     pub request: Value,
     /// Milliseconds since the Unix epoch.
+    pub at: u64,
     #[serde(default)]
     pub choices: PermissionChoices,
 }
@@ -1492,7 +1515,6 @@ pub struct PermissionChoices {
     pub command: Option<String>,
     /// What its tool call is called.
     pub title: Option<String>,
-    pub at: u64,
 }
 
 /// The app's `agent_state_changed` payload.

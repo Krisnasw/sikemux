@@ -4,17 +4,14 @@ import { useEffect, useRef, useState } from "react";
     before it and asks again with the new text. */
 export function MessageEditor({
     initial,
-    canRestoreFiles,
     onSend,
     onCancel,
 }: {
     initial: string;
-    canRestoreFiles: boolean;
-    onSend: (text: string, restoreFiles: boolean) => void;
+    onSend: (text: string) => void;
     onCancel: () => void;
 }) {
     const [text, setText] = useState(initial);
-    const [restoreFiles, setRestoreFiles] = useState(false);
     const field = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -32,7 +29,7 @@ export function MessageEditor({
     }, [text]);
 
     const send = () => {
-        if (text.trim()) onSend(text, restoreFiles);
+        if (text.trim()) onSend(text);
     };
 
     return (
@@ -55,16 +52,6 @@ export function MessageEditor({
                 }}
             />
             <div className="chat-message-editor-actions">
-                {canRestoreFiles && (
-                    <button
-                        type="button"
-                        className={`chat-message-editor-restore${restoreFiles ? " on" : ""}`}
-                        aria-pressed={restoreFiles}
-                        title="Put the files back as they were before this message"
-                        onClick={() => setRestoreFiles((on) => !on)}>
-                        Undo file changes
-                    </button>
-                )}
                 <button type="button" onClick={onCancel}>
                     Cancel
                 </button>

@@ -115,12 +115,6 @@ impl Sink {
         );
     }
 
-    /// The agent's process was replaced under the chat, taking everything it
-    /// had going with it.
-    pub fn agent_gone(&self) {
-        self.chat.feed.agent_gone();
-    }
-
     /// Whether a turn this side prompted is being answered.
     pub fn running(&self) -> bool {
         self.chat.running.load(Ordering::Acquire)
@@ -267,14 +261,11 @@ pub(crate) trait Backend: Sized + Send {
         task_id: &str,
     ) -> impl std::future::Future<Output = Result<(), String>> + Send;
 
-    /// Takes the conversation back to before the person's message
-    /// `message_id`, and the files too when `restore_files`. Answers with the
-    /// session's new id when the agent had to start a new one to do it.
+    /// Takes the conversation back to before the person's message `message_id`.
     fn rewind(
         &mut self,
         message_id: &str,
-        restore_files: bool,
-    ) -> impl std::future::Future<Output = Result<Option<String>, String>> + Send;
+    ) -> impl std::future::Future<Output = Result<(), String>> + Send;
 
     /// Resolves once the agent is gone, with why.
     fn closed(&self) -> impl std::future::Future<Output = String> + Send;
@@ -309,7 +300,7 @@ pub(crate) async fn run<B: Backend>(
     let (mut backend, opened) = B::start(&launch, sink.clone()).await?;
     quiet.store(false, Ordering::Release);
 
-    let mut session_id = opened.session_id.clone();
+    let session_id = opened.session_id.clone();
     let mut setup = opened.setup;
     let start = ChatStart {
         session_id: session_id.clone(),
@@ -477,7 +468,6 @@ pub(crate) async fn run<B: Backend>(
                 text,
                 paths,
                 context,
-                restore_files,
                 reply,
             } => {
                 if chat.running.load(Ordering::Acquire) {
@@ -485,27 +475,11 @@ pub(crate) async fn run<B: Backend>(
                         reply.send(Err("Stop the current turn before editing a message".into()));
                     continue;
                 }
-                match backend.rewind(&message_id, restore_files).await {
-                    Ok(Some(renamed)) => {
-                        chat.feed.rewound(from, &session_id, &message_id);
-                        session_id = renamed;
-                        let start = ChatStart {
-                            session_id: session_id.clone(),
-                            capabilities: start.capabilities.clone(),
-                            setup: setup.clone(),
-                        };
-                        chat.mark_ready(start.clone());
-                        chat.emit(
-                            ChatEventKind::Ready,
-                            serde_json::to_value(&start).unwrap_or_else(|_| json!({})),
-                        );
-                    }
-                    Ok(None) => chat.feed.rewound(from, &session_id, &message_id),
-                    Err(error) => {
-                        let _ = reply.send(Err(error));
-                        continue;
-                    }
+                if let Err(error) = backend.rewind(&message_id).await {
+                    let _ = reply.send(Err(error));
+                    continue;
                 }
+                chat.feed.rewound(from, &session_id, &message_id);
                 let _ = reply.send(Ok(()));
                 exhausted.clear();
                 signed_in_again = false;
