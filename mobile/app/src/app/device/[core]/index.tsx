@@ -373,9 +373,9 @@ const FADE = 22;
 
 /**
  * The list's mask: once the tabs are pinned, nothing shows under them and rows fade in just below.
- * Until then `open` keeps the whole list shown, so the header is never cut.
+ * Until then `open` keeps the whole list shown, so the header is never cut. Rows also fade out into the home bar.
  */
-function UnderBar({ height, open }: { height: number; open: Animated.AnimatedInterpolation<number> }) {
+function UnderBar({ height, open, bottom }: { height: number; open: Animated.AnimatedInterpolation<number>; bottom: number }) {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ height }} />
@@ -389,6 +389,15 @@ function UnderBar({ height, open }: { height: number; open: Animated.AnimatedInt
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#under-bar)" />
       </Svg>
       <View style={{ flex: 1, backgroundColor: '#000' }} />
+      <Svg width="100%" height={bottom}>
+        <Defs>
+          <LinearGradient id="over-home" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#000" stopOpacity={1} />
+            <Stop offset="1" stopColor="#000" stopOpacity={0} />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#over-home)" />
+      </Svg>
       <Animated.View
         style={{ position: 'absolute', top: 0, left: 0, right: 0, height: height + FADE, backgroundColor: '#000', opacity: open }}
       />
@@ -555,7 +564,7 @@ export default function Device() {
       ) : (
         <>
           <View style={styles.list}>
-            <MaskedView style={styles.list} maskElement={<UnderBar height={barHeight} open={unpinned} />}>
+            <MaskedView style={styles.list} maskElement={<UnderBar height={barHeight} open={unpinned} bottom={bottom} />}>
               <Animated.ScrollView
                 {...scrollPause}
                 onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrolled } } }], { useNativeDriver: true })}
