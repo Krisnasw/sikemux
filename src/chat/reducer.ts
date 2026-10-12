@@ -158,9 +158,12 @@ function appendChunk(
     } else {
         const message = messages[existingIndex];
         const parts = [...message.parts];
-        const last = parts.at(-1);
+        /* A task can end while the reply streams; its notice must not cut the reply's markdown in two. */
+        let open = parts.length - 1;
+        while (open > 0 && (parts[open].kind === "notice" || parts[open].kind === "agent_notice")) open -= 1;
+        const last = parts[open];
         if (contentText !== undefined && last?.kind === partKind) {
-            parts[parts.length - 1] = { ...last, text: last.text + contentText };
+            parts[open] = { ...last, text: last.text + contentText };
         } else if (contentText !== undefined) {
             parts.push({ id: `${messageId}-${partKind}-${parts.length}`, kind: partKind, text: contentText });
         } else {
