@@ -112,9 +112,10 @@ pub(crate) struct Reader {
     subagents: HashMap<String, Child>,
     held: HashMap<String, Held<Value>>,
     tasks: HashMap<String, Task>,
-    /// Shell commands Claude Code waits on in the turn. It reports their end
-    /// like background work's, but their tool result already says it.
-    foreground: HashSet<String>,
+    /// Shell commands Claude Code waits on in the turn, as it reported them
+    /// starting. It reports their end like background work's, but their tool
+    /// result already says it. One moved to the background is shown then.
+    foreground: HashMap<String, Value>,
     compaction: Option<String>,
     /// The list Claude's task tools keep, shown as the chat's plan.
     task_plan: TaskPlan,
@@ -280,7 +281,7 @@ impl Reader {
             subagents: HashMap::new(),
             held: HashMap::new(),
             tasks: HashMap::new(),
-            foreground: HashSet::new(),
+            foreground: HashMap::new(),
             compaction: None,
             task_plan: TaskPlan::default(),
             used: None,
@@ -307,9 +308,6 @@ impl Reader {
     /// subagent a tool call spawned. A subagent not yet announced holds it.
     fn send(&mut self, parent: Option<&str>, update: Value) {
         let Some(parent) = parent else {
-            if !self.turn_running() {
-                self.sink.work_started();
-            }
             self.sink.update(&self.session_id, update);
             return;
         };
@@ -714,7 +712,6 @@ impl Reader {
             }
             let update = tools::tool_result(&id, &name, &input, result, structured, &self.cwd);
             self.sink.update(&session, update);
-            self.background_shell(&id, &input, result);
         }
     }
 
@@ -729,58 +726,6 @@ impl Reader {
             parent,
             json!({ "sessionUpdate": "agent_message_chunk", "content": { "type": "text", "text": output } }),
         );
-    }
-
-    /// A shell command sent to the background answers with where its output
-    /// goes, and runs on as a task.
-    fn background_shell(&mut self, tool_id: &str, input: &Value, result: &Value) {
-        let said = json::joined_text(result.get("content"));
-        // Claude sends a command to the background when asked to, or when it outlives its timeout.
-        let Some(rest) = said
-            .split("Command running in background with ID: ")
-            .nth(1)
-            .or_else(|| said.split("moved to the background (ID ").nth(1))
-        else {
-            return;
-        };
-        let Some(task_id) = rest
-            .split(|ch: char| ch == '.' || ch == ')' || ch.is_whitespace())
-            .next()
-        else {
-            return;
-        };
-        if task_id.is_empty() || self.tasks.contains_key(task_id) {
-            return;
-        }
-        let output = said
-            .split("Output is being written to: ")
-            .nth(1)
-            .and_then(|rest| rest.split(". You will be notified").next())
-            .map(str::trim)
-            .filter(|path| !path.is_empty());
-        let description = text(input, "command").unwrap_or("Shell").to_owned();
-        self.tasks.insert(
-            task_id.to_owned(),
-            Task {
-                name: description.clone(),
-                ended: false,
-            },
-        );
-        let mut update = json!({
-            "sessionUpdate": "async_task_spawned",
-            "asyncTaskId": task_id,
-            "name": description,
-            "taskType": "shell",
-            "description": description,
-            "showInTranscript": true,
-            "canStop": true,
-            "toolCallId": tool_id,
-            "owner": self.owner_of(Some(tool_id)),
-        });
-        if let Some(output) = output {
-            update["outputFilePath"] = json!(output);
-        }
-        self.sink.update(&self.session_id, update);
     }
 
     fn result(&mut self, result: &Value) {
@@ -823,9 +768,6 @@ impl Reader {
             }
             return;
         };
-        if turn.cancelled {
-            self.end_foreground_subagents();
-        }
         let end = if turn.cancelled {
             TurnEnd::Completed(json!({ "stopReason": "cancelled" }))
         } else if let Some(failure) = turn.failure {
@@ -922,6 +864,8 @@ impl Reader {
     fn system(&mut self, message: &Value) {
         match text(message, "subtype") {
             Some("session_state_changed") if text(message, "state") == Some("idle") => self.idle(),
+            // Claude Code opens every turn with this, including the ones background work starts.
+            Some("init") if !self.turn_running() => self.sink.work_started(),
             Some("status") => self.status(message),
             Some("compact_boundary") => {
                 if let Some(used) = message
@@ -939,6 +883,9 @@ impl Reader {
                     return;
                 };
                 let patch = message.get("patch").cloned().unwrap_or(Value::Null);
+                if patch.get("is_backgrounded").and_then(Value::as_bool) == Some(true) {
+                    self.backgrounded(&id);
+                }
                 if let Some(status) = text(&patch, "status") {
                     self.task_ended(&id, status, None, text(&patch, "output_file"));
                 }
@@ -951,7 +898,7 @@ impl Reader {
                 let summary = text(message, "summary");
                 // Work started outside any tracked task still wakes the agent.
                 if !self.tasks.contains_key(&id) && !self.subagents.contains_key(&id) {
-                    if self.foreground.contains(&id) {
+                    if self.foreground.contains_key(&id) {
                         return;
                     }
                     let name = summary
@@ -1076,9 +1023,6 @@ impl Reader {
             .and_then(|mut shared| shared.turn.take());
         match turn {
             Some(turn) => {
-                if turn.cancelled {
-                    self.end_foreground_subagents();
-                }
                 let end = match turn.failure {
                     Some(failure) if !turn.cancelled => TurnEnd::Failed {
                         failure,
@@ -1153,7 +1097,7 @@ impl Reader {
             None => !matches!(kind, Some("local_bash" | "local_agent")),
         };
         if !backgrounded {
-            self.foreground.insert(task_id);
+            self.foreground.insert(task_id, message.clone());
             return;
         }
         if self.tasks.contains_key(&task_id) {
@@ -1394,21 +1338,16 @@ impl Reader {
         );
     }
 
-    /// Stopping a turn stops the subagents it waits on; ones sent to the
-    /// background run on.
-    fn end_foreground_subagents(&mut self) {
-        let stopped: Vec<(String, String)> = self
-            .subagents
-            .iter_mut()
-            .filter(|(_, child)| !child.ended && !child.background)
-            .map(|(session_id, child)| {
-                child.ended = true;
-                (child.parent.clone(), session_id.clone())
-            })
-            .collect();
-        for (parent, session_id) in stopped {
-            self.sink
-                .update(&parent, Subagent::Cancelled.update(&session_id));
+    /// Work the turn was waiting on that Claude Code moved to the background,
+    /// which then runs on past the turn.
+    fn backgrounded(&mut self, task_id: &str) {
+        if let Some(child) = self.subagents.get_mut(task_id) {
+            child.background = true;
+            return;
+        }
+        if let Some(mut started) = self.foreground.remove(task_id) {
+            started["is_backgrounded"] = json!(true);
+            self.task_started(&started);
         }
     }
 
