@@ -233,24 +233,6 @@
     background: var(--surface-selected);
 }
 
-.proj-pip.is-working::after,
-.proj-pip.has-unread::after {
-    content: "";
-    position: absolute;
-    right: -1px;
-    top: -1px;
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: var(--acc);
-    box-shadow: 0 0 0 2px var(--surface);
-}
-.proj-pip.is-working::after {
-    background: transparent;
-    border: 1.5px solid color-mix(in srgb, var(--live) 30%, transparent);
-    border-top-color: var(--live);
-    animation: agent-activity-spin 0.72s linear infinite;
-}
 .env-dd {
     position: relative;
     flex: 0 1 auto;
@@ -853,8 +835,7 @@
 
 @media (prefers-reduced-motion: reduce) {
     .agent-state-loader i,
-    .loading-ring,
-    .proj-pip.is-working::after {
+    .loading-ring {
         animation: none;
     }
 }

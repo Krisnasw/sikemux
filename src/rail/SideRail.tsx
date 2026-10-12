@@ -14,9 +14,9 @@ import {
 } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { keybindingLabelForAction, type KeybindingActionId } from "../commands/keybindings";
-import type { Agent, AgentRuntimeState, Session, SessionKind, Window, WindowRole } from "../state/types";
+import type { Agent, Session, SessionKind, Window, WindowRole } from "../state/types";
 import * as cmd from "../state/commands";
-import { animate, EASE_IN, EASE_SWAP, foldedFrames, leavingRef, prefersReducedMotion } from "../lib/motion";
+import { animate, EASE_IN, EASE_PAN, EASE_POP, EASE_SWAP, foldedFrames, leavingRef, prefersReducedMotion } from "../lib/motion";
 import { rollupAgentDisplays, type AgentDisplay } from "../state/agentStatus";
 import { getState, useStore } from "../state/store";
 import { AgentIcon, IconClose, IconCommand, IconFolder, IconPencil, IconPlus, WindowIcon } from "../ui/Icons";
@@ -114,7 +114,6 @@ interface RailContextValue {
     windowsById: Record<string, Window>;
     windowsBySession: Record<string, string[]>;
     agentsById: Record<string, Agent>;
-    activityById: Record<string, AgentRuntimeState>;
     displayOf: (agentId: string) => AgentDisplay;
     draggingProjectId: string | null;
     projectDragClass: (id: string) => string;
@@ -213,7 +212,7 @@ function useProjectUnfold(tree: RefObject<HTMLDivElement | null>, active: boolea
 
 function ProjectBlock({ s }: { s: Session }) {
     const rail = useRail();
-    const { activeSessionId, agentsById, activityById, displayOf, windowsById, windowsBySession, draggingProjectId, kb } = rail;
+    const { activeSessionId, agentsById, displayOf, windowsById, windowsBySession, draggingProjectId, kb } = rail;
     const active = s.id === activeSessionId;
     // Active or not, a project is one tree root holding its row, so the row survives the switch and its tint cross-fades.
     const treeRef = useRef<HTMLDivElement>(null);
@@ -232,7 +231,7 @@ function ProjectBlock({ s }: { s: Session }) {
             {visibleAgents.length > 0 && (
                 <span className="proj-child-icons">
                     {visibleAgents.map((a) => (
-                        <span key={a.id} className={`proj-pip proj-pip-${a.type}${activityById[a.id] ? ` state-${activityById[a.id].state}` : ""}`}>
+                        <span key={a.id} className={`proj-pip proj-pip-${a.type}`}>
                             <AgentIcon type={a.type} size={20} />
                         </span>
                     ))}
@@ -526,7 +525,7 @@ export const SideRail = memo(function SideRail() {
                 if (Math.abs(shift) < 1) continue;
                 element.animate([{ transform: `translate3d(0, ${shift}px, 0)` }, { transform: "translate3d(0, 0, 0)" }], {
                     duration: 220,
-                    easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+                    easing: EASE_POP,
                 });
             }
         });
@@ -564,7 +563,7 @@ export const SideRail = memo(function SideRail() {
                 { transform: ghost.style.transform, opacity: 1 },
                 { transform: `translate3d(${bounds.left}px, ${bounds.top}px, 0)`, opacity: 0 },
             ],
-            { duration: 180, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" },
+            { duration: 180, easing: EASE_PAN, fill: "forwards" },
         );
         void animation.finished
             .catch(() => undefined)
@@ -676,7 +675,6 @@ export const SideRail = memo(function SideRail() {
         windowsById,
         windowsBySession,
         agentsById,
-        activityById,
         displayOf: (agentId) => agentDisplayOf({ agentActivity: activityById, agentTasks: tasksById, agentSubagents: subagentsById }, agentId),
         draggingProjectId,
         projectDragClass,
