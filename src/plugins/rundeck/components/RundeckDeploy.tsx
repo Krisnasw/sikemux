@@ -8,7 +8,7 @@ import type { JobRef } from "../state";
 import { rndExecutionsR, rndJobDetailR, rndJobsR, rndPlanR } from "../resources";
 import { branchOf, branchOptionName, envOf, isLiveStatus, isProdTarget, localDateTimeToIso, qualifiedName } from "../shape";
 import { watchRun } from "../runWatch";
-import { useDebounced } from "./hooks";
+import { useDebounced } from "../../../plugin-api/hooks";
 import { initialOptionValues, runOptionValues, validateOptions, type OptionValues, type RemoteValues } from "./options";
 import { RundeckAdvanced, type AdvancedRun } from "./RundeckAdvanced";
 import { RundeckOptionsForm } from "./RundeckOptionsForm";

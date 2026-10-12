@@ -3,7 +3,7 @@ import type { RepoRef } from "../api";
 import { runsR } from "../resources";
 import { checksSummary, elapsedMs, eventLabel, isUnfinished, outcomeOf, OUTCOME_LABEL, overallOutcome } from "../runStatus";
 import { OutcomeIcon } from "./ActionsIcon";
-import { useEvery, useNow } from "./hooks";
+import { useEvery, useNow } from "../../plugin-api/hooks";
 import { formatDuration } from "../../lib/format";
 
 const LIVE_REFRESH_MS = 10_000;

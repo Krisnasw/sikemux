@@ -8,7 +8,7 @@ import { useHost } from "../registry";
 import { releasesR } from "../resources";
 import { SectionIcon } from "./ActionsIcon";
 import { Who } from "./Bits";
-import { useNow } from "./hooks";
+import { useNow } from "../../plugin-api/hooks";
 import { Prose } from "./Pictures";
 import { formatAgo, formatBytes } from "../../lib/format";
 

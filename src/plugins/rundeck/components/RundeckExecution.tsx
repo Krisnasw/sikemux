@@ -9,7 +9,7 @@ import { rndJobDetailR } from "../resources";
 import { useWatchingRun, watchRun } from "../runWatch";
 import { branchOf, displayStatus, duration, formatTime, isLiveStatus } from "../shape";
 import { executionProgress } from "./executionProgress";
-import { useNow } from "./hooks";
+import { useNow } from "../../../plugin-api/hooks";
 import { reusableOptions } from "./options";
 import { RundeckLogView } from "./RundeckLogView";
 import { useExecutionStreams } from "./useExecutionStreams";

@@ -7,7 +7,7 @@ import { useHostRepo } from "../project";
 import { hostStatusR, runsR } from "../resources";
 import { isUnfinished, outcomeOf, OUTCOME_LABEL } from "../runStatus";
 import { OutcomeIcon } from "./ActionsIcon";
-import { useEvery } from "./hooks";
+import { useEvery } from "../../plugin-api/hooks";
 import "../topbar.css";
 import { formatAgo } from "../../lib/format";
 

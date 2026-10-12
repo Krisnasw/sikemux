@@ -1,5 +1,5 @@
 import { memo, useState, type MouseEvent, type ReactNode } from "react";
-import { copyText, swallow } from "../../../plugin-api/host";
+import { copyWithNotice } from "../../../plugin-api/host";
 import type { Cell, QueryOutcome, ResultColumn, ResultSet } from "../api";
 import { cellText, mainResult, summary, toCsv, toTsv } from "../results";
 import { formatDuration } from "../../../plugin-api/format";
@@ -41,7 +41,7 @@ export function ResultsView({ outcome, actions }: { outcome: QueryOutcome; actio
                         type="button"
                         className="db-button"
                         title="Copy as tab-separated text, ready to paste into a spreadsheet"
-                        onClick={() => void copyText(toTsv(result)).catch(swallow("copy the results"))}>
+                        onClick={() => copyWithNotice(toTsv(result), "the results")}>
                         Copy
                     </button>
                 )}
@@ -50,7 +50,7 @@ export function ResultsView({ outcome, actions }: { outcome: QueryOutcome; actio
                         type="button"
                         className="db-button"
                         title="Copy as comma-separated values (CSV)"
-                        onClick={() => void copyText(toCsv(result)).catch(swallow("copy the results"))}>
+                        onClick={() => copyWithNotice(toCsv(result), "the results as CSV")}>
                         Copy CSV
                     </button>
                 )}
@@ -110,7 +110,7 @@ function Grid({ result }: { result: ResultSet }) {
                     <button
                         type="button"
                         className="db-button"
-                        onClick={() => void copyText(selectedCell === null ? "" : cellText(selectedCell)).catch(swallow("copy the value"))}>
+                        onClick={() => copyWithNotice(selectedCell === null ? "" : cellText(selectedCell), "the value")}>
                         Copy value
                     </button>
                 </div>

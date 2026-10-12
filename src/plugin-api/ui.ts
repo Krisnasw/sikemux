@@ -1,5 +1,6 @@
 export * from "../ui/Icons";
 export { Checkbox, Switch } from "../ui/Controls";
+export { Filter, Seg, type SegOption } from "./Controls";
 export { Dropdown, type DropdownOption } from "../ui/Dropdown";
 export { EmptyState } from "../ui/Panel";
 export { Markdown, type ProseImageLoader } from "./Prose";

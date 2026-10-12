@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { IconChevron, IconGit, IconPanelLeft, IconRefresh, IconSearch, Tooltip } from "../../../plugin-api/ui";
+import { IconChevron, IconGit, IconPanelLeft, IconRefresh, Tooltip } from "../../../plugin-api/ui";
 import * as cmd from "../state";
 import type { JobRef, RundeckLevel } from "../state";
 import { groupSegments, isProdTarget } from "../shape";
@@ -131,61 +131,6 @@ export function Header({
                 </div>
             </div>
         </header>
-    );
-}
-
-export interface SegOption<V extends string> {
-    value: V;
-    label: ReactNode;
-    count?: number;
-}
-
-export function Seg<V extends string>({
-    options,
-    value,
-    onChange,
-    label,
-}: {
-    options: SegOption<V>[];
-    value: V;
-    onChange: (value: V) => void;
-    label: string;
-}) {
-    return (
-        <div className="rnd-seg" role="group" aria-label={label}>
-            {options.map((o) => (
-                <button
-                    key={o.value}
-                    type="button"
-                    className={o.value === value ? "on" : ""}
-                    aria-pressed={o.value === value}
-                    onClick={() => onChange(o.value)}>
-                    {o.label}
-                    {o.count !== undefined && <span className="rnd-seg-count">{o.count}</span>}
-                </button>
-            ))}
-        </div>
-    );
-}
-
-export function Filter({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
-    return (
-        <label className="rnd-filter">
-            <IconSearch size={14} />
-            <input
-                value={value}
-                placeholder={placeholder}
-                spellCheck={false}
-                onChange={(e) => onChange(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === "Escape" && value) {
-                        e.stopPropagation();
-                        onChange("");
-                    }
-                }}
-            />
-            <kbd>/</kbd>
-        </label>
     );
 }
 

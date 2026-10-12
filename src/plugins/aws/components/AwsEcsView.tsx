@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { reportError } from "../../../plugin-api/host";
 import { useResourceEnabled, type ResourceHandle } from "../../../plugin-api/resources";
-import { IconChevron, IconClose, IconCopy } from "../../../plugin-api/ui";
+import { Filter, IconChevron, IconClose, IconCopy, Seg } from "../../../plugin-api/ui";
 import { awsApi, type EcsCluster, type EcsService, type EcsTask } from "../api";
 import { ecsClustersR, ecsServiceLogConfigR, ecsServicesR, ecsTasksR } from "../resources";
 import { selectAws, setEcsLevel, useAws, type EcsLevel } from "../state";
@@ -11,7 +11,6 @@ import {
     ConsoleButton,
     Crumbs,
     Facts,
-    Filter,
     Header,
     Inspector,
     InspectorEmpty,
@@ -19,7 +18,6 @@ import {
     ListState,
     Cell,
     Section,
-    Seg,
     State,
     Stats,
     Table,
@@ -134,7 +132,7 @@ function Clusters({ profile, active, onOpen }: ViewProps & { onOpen: (cluster: s
                     crumbs={<Crumbs profile={profile} region={region} trail={[{ label: "ECS" }]} />}
                     title="Clusters"
                     count={all?.length}
-                    aside={envs.size > 1 ? <Seg options={envOptions} value={env} onChange={setEnv} /> : undefined}
+                    aside={envs.size > 1 ? <Seg label="Environment" options={envOptions} value={env} onChange={setEnv} /> : undefined}
                     tools={<Filter value={query} onChange={setQuery} placeholder="Filter" />}
                     handle={handle}
                 />
@@ -446,6 +444,7 @@ function ServicePage({
     const lead = (
         <>
             <Seg
+                label="Show"
                 options={[
                     { value: "logs" as const, label: "Logs" },
                     { value: "tasks" as const, label: "Tasks", count: tasks.data?.length },

@@ -1,5 +1,50 @@
-import { useEffect, useRef, type DependencyList } from "react";
+import { useEffect, useRef, useState, type DependencyList } from "react";
 import type { PluginStream } from "./backend";
+
+/** The current time, read again every `intervalMs` while `ticking`. */
+export function useNow(ticking: boolean, intervalMs = 1_000): number {
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        if (!ticking) return;
+        setNow(Date.now());
+        const timer = window.setInterval(() => setNow(Date.now()), intervalMs);
+        return () => window.clearInterval(timer);
+    }, [ticking, intervalMs]);
+    return now;
+}
+
+/** `value` once it has stopped changing for `delayMs`. */
+export function useDebounced<T>(value: T, delayMs: number): T {
+    const [settled, setSettled] = useState(value);
+    useEffect(() => {
+        const timer = window.setTimeout(() => setSettled(value), delayMs);
+        return () => window.clearTimeout(timer);
+    }, [value, delayMs]);
+    return settled;
+}
+
+/**
+ * Calls `work` every `ms` while `enabled`. The latest `work` is always the one
+ * called, and a render in between does not start the wait over, so a view
+ * that redraws every second still refreshes on time. Nothing is read while
+ * the window is hidden, and it reads once as soon as it is shown again.
+ */
+export function useEvery(enabled: boolean, ms: number, work: () => void): void {
+    const latest = useRef(work);
+    latest.current = work;
+    useEffect(() => {
+        if (!enabled) return;
+        const tick = () => {
+            if (!document.hidden) latest.current();
+        };
+        const timer = setInterval(tick, ms);
+        document.addEventListener("visibilitychange", tick);
+        return () => {
+            clearInterval(timer);
+            document.removeEventListener("visibilitychange", tick);
+        };
+    }, [enabled, ms]);
+}
 
 export interface StreamLife {
     /** What the stream follows is over: it is not opened again, even when the app shows again. */

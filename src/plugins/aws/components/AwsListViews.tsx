@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useResourceEnabled } from "../../../plugin-api/resources";
-import { IconCopy } from "../../../plugin-api/ui";
+import { Filter, IconCopy, Seg } from "../../../plugin-api/ui";
 import type { Ec2Instance, LambdaFn, S3Bucket, SqsQueue } from "../api";
 import { ec2InstancesR, lambdaFnsR, s3BucketsR, sqsQueuesR } from "../resources";
 import { selectAws, setLambdaLogs, useAws } from "../state";
@@ -10,14 +10,12 @@ import {
     ConsoleButton,
     Crumbs,
     Facts,
-    Filter,
     Header,
     Inspector,
     InspectorEmpty,
     InspectorHead,
     ListState,
     Cell,
-    Seg,
     State,
     Stats,
     Table,
@@ -75,6 +73,7 @@ export function AwsEc2View({ profile, active }: ViewProps) {
                     count={all?.length}
                     aside={
                         <Seg
+                            label="Instance state"
                             options={[
                                 { value: "all", label: "All", count: all?.length ?? 0 },
                                 { value: "running", label: "Running", count: running },
@@ -225,6 +224,7 @@ function LambdaList({ profile, active }: ViewProps) {
                     aside={
                         families.size > 1 ? (
                             <Seg
+                                label="Runtime"
                                 options={[
                                     { value: "all", label: "All", count: all?.length ?? 0 },
                                     ...[...families].sort((a, b) => b[1] - a[1]).map(([f, n]) => ({ value: f, label: familyLabel[f], count: n })),
@@ -390,6 +390,7 @@ export function AwsSqsView({ profile, active }: ViewProps) {
                     aside={
                         dlqs ? (
                             <Seg
+                                label="Queue kind"
                                 options={[
                                     { value: "all", label: "All", count: all?.length ?? 0 },
                                     { value: "dlq", label: "Dead-letter", count: dlqs },

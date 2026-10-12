@@ -1,7 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { currentBranch, git, openUrl, swallow, useActiveProjectCwd } from "../../../plugin-api/host";
 import { useResourceEnabled } from "../../../plugin-api/resources";
-import { EmptyState, IconChevron, IconExternal, IconFetch, IconGit, IconRun, IconWarning, SkeletonRows, Tooltip } from "../../../plugin-api/ui";
+import {
+    EmptyState,
+    Filter,
+    IconChevron,
+    IconExternal,
+    IconFetch,
+    IconGit,
+    IconRun,
+    IconWarning,
+    Seg,
+    SkeletonRows,
+    Tooltip,
+} from "../../../plugin-api/ui";
 import { failureMessage, type MatrixCell, type RundeckExecution } from "../api";
 import { rndExecutionsR, rndJobDetailR, rndJobsR, rndMatrixR } from "../resources";
 import * as cmd from "../state";
@@ -9,9 +21,9 @@ import type { JobRef, RundeckLevel } from "../state";
 import { branchOf, branchOptionName, childSegment, duration, groupSegments, inGroup, isLiveStatus, isProdTarget } from "../shape";
 import { statusKind } from "./branchStyle";
 import { newestExecutions } from "./executionProgress";
-import { useNow } from "./hooks";
+import { useEvery, useNow } from "../../../plugin-api/hooks";
 import { reusableOptions } from "./options";
-import { BranchChip, Filter, FolderChip, Header, Seg, Status, Tag, levelCrumbs } from "./parts";
+import { BranchChip, FolderChip, Header, Status, Tag, levelCrumbs } from "./parts";
 import { formatAgo } from "../../../plugin-api/format";
 
 interface Props {
@@ -526,8 +538,6 @@ function JobInspector({ paneId, active, cell, job, now }: { paneId: string; acti
     const jobs = useResourceEnabled(active, rndJobsR, job.project);
     const execs = useResourceEnabled(active, rndExecutionsR, job.jobId, job.project, 25);
     const [actionError, setActionError] = useState<string | null>(null);
-    const refresh = useRef(execs.refresh);
-    refresh.current = execs.refresh;
 
     const executions = useMemo(() => newestExecutions(execs.data ?? []), [execs.data]);
     const anyLive = executions.some((ex) => isLiveStatus(ex.status));
@@ -547,18 +557,7 @@ function JobInspector({ paneId, active, cell, job, now }: { paneId: string; acti
     const lastGood = executions.find((ex) => ex.status === "succeeded" && (!runsBranch || branchOf(ex.job?.options, branchOptions) !== null)) ?? null;
     const lastGoodBranch = lastGood ? branchOf(lastGood.job?.options, branchOptions) : null;
 
-    useEffect(() => {
-        if (!active) return;
-        const tick = () => {
-            if (!document.hidden) void refresh.current().catch(() => {});
-        };
-        const timer = window.setInterval(tick, anyLive ? 3_000 : 20_000);
-        document.addEventListener("visibilitychange", tick);
-        return () => {
-            window.clearInterval(timer);
-            document.removeEventListener("visibilitychange", tick);
-        };
-    }, [active, anyLive]);
+    useEvery(active, anyLive ? 3_000 : 20_000, () => void execs.refresh().catch(() => {}));
 
     const openForm = (branch: string | undefined, options?: Record<string, string>) => {
         setActionError(null);

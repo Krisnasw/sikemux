@@ -10,7 +10,8 @@ import { filterBy, hostSettings, setFollowBranch, showRun, STATUS_FILTERS, updat
 import { RingedOutcome } from "./ActionsIcon";
 import { RunMenu } from "./RunMenu";
 import { Face } from "./CommentThread";
-import { coarse, useEvery, useNow } from "./hooks";
+import { coarse } from "./hooks";
+import { useEvery, useNow } from "../../plugin-api/hooks";
 import { formatAgo, formatDuration } from "../../lib/format";
 
 const LIVE_REFRESH_MS = 10_000;
