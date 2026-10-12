@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 
+import { audit } from "../audit.ts";
 import { requireSession, type AuthEnv } from "../auth.ts";
 import type { Database } from "../db.ts";
 import { ownedDevice } from "../devices/owned.ts";
@@ -30,16 +31,13 @@ export function joinRoutes(
       await ownedDevice(db, userId, host, { role: "host" });
 
       const ticket = signTicket(signer, { account: userId, host, phone });
-      await db
-        .insertInto("audit")
-        .values({
-          user_id: userId,
-          actor: `user:${userId}`,
-          action: "join.issued",
-          subject: phone,
-          detail: JSON.stringify({ host, keyId: ticket.keyId }),
-        })
-        .execute();
+      await audit(db, {
+        userId,
+        actor: `user:${userId}`,
+        action: "join.issued",
+        subject: phone,
+        detail: { host, keyId: ticket.keyId },
+      });
       c.get("log").info(
         { phone: phone.slice(0, 8), host: host.slice(0, 8) },
         "issued a join ticket",

@@ -1,5 +1,6 @@
 import { sql, type Kysely } from "kysely";
 
+import { audit, type Actor } from "../audit.ts";
 import type { Tables } from "../db.ts";
 import { removeDevice } from "../devices/removal.ts";
 import { appendEvent } from "../events/log.ts";
@@ -19,8 +20,7 @@ export const ALERT_AFTER_ATTEMPTS = 6;
 
 export interface DeletionRequest {
   userId: string;
-  /** `user:<id>` when the person asked, `clerk` when Clerk's webhook said so. */
-  actor: string;
+  actor: Actor;
   via: string;
   /** Whether the user is already gone from Clerk, as when Clerk's webhook reports it. */
   deletedInClerk: boolean;
@@ -97,16 +97,12 @@ export async function markDeleted(
         actor,
       });
     await appendEvent(trx, { userId, type: "account.deleted" });
-    await trx
-      .insertInto("audit")
-      .values({
-        user_id: userId,
-        actor,
-        action: "account.deletion_requested",
-        subject: null,
-        detail: JSON.stringify({ via, devices: devices.length }),
-      })
-      .execute();
+    await audit(trx, {
+      userId,
+      actor,
+      action: "account.deletion_requested",
+      detail: { via, devices: devices.length },
+    });
     if (deletedInClerk) await auditClerkDeletion(trx, userId, actor);
     return {
       requestedAt: marked.deleted_at ?? new Date(),
@@ -143,15 +139,11 @@ export async function restoreAccount(
       })
       .where("id", "=", userId)
       .execute();
-    await trx
-      .insertInto("audit")
-      .values({
-        user_id: userId,
-        actor: `user:${userId}`,
-        action: "account.restored",
-        subject: null,
-      })
-      .execute();
+    await audit(trx, {
+      userId,
+      actor: `user:${userId}`,
+      action: "account.restored",
+    });
     return true;
   });
 }
@@ -159,23 +151,19 @@ export async function restoreAccount(
 async function auditClerkDeletion(
   trx: Kysely<Tables>,
   userId: string,
-  actor: string,
+  actor: Actor,
 ) {
-  await trx
-    .insertInto("audit")
-    .values({
-      user_id: userId,
-      actor,
-      action: "account.deleted_in_clerk",
-      subject: null,
-    })
-    .execute();
+  await audit(trx, {
+    userId,
+    actor,
+    action: "account.deleted_in_clerk",
+  });
 }
 
 async function recordClerkDeletion(
   trx: Kysely<Tables>,
   userId: string,
-  actor: string,
+  actor: Actor,
 ) {
   await trx
     .updateTable("users")

@@ -1,5 +1,6 @@
 import { sql, type Kysely } from "kysely";
 
+import { audit } from "../audit.ts";
 import type { Tables } from "../db.ts";
 import { pruneChallenges } from "../devices/challenge.ts";
 import type { Logger } from "../log.ts";
@@ -63,16 +64,12 @@ export async function purgeAccounts(
       await trx.deleteFrom("audit").where("user_id", "=", id).execute();
       await trx.deleteFrom("challenges").where("user_id", "=", id).execute();
       await trx.deleteFrom("users").where("id", "=", id).execute();
-      await trx
-        .insertInto("audit")
-        .values({
-          user_id: null,
-          actor: "system",
-          action: "account.purged",
-          subject: null,
-          detail: JSON.stringify({ devices: Number(removed.n) }),
-        })
-        .execute();
+      await audit(trx, {
+        userId: null,
+        actor: "system",
+        action: "account.purged",
+        detail: { devices: Number(removed.n) },
+      });
       return true;
     });
     if (done) purged += 1;

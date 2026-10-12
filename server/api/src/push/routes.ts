@@ -2,6 +2,7 @@ import type { PushTokenState } from "@sikemux/protocol";
 import { Hono } from "hono";
 import { sql } from "kysely";
 
+import { audit } from "../audit.ts";
 import { requireSession, type AuthEnv } from "../auth.ts";
 import type { Database } from "../db.ts";
 import { consumeChallenge } from "../devices/challenge.ts";
@@ -89,16 +90,13 @@ export function pushTokenRoutes(
           )
           .returning("updated_at")
           .executeTakeFirstOrThrow();
-        await trx
-          .insertInto("audit")
-          .values({
-            user_id: userId,
-            actor: `user:${userId}`,
-            action: "push.enabled",
-            subject: key,
-            detail: JSON.stringify({ platform: registration.platform }),
-          })
-          .execute();
+        await audit(trx, {
+          userId,
+          actor: `user:${userId}`,
+          action: "push.enabled",
+          subject: key,
+          detail: { platform: registration.platform },
+        });
         return row.updated_at;
       });
       c.get("log").info(
@@ -121,15 +119,12 @@ export function pushTokenRoutes(
           .where("device_key", "=", key)
           .executeTakeFirst();
         if (removed.numDeletedRows > 0n)
-          await trx
-            .insertInto("audit")
-            .values({
-              user_id: userId,
-              actor: `user:${userId}`,
-              action: "push.disabled",
-              subject: key,
-            })
-            .execute();
+          await audit(trx, {
+            userId,
+            actor: `user:${userId}`,
+            action: "push.disabled",
+            subject: key,
+          });
         return removed.numDeletedRows > 0n;
       });
       if (cleared)

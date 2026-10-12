@@ -11,6 +11,7 @@ import { sql, type Selectable } from "kysely";
 
 import type { ClerkBackend } from "../account/clerk.ts";
 import { revokeRemovedSession } from "../account/deletion.ts";
+import { audit } from "../audit.ts";
 import { requireIdentity, type AuthEnv, type Verifier } from "../auth.ts";
 import type { Database, Tables } from "../db.ts";
 import { appendEvent } from "../events/log.ts";
@@ -165,21 +166,18 @@ export function deviceRoutes(
             .deleteFrom("removed_devices")
             .where("key", "=", registration.key)
             .execute();
-        await trx
-          .insertInto("audit")
-          .values({
-            user_id: userId,
-            actor: `user:${userId}`,
-            action: existing ? "device.updated" : "device.registered",
-            subject: registration.key,
-            detail: JSON.stringify({
-              role: row.role,
-              name: row.name,
-              platform: row.platform,
-              via: identity.via,
-            }),
-          })
-          .execute();
+        await audit(trx, {
+          userId,
+          actor: `user:${userId}`,
+          action: existing ? "device.updated" : "device.registered",
+          subject: registration.key,
+          detail: {
+            role: row.role,
+            name: row.name,
+            platform: row.platform,
+            via: identity.via,
+          },
+        });
         return { row, added: !existing };
       });
       c.get("log").info(
