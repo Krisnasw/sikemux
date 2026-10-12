@@ -74,6 +74,16 @@ export function agentPaneId(win: Window): string | null {
     return collectPanes(win.root).find((pane) => pane.kind === "agent")?.id ?? null;
 }
 
+/**
+ * What a terminal is called everywhere: the name the person gave its tab, else the shell's own
+ * title, else the name it opened with. A renamed tab's name belongs to the terminal it opened with.
+ */
+export function terminalLabel(win: Window | undefined, pane: PaneNode, titles: Readonly<Record<string, string | undefined>>): string {
+    const home = win?.role === "term" ? collectPanes(win.root).find((candidate) => candidate.kind === "terminal") : undefined;
+    if (win?.customName && home?.id === pane.id) return win.customName;
+    return titles[pane.id] || pane.title || win?.name || "terminal";
+}
+
 /** The window an agent lives in, wherever it is. */
 export function agentWindowId(state: Pick<StoreState, "windows">, agentId: string): string | null {
     for (const win of Object.values(state.windows)) if (win.role === "agent" && agentPaneId(win) === agentId) return win.id;
