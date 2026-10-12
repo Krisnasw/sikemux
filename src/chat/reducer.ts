@@ -1,7 +1,7 @@
 import { toolDiff, toolFailure } from "./diff";
 import { toolPage } from "./pages";
 import { toolOutput } from "./toolOutput";
-import { toolRowArguments } from "./toolLabels";
+import { toolRowArguments, toolRunning } from "./toolLabels";
 import type {
     AccountMove,
     AcpAsyncTask,
@@ -230,11 +230,10 @@ function upsertTool(transcript: Transcript, update: AcpToolCall, merge: boolean,
         if (current.kind !== "tool") continue;
         const patch = Object.fromEntries(Object.entries(update).filter(([key, value]) => value !== undefined && !(key === "title" && value === "")));
         const tool = merge ? { ...current.tool, ...patch } : update;
-        const ended = tool.status === "completed" || tool.status === "failed";
         parts[partIndex] =
             current.endedAt !== undefined
                 ? { ...current, tool: withoutPayload(tool) }
-                : ended
+                : !toolRunning(tool)
                   ? settleTool({ ...current, tool, endedAt: Date.now() })
                   : { ...current, tool };
         messages[messageIndex] = { ...message, parts };
@@ -246,7 +245,7 @@ function upsertTool(transcript: Transcript, update: AcpToolCall, merge: boolean,
        With nothing to merge into and no title to show, a new row would be a
        blank line that spins forever, so let it pass. */
     if (!update.title) return null;
-    const ended = update.status === "completed" || update.status === "failed";
+    const ended = !toolRunning(update);
     /* Reloading a session replays its whole history at once, so a call that is
        already finished the first time this side sees it never ran here. Stamping
        both ends now would time the replay rather than the call. */
@@ -306,15 +305,13 @@ function recordedTime(transcript: Transcript, update: Record<string, unknown>, t
     return { ...transcript, messages: [...transcript.messages.slice(0, -1), stamped] };
 }
 
-const TOOL_ENDED = ["completed", "failed", "cancelled"];
-
 /* The agent sends no last word for work it was cut off in, so it would spin
    forever. A subagent can outlive its turn, so only `endSubagents` stops it. */
 function settleParts(parts: ChatPart[], at: number, endSubagents: boolean): ChatPart[] | null {
     let changed = false;
     const settled = parts.map((part) => {
         if (part.kind === "tool") {
-            if (TOOL_ENDED.includes(part.tool.status ?? "pending")) return part;
+            if (!toolRunning(part.tool)) return part;
             changed = true;
             return settleTool({ ...part, tool: { ...part.tool, status: "cancelled" }, endedAt: part.endedAt ?? at });
         }
