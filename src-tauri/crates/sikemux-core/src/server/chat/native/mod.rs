@@ -46,6 +46,18 @@ fn stamp_replayed(update: &mut Value, at: Option<u64>, opens_turn: bool) {
     }
 }
 
+/// How an agent is shown a file the person attached: a markdown link named
+/// for the file, the way the agents' own clients write it.
+fn file_link(name: Option<&str>, uri: &str) -> String {
+    match name.filter(|name| !name.is_empty()) {
+        Some(name) => format!("[@{name}]({uri})"),
+        None => match uri.strip_prefix("file://") {
+            Some(path) => format!("[@{}]({uri})", path.rsplit('/').next().unwrap_or(path)),
+            None => uri.to_owned(),
+        },
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Kind {
     Claude,

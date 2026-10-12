@@ -9,7 +9,7 @@ mod replay;
 mod tools;
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use serde_json::{json, Value};
@@ -109,13 +109,7 @@ fn content(prompt: &Prompt) -> Result<Vec<Value>, String> {
         prompt.context.clone(),
         true,
     )?;
-    let link = |uri: &str| match uri
-        .strip_prefix("file://")
-        .and_then(|path| Path::new(path).file_name()?.to_str().map(str::to_owned))
-    {
-        Some(name) => format!("[@{name}]({uri})"),
-        None => uri.to_owned(),
-    };
+    let link = |uri: &str| super::file_link(None, uri);
     let mut content = Vec::new();
     let mut handed = Vec::new();
     for block in blocks {

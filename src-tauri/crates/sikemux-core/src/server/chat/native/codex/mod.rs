@@ -21,6 +21,7 @@ use url::Url;
 use crate::acp::prompt_blocks;
 use crate::protocol::ChatLaunch;
 
+use super::file_link;
 use super::process::{Lines, Process};
 use super::rpc::{Incoming, Rpc};
 use super::session::{Backend, Opened, Prompt, Sink, TurnEnd};
@@ -229,13 +230,6 @@ async fn subagent_histories(rpc: &Rpc, turns: &[Value]) -> HashMap<String, Vec<V
 /// with attached images handed over as images when the model reads them.
 fn input(blocks: &[Value], images: bool) -> Vec<Value> {
     let text = |text: String| json!({ "type": "text", "text": text, "text_elements": [] });
-    let link = |name: Option<&str>, uri: &str| match name.filter(|name| !name.is_empty()) {
-        Some(name) => format!("[@{name}]({uri})"),
-        None => match uri.strip_prefix("file://") {
-            Some(path) => format!("[@{}]({uri})", path.rsplit('/').next().unwrap_or(path)),
-            None => uri.to_owned(),
-        },
-    };
     blocks
         .iter()
         .filter_map(|block| match block["type"].as_str()? {
@@ -254,7 +248,7 @@ fn input(blocks: &[Value], images: bool) -> Vec<Value> {
                 });
                 match image {
                     Some(path) => Some(json!({ "type": "localImage", "path": path })),
-                    None => Some(text(link(block["name"].as_str(), uri))),
+                    None => Some(text(file_link(block["name"].as_str(), uri))),
                 }
             }
             "resource" => {
@@ -263,7 +257,7 @@ fn input(blocks: &[Value], images: bool) -> Vec<Value> {
                 let body = resource["text"].as_str()?;
                 Some(text(format!(
                     "{}\n<context ref=\"{uri}\">\n{body}\n</context>",
-                    link(None, uri)
+                    file_link(None, uri)
                 )))
             }
             _ => None,
