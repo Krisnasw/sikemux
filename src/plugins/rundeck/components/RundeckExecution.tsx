@@ -122,7 +122,7 @@ export function RundeckExecution({ paneId, level, active }: Props) {
                                 className="rnd-btn"
                                 disabled={watching}
                                 title={watching ? "Sikemux will tell you when this run ends" : "Get a notification when this run ends"}
-                                onClick={() => void watchRun(cmd.jobRefOf(level), level.executionId).catch(swallow("watch the run"))}>
+                                onClick={() => watchRun(cmd.jobRefOf(level), level.executionId)}>
                                 <IconClock size={12} />
                                 {watching ? "Will notify" : "Notify me"}
                             </button>

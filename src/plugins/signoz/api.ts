@@ -1,4 +1,4 @@
-import { createPluginBackend } from "../../plugin-api/backend";
+import { createPluginBackend, type PluginStreamHandlers } from "../../plugin-api/backend";
 import { SIGNOZ_PLUGIN_ID } from "./kinds";
 
 export { failureMessage } from "../../plugin-api/backend";
@@ -263,6 +263,5 @@ export const signozApi = {
     fieldKeys: (signal: Signal, search: string) => backend.call<FieldKey[]>("fieldKeys", { signal, search }),
     fieldValues: (signal: Signal, name: string, search: string) => backend.call<string[]>("fieldValues", { signal, name, search }),
 
-    tailStart: (search: LogSearch, onTick: (tick: TailTick) => void) => backend.openStream<TailTick>("tailLogs", search, onTick),
-    tailStop: (id: number) => backend.closeStream(id),
+    tail: (search: LogSearch, handlers: PluginStreamHandlers<TailTick>) => backend.stream<TailTick>("tailLogs", search, handlers),
 };

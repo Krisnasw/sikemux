@@ -1,4 +1,4 @@
-import { createPluginBackend, isPluginFailure } from "../../plugin-api/backend";
+import { createPluginBackend, isPluginFailure, type PluginStreamHandlers } from "../../plugin-api/backend";
 import { RUNDECK_PLUGIN_ID } from "./kinds";
 
 export { failureMessage } from "../../plugin-api/backend";
@@ -299,12 +299,9 @@ export const rundeckApi = {
     run: (req: RunRequest) => rndInvoke<RunResult>("run", req),
     abort: (executionId: number) => rndInvoke<AbortResult>("abort", { executionId }),
 
-    watchStart: (executionId: number, onUpdate: (u: WatchUpdate) => void) => backend.openStream("watch", { executionId }, onUpdate),
-    watchStop: (id: number) => backend.closeStream(id),
-
-    logsStart: (executionId: number, offset: string | null, backlog: number | null, onChunk: (c: LogTick) => void) =>
-        backend.openStream("logs", { executionId, offset, backlog }, onChunk),
-    logsStop: (id: number) => backend.closeStream(id),
+    watch: (executionId: number, handlers: PluginStreamHandlers<WatchUpdate>) => backend.stream("watch", { executionId }, handlers),
+    logs: (executionId: number, offset: string | null, handlers: PluginStreamHandlers<LogTick>) =>
+        backend.stream("logs", { executionId, offset, backlog: null }, handlers),
 
     plan: (req: PlanRequest) => rndInvoke<PlanResult>("plan", req),
 };

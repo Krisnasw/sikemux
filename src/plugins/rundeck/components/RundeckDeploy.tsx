@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { confirmDialog, git, notify, swallow } from "../../../plugin-api/host";
+import { confirmDialog, git, notify } from "../../../plugin-api/host";
 import { invalidate, useResourceEnabled } from "../../../plugin-api/resources";
 import { IconRun, IconWarning, SkeletonRows } from "../../../plugin-api/ui";
 import { failureMessage, rundeckApi, type JobDetail, type JobOption, type PlanResult } from "../api";
@@ -210,7 +210,7 @@ function RunForm({ paneId, level, active, detail, permalink, children }: FormPro
             invalidate(
                 (kind, args) => (kind === "rnd.executions" && args[0] === level.jobId) || (kind === "rnd.matrix" && args[0] === level.project),
             );
-            void watchRun(cmd.jobRefOf(level), result.id).catch(swallow("watch the run"));
+            watchRun(cmd.jobRefOf(level), result.id);
             cmd.rundeckReplace(paneId, { kind: "execution", ...cmd.jobRefOf(level), executionId: result.id });
         } catch (e) {
             setError(failureMessage(e));
