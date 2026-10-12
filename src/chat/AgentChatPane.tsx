@@ -14,7 +14,7 @@ import { ChatWelcome } from "./ChatWelcome";
 import { FoldMemoryContext, newFoldMemory } from "./longText";
 import { sentPrompts } from "./promptHistory";
 import { activeToolLabel } from "./toolLabels";
-import { formatDetail, runningSubagents, workFolds } from "./transcript";
+import { formatDetail, outlivesFold, runningSubagents, workFolds } from "./transcript";
 import { WorkSummary } from "./WorkSummary";
 import { activityText, backendState, composerPlaceholder as placeholderFor, connectingLabel, knownEffort } from "./chatStatus";
 import { ChatAgentContext, ReaderScrollContext } from "./chatAgent";
@@ -385,7 +385,7 @@ export function AgentChatPane({
                                         const summary = fold && index === Math.max(fold.start, firstRow) && (
                                             <WorkSummary took={fold.took} calls={fold.calls} open={!folded} onToggle={() => toggleWork(workId)} />
                                         );
-                                        if (fold && folded && index < fold.end)
+                                        if (fold && folded && index < fold.end && !message.parts.some(outlivesFold))
                                             return (
                                                 <div key={message.id} data-index={index} className="chat-row">
                                                     {summary}
@@ -395,7 +395,7 @@ export function AgentChatPane({
                                             <div key={message.id} data-index={index} className="chat-row">
                                                 {summary}
                                                 <ChatMessageRow
-                                                    from={fold && folded ? fold.from : 0}
+                                                    from={fold && folded ? (index < fold.end ? message.parts.length : fold.from) : 0}
                                                     message={message}
                                                     live={displayState.running && index === displayState.messages.length - 1}
                                                     copyable={meta.text}

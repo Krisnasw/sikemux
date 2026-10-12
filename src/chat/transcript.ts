@@ -62,6 +62,10 @@ export interface WorkFold {
 
 const isReply = (part: ChatPart) => part.kind === "text" || part.kind === "content";
 
+/* A page the agent showed and a subagent still at work stay in view when the turn around them folds. */
+export const outlivesFold = (part: ChatPart) =>
+    (part.kind === "tool" && part.page !== undefined) || (part.kind === "subagent" && part.subagent.state === "running");
+
 /* Runs while a reply streams in, so it walks the turn's parts in place rather than gathering them. */
 function workFold(messages: ChatMessage[], start: number, end: number): WorkFold | null {
     const parts = messages[end].parts;

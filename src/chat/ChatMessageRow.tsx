@@ -26,7 +26,7 @@ import { FoldedMarkdown, warmChatMarkdown } from "./ChatMarkdown";
 import { ChatPage } from "./ChatPage";
 import { ToolGroup } from "./ToolGroup";
 import { ToolRow } from "./ToolRow";
-import { attachmentName, formatDetail, groupParts, subagentTask } from "./transcript";
+import { attachmentName, formatDetail, groupParts, outlivesFold, subagentTask } from "./transcript";
 import type { AccountMove, AcpSubagent, AcpTaskNotice, AgentNotice, ChatMessage, ChatPart } from "./types";
 import { ContextChipLabel } from "./ContextChip";
 import { Shimmer } from "./Shimmer";
@@ -306,6 +306,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
     from?: number;
 }) {
     const { parts, context } = useMemo(() => sentParts(message), [message]);
+    const shown = useMemo(() => (from > 0 ? parts.filter((part, index) => index >= from || outlivesFold(part)) : parts), [parts, from]);
     const [editing, setEditing] = useState(false);
     const attachments = message.attachments ?? [];
     if (editing && onEdit) {
@@ -341,7 +342,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
                         ))}
                     </div>
                 )}
-                <PartGroups parts={from > 0 ? parts.slice(from) : parts} live={live} typed={message.role === "user"} />
+                <PartGroups parts={shown} live={live} typed={message.role === "user"} />
                 {copyable && (
                     <div className="chat-message-meta">
                         {onEdit && context.length === 0 && (
