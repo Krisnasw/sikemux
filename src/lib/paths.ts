@@ -51,3 +51,17 @@ export function expandHome(path: string, home: string | null | undefined): strin
     return path;
 }
 
+/** The path a `file:` URI names, or null when it is not one. A Windows drive loses the slash in front of it. */
+export function fileUriToPath(uri: string): string | null {
+    if (!/^file:/i.test(uri)) return null;
+    let url: URL;
+    let pathname: string;
+    try {
+        url = new URL(uri);
+        pathname = decodeURIComponent(url.pathname);
+    } catch {
+        return null;
+    }
+    if (url.hostname && url.hostname.toLowerCase() !== "localhost") return `//${url.hostname}${pathname}`;
+    return /^\/[A-Za-z]:/.test(pathname) ? pathname.slice(1) : pathname;
+}
