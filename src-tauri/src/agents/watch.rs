@@ -10,6 +10,7 @@ use tauri::async_runtime::spawn_blocking;
 use tauri::{AppHandle, Emitter};
 
 use super::config::{agent_config_root, grok_root, omp_session_dirs};
+use super::sessions::claude::claude_project_dir;
 use super::sessions::opencode::opencode_data_dirs;
 use super::sessions::pi::pi_session_dir;
 use super::{home_path, AgentKind};
@@ -83,7 +84,7 @@ fn agent_watch_dirs(
         AgentKind::Claude => {
             if let Some(root) = agent_config_root("claude", config_path) {
                 let projects = root.join("projects");
-                let project = projects.join(cwd.replace('/', "-"));
+                let project = claude_project_dir(&root, cwd);
                 if project.is_dir() {
                     push_watch_target(&mut out, project, RecursiveMode::Recursive);
                 } else {

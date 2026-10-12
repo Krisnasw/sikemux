@@ -1,4 +1,4 @@
-mod claude;
+pub(crate) mod claude;
 mod codex;
 pub(crate) mod context;
 pub(crate) mod delete;
