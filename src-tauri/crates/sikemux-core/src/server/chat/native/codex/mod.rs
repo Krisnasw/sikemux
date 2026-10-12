@@ -11,7 +11,7 @@ mod patch;
 mod state;
 mod subagents;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
@@ -398,7 +398,6 @@ impl Codex {
             &self.thread_id,
             &turns,
             &children,
-            &mut HashSet::from([self.thread_id.clone()]),
             &items::read_file,
             &mut out,
         );
