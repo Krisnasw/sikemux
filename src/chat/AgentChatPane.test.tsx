@@ -523,7 +523,7 @@ describe("AgentChatPane", () => {
         fireEvent.change(field, { target: { value: "Second try" } });
         fireEvent.keyDown(field, { key: "Enter" });
 
-        await waitFor(() => expect(mocks.edit).toHaveBeenCalledWith(agent.id, messageId, "Second try", [], [], false));
+        await waitFor(() => expect(mocks.edit).toHaveBeenCalledWith(agent.id, messageId, "Second try", [], []));
         expect(screen.queryByText("The old answer")).not.toBeInTheDocument();
         expect(screen.queryByText("First try")).not.toBeInTheDocument();
         expect(screen.getByText("Second try")).toBeInTheDocument();
