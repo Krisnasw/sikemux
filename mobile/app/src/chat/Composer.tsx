@@ -9,6 +9,7 @@ import { unknownCommand } from '@mac/chat/composerInput';
 import { pickerSlots, sessionConfigs, type SessionConfig } from '@mac/chat/sessionConfig';
 import { toolKind, toolLabel, toolPath } from '@mac/chat/toolLabels';
 import type { AcpAvailableCommand, AcpPermissionRequest, AcpToolCall, ChatState, ContextUsage } from '@mac/chat/types';
+import { canSwitchMode, isYolo } from '@mac/agents/agentLaunch';
 import { agentLabel } from '@mac/agents/catalog';
 import { haptics } from '@/ui/haptics';
 import { AgentIcon, Icon } from '@/ui/Icon';
@@ -229,13 +230,6 @@ function ContextRing({ usage, provider, onPress }: { usage: ContextUsage; provid
   );
 }
 
-/** Agents whose host can switch between asking first and running without asking mid-chat. */
-const SWITCHES_MODE = new Set(['claude', 'codex', 'hermes']);
-
-export function runsWithoutAsking(mode: string): boolean {
-  return mode === 'bypass' || mode === 'bypassPermissions' || mode === 'full-access';
-}
-
 /** YOLO or safe, as the Mac's toggle says it; a tap switches it where the host can. */
 /** The Mac's YOLO word, in its rainbow. */
 function YoloWord() {
@@ -276,8 +270,8 @@ export function YoloToggle({
 }) {
   const colors = useColors();
   const styles = useStyles(makeStyles);
-  const on = runsWithoutAsking(mode);
-  const switches = SWITCHES_MODE.has(provider);
+  const on = isYolo(mode);
+  const switches = canSwitchMode(provider);
   const look = (
     <>
       <Icon name={on ? 'IconShieldBolt' : 'IconShield'} size={13} color={on ? colors.accent : colors.inkFaint} />

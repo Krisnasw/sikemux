@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { agentSupportsSkipPermissions } from "../state/commands/agentLogic";
 import { ComposerPickers } from "./ComposerPickers";
 import type { SessionConfig } from "./sessionConfig";
 import { basename, dirname, joinPath } from "../lib/paths";
@@ -24,6 +23,7 @@ import { ContextMeter } from "./ContextMeter";
 import { imagesInClipboard, savePastedClipboard } from "./pasteImage";
 import { arrowsBrowse, recallPrompt, type HistoryPosition } from "./promptHistory";
 import { commandMatches, entryName, mergePaths, projectEntries, rankEntries, removeToken, tokenAt, type ProjectEntry } from "./composerInput";
+import { canSwitchMode } from "../agents/agentLaunch";
 import { receiveForAgent } from "../agents/agentInbox";
 import type { AcpAvailableCommand, ChatState, ContextUsage } from "./types";
 import type { OutgoingMessage } from "./queuedMessages";
@@ -610,7 +610,7 @@ export function ChatComposer({
                 <button type="button" className="chat-composer-icon" aria-label="Add files" onClick={() => void chooseFiles()}>
                     <IconPlus size={17} />
                 </button>
-                {agentSupportsSkipPermissions(agent.type) && (
+                {canSwitchMode(agent.type) && (
                     <YoloToggle
                         agent={agent}
                         relaunches={false}
