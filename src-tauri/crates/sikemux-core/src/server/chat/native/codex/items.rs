@@ -5,11 +5,8 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::{json, Map, Value};
 
+use super::super::json::text_or_empty as text;
 use super::patch;
-
-fn text<'a>(value: &'a Value, key: &str) -> &'a str {
-    value[key].as_str().unwrap_or_default()
-}
 
 fn status(item: &Value) -> &'static str {
     match text(item, "status") {

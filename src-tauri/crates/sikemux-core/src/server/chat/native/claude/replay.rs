@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use serde_json::{json, Map, Value};
 
 use super::super::super::states::{self, Subagent};
-use super::tools::{self, is_js_whitespace, js_str, truthy, TaskPlan};
+use super::super::json::{self, is_js_whitespace, js_str, str_field, truthy};
+use super::tools::{self, TaskPlan};
 
 /// The transcript file for a session: search `<config_dir>/projects/*/<session_id>.jsonl` (config_dir = CLAUDE_CONFIG_DIR or ~/.claude).
 pub fn transcript_path(config_dir: &Path, session_id: &str) -> Option<PathBuf> {
@@ -175,10 +176,6 @@ fn parse_lines(bytes: &[u8]) -> Vec<Value> {
             ) && record.get("uuid").is_some_and(Value::is_string)
         })
         .collect()
-}
-
-fn str_field<'a>(record: &'a Value, key: &str) -> Option<&'a str> {
-    record.get(key).and_then(Value::as_str)
 }
 
 fn uuid_of(record: &Value) -> &str {
@@ -854,7 +851,7 @@ fn collect_children(records: &[Value], session_id: &str) -> Vec<Child> {
             let kind = str_field(block, "type").unwrap_or_default();
             if matches!(kind, "tool_result" | "mcp_tool_result") {
                 if let Some(id) = str_field(block, "tool_use_id") {
-                    let said = content_text(block.get("content"));
+                    let said = json::joined_text(block.get("content"));
                     if let Some(agent_id) = said
                         .split("agentId: ")
                         .nth(1)
@@ -939,7 +936,7 @@ fn collect_children(records: &[Value], session_id: &str) -> Vec<Child> {
 }
 
 fn wakes_agent(record: &Value) -> bool {
-    content_text(record.pointer("/message/content")).contains("<task-notification>")
+    json::joined_text(record.pointer("/message/content")).contains("<task-notification>")
 }
 
 /// The agent and end state a `<task-notification>` Claude Code wrote to itself reports.
@@ -947,7 +944,7 @@ fn task_notification(record: &Value) -> Option<(String, Subagent)> {
     if str_field(record, "type") != Some("user") {
         return None;
     }
-    let said = content_text(record.pointer("/message/content"));
+    let said = json::joined_text(record.pointer("/message/content"));
     let tag = |name: &str| {
         said.split(&format!("<{name}>"))
             .nth(1)?
@@ -969,7 +966,7 @@ fn terminal_state(result: &Value) -> Subagent {
     if result.get("is_error") != Some(&Value::Bool(true)) {
         return Subagent::Completed;
     }
-    let said = content_text(result.get("content"));
+    let said = json::joined_text(result.get("content"));
     if INTERRUPTION_PREFIXES
         .iter()
         .any(|prefix| said.trim_start().starts_with(prefix))
@@ -977,24 +974,6 @@ fn terminal_state(result: &Value) -> Subagent {
         Subagent::Cancelled
     } else {
         Subagent::Failed
-    }
-}
-
-fn content_text(value: Option<&Value>) -> String {
-    match value {
-        Some(Value::String(text)) => text.clone(),
-        Some(Value::Array(items)) => items
-            .iter()
-            .map(|item| content_text(Some(item)))
-            .collect::<Vec<_>>()
-            .join(" "),
-        Some(Value::Object(map)) => ["text", "content", "message"]
-            .iter()
-            .map(|key| content_text(map.get(*key)))
-            .filter(|text| !text.is_empty())
-            .collect::<Vec<_>>()
-            .join(" "),
-        _ => String::new(),
     }
 }
 

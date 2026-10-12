@@ -11,6 +11,7 @@ use tokio::task::AbortHandle;
 use crate::acp::account::{Failure, FailureKind};
 
 use super::super::super::states::{self, Held, Subagent, Task as TaskState};
+use super::super::json::{self, text};
 use super::super::session::{Sink, TurnEnd};
 use super::control::Control;
 use super::permission;
@@ -118,13 +119,6 @@ pub(crate) struct Reader {
     permissions: Arc<Mutex<HashMap<String, AbortHandle>>>,
 }
 
-fn text<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .filter(|text| !text.is_empty())
-}
-
 fn usage_total(usage: &Value) -> Option<u64> {
     let field = |key: &str| usage.get(key).and_then(Value::as_u64).unwrap_or(0);
     usage.is_object().then(|| {
@@ -187,17 +181,7 @@ pub(crate) fn available_commands(commands: &Value) -> Value {
 /// of an answer.
 fn failure_of(message: &Value) -> Option<Failure> {
     let inner = message.get("message")?;
-    let said: String = inner
-        .get("content")
-        .and_then(Value::as_array)
-        .map(|blocks| {
-            blocks
-                .iter()
-                .filter_map(|block| text(block, "text"))
-                .collect::<Vec<_>>()
-                .join("\n")
-        })
-        .unwrap_or_default();
+    let said = json::joined_text(inner.get("content").filter(|content| content.is_array()));
     let synthetic = text(inner, "model") == Some("<synthetic>");
     let title = |fallback: &str| {
         if said.trim().is_empty() {
@@ -733,15 +717,7 @@ impl Reader {
     /// A shell command sent to the background answers with where its output
     /// goes, and runs on as a task.
     fn background_shell(&mut self, tool_id: &str, input: &Value, result: &Value) {
-        let said = match result.get("content") {
-            Some(Value::String(said)) => said.clone(),
-            Some(Value::Array(blocks)) => blocks
-                .iter()
-                .filter_map(|block| text(block, "text"))
-                .collect::<Vec<_>>()
-                .join("\n"),
-            _ => return,
-        };
+        let said = json::joined_text(result.get("content"));
         // Claude sends a command to the background when asked to, or when it outlives its timeout.
         let Some(rest) = said
             .split("Command running in background with ID: ")

@@ -5,6 +5,7 @@
 
 mod claude;
 mod codex;
+mod json;
 mod process;
 mod rpc;
 mod session;

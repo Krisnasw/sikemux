@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 use crate::acp::account;
 
 use super::super::super::states::{self, Subagent};
+use super::super::json::text_or_empty as text;
 use super::super::session::TurnEnd;
 use super::approvals::{self, Question};
 use super::items::{self, Items};
@@ -70,10 +71,6 @@ pub(super) struct Session {
     questions: u64,
     /// Set once Codex's output closed.
     pub gone: bool,
-}
-
-fn text<'a>(value: &'a Value, key: &str) -> &'a str {
-    value[key].as_str().unwrap_or_default()
 }
 
 fn notice(title: &str, description: Option<&str>) -> Value {
