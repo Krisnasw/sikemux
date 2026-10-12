@@ -4,6 +4,7 @@ import { subscribe } from "../state/bus";
 import * as cmd from "../state/commands";
 import { getState, setState, useStore, type StoreState } from "../state/store";
 import type { PluginKind } from "../plugins/kinds";
+import type { GitStatus } from "../api/git";
 import type { GitArea } from "../state/types";
 
 export { fsapi as files, type DirEntry } from "../api/fs";
@@ -16,6 +17,12 @@ export { usePluginOverlay } from "../plugins/overlays";
 export { useModalFocus } from "../hooks/useModalFocus";
 export { notify, reportError, swallow } from "../state/toast";
 export { postNotification as notifyDesktop } from "../agents/agentNotifications";
+
+/** The branch checked out, or null on a detached HEAD, which git reports as a branch named `HEAD`. */
+export function currentBranch(status: Pick<GitStatus, "branch"> | null | undefined): string | null {
+    const branch = status?.branch.trim() ?? "";
+    return branch && branch !== "HEAD" ? branch : null;
+}
 
 export function openUrl(url: string): Promise<void> {
     return invokeCommand<void>("open_url", { url, app: null, shortcut: null });

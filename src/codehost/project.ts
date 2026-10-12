@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { git, gitOverviewR } from "../plugin-api/host";
+import { currentBranch, git, gitOverviewR } from "../plugin-api/host";
 import { resource, useResourceEnabled } from "../plugin-api/resources";
 import { isOwnBranch } from "./checkout";
 import { enabledCodeHosts, type CodeHost } from "./registry";
@@ -65,7 +65,7 @@ export function useHostRepo(cwd: string | null, enabled: boolean): HostRepo {
     return {
         repo,
         remote,
-        branch: overview.data?.status.branch ?? null,
+        branch: currentBranch(overview.data?.status),
         loading: (!!cwd && fromRemote.status === "loading" && !fromRemote.data) || findingAccount,
     };
 }

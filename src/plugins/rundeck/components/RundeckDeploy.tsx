@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { confirmDialog, git, notify } from "../../../plugin-api/host";
+import { confirmDialog, currentBranch, git, notify } from "../../../plugin-api/host";
 import { invalidate, useResourceEnabled } from "../../../plugin-api/resources";
 import { IconRun, IconWarning, SkeletonRows } from "../../../plugin-api/ui";
 import { failureMessage, rundeckApi, type JobDetail, type JobOption, type PlanResult } from "../api";
@@ -194,9 +194,9 @@ function RunForm({ paneId, level, active, detail, permalink, children }: FormPro
             }
 
             if (runsBranch && plan.data?.push_action === "will-push-current" && repoPath) {
-                const status = await git.status(repoPath);
-                if (status.branch !== branch) {
-                    setError(`The checkout is now on ${status.branch}, not ${branch}. Nothing was pushed or run.`);
+                const checkedOut = currentBranch(await git.status(repoPath));
+                if (checkedOut !== branch) {
+                    setError(`The checkout is now on ${checkedOut ?? "a detached HEAD"}, not ${branch}. Nothing was pushed or run.`);
                     return;
                 }
                 await git.push(repoPath);

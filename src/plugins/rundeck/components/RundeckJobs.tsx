@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { git, openUrl, swallow, useActiveProjectCwd } from "../../../plugin-api/host";
+import { currentBranch, git, openUrl, swallow, useActiveProjectCwd } from "../../../plugin-api/host";
 import { useResourceEnabled } from "../../../plugin-api/resources";
 import { EmptyState, IconChevron, IconExternal, IconFetch, IconGit, IconRun, IconWarning, SkeletonRows, Tooltip } from "../../../plugin-api/ui";
 import { failureMessage, type MatrixCell, type RundeckExecution } from "../api";
@@ -569,7 +569,7 @@ function JobInspector({ paneId, active, cell, job, now }: { paneId: string; acti
         setActionError(null);
         try {
             const status = await git.status(job.repoPath);
-            openForm(status.branch === "HEAD" ? "" : status.branch);
+            openForm(currentBranch(status) ?? "");
         } catch (e) {
             setActionError(failureMessage(e));
         }
