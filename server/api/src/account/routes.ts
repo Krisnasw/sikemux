@@ -13,7 +13,7 @@ import { ApiFailure, readOptionalBody } from "../http.ts";
 import { limit, type RateLimiter } from "../limits.ts";
 import { revokeAppleSignIn, type AppleSignIn } from "./apple.ts";
 import type { ClerkBackend } from "./clerk.ts";
-import { markDeleted, restoreAccount } from "./deletion.ts";
+import { markDeleted, PURGE_AFTER_DAYS, restoreAccount } from "./deletion.ts";
 
 /** How recently the person must have proved their first factor to delete their account. */
 const REVERIFY_MINUTES = 10;
@@ -38,8 +38,12 @@ export function accountRoutes(
         .executeTakeFirst();
       const body: Account =
         user?.deleted_at && user.purge_after
-          ? { status: "deleting", deletesAt: user.purge_after.toISOString() }
-          : { status: "active" };
+          ? {
+              status: "deleting",
+              deletesAt: user.purge_after.toISOString(),
+              restorableDays: PURGE_AFTER_DAYS,
+            }
+          : { status: "active", restorableDays: PURGE_AFTER_DAYS };
       return c.json(body);
     })
     .post(
@@ -59,7 +63,10 @@ export function accountRoutes(
             "The account is already deleted and can no longer be restored.",
           );
         c.get("log").info("restored an account");
-        const body: Account = { status: "active" };
+        const body: Account = {
+          status: "active",
+          restorableDays: PURGE_AFTER_DAYS,
+        };
         return c.json(body);
       },
     )
@@ -77,7 +84,9 @@ export function accountRoutes(
           identity.factorAgeMinutes === undefined ||
           identity.factorAgeMinutes > REVERIFY_MINUTES
         )
-          throw new ApiFailure(403, "reverify_required", "reverify");
+          throw new ApiFailure(403, "reverify_required", "reverify", {
+            reverifyWithinMinutes: REVERIFY_MINUTES,
+          });
         const request = await readOptionalBody(c, "AccountDeletionRequest");
 
         const deletion = await markDeleted(db, {

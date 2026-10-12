@@ -5,7 +5,8 @@ import { api, formatDay, problemText, signedInToken } from "./api.ts";
 
 export type AccountState =
   | { state: "loading" }
-  | { state: "active" }
+  /** How long a deletion stays restorable is unknown when the account could not be read. */
+  | { state: "active"; restorableDays?: number }
   | { state: "deleting"; deletesAt: string };
 
 /** Whether the signed-in account is in use, or deleted and still restorable. A failed read counts as in use, and the devices list says what went wrong. */
@@ -24,7 +25,7 @@ export function useAccountState(ready: boolean) {
         setAccount(
           read.status === "deleting" && read.deletesAt
             ? { state: "deleting", deletesAt: read.deletesAt }
-            : { state: "active" },
+            : { state: "active", restorableDays: read.restorableDays },
         );
       } catch {
         if (current) setAccount({ state: "active" });
@@ -35,7 +36,10 @@ export function useAccountState(ready: boolean) {
     };
   }, [ready, isSignedIn, getToken]);
 
-  const restored = useCallback(() => setAccount({ state: "active" }), []);
+  const restored = useCallback(
+    (restorableDays: number) => setAccount({ state: "active", restorableDays }),
+    [],
+  );
   return { account, restored };
 }
 
@@ -44,7 +48,7 @@ export function RestoreAccount({
   onRestored,
 }: {
   deletesAt: string;
-  onRestored: () => void;
+  onRestored: (restorableDays: number) => void;
 }) {
   const { getToken } = useAuth();
   const [busy, setBusy] = useState(false);
@@ -58,8 +62,8 @@ export function RestoreAccount({
       const token = await signedInToken(getToken, "restore your account", {
         fresh: true,
       });
-      await api.restoreAccount(token);
-      onRestored();
+      const account = await api.restoreAccount(token);
+      onRestored(account.restorableDays);
     } catch (error) {
       setBusy(false);
       setProblem(problemText(error));

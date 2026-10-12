@@ -16,8 +16,14 @@ export const schema = {
           type: "string",
           format: "date-time",
         },
+        restorableDays: {
+          description:
+            "How many days a deleted account can still be restored: deletesAt is this long after the deletion.",
+          type: "integer",
+          minimum: 1,
+        },
       },
-      required: ["status"],
+      required: ["status", "restorableDays"],
       additionalProperties: false,
     },
     AccountDeletion: {
@@ -222,6 +228,12 @@ export const schema = {
           description:
             "The same as the response's x-request-id header, and how the server's logs find this request.",
           type: "string",
+        },
+        reverifyWithinMinutes: {
+          description:
+            "Only with reverify_required: how recently the person must have proved their first factor.",
+          type: "integer",
+          minimum: 1,
         },
       },
       required: ["code", "message", "requestId"],

@@ -433,7 +433,7 @@
             }
           },
           "403": {
-            "description": "The sign-in was not verified again in the last 10 minutes (message reverify).",
+            "description": "The sign-in was not verified again within the error's reverifyWithinMinutes (message reverify).",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ApiError" }
@@ -531,9 +531,14 @@
             "description": "Only while deleting: when the account is deleted for good unless restored first.",
             "type": "string",
             "format": "date-time"
+          },
+          "restorableDays": {
+            "description": "How many days a deleted account can still be restored: deletesAt is this long after the deletion.",
+            "type": "integer",
+            "minimum": 1
           }
         },
-        "required": ["status"],
+        "required": ["status", "restorableDays"],
         "additionalProperties": false
       },
       "AccountDeletion": {
@@ -733,6 +738,11 @@
           "requestId": {
             "description": "The same as the response's x-request-id header, and how the server's logs find this request.",
             "type": "string"
+          },
+          "reverifyWithinMinutes": {
+            "description": "Only with reverify_required: how recently the person must have proved their first factor.",
+            "type": "integer",
+            "minimum": 1
           }
         },
         "required": ["code", "message", "requestId"],

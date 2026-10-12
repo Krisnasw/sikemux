@@ -209,7 +209,7 @@
           "body": "ApiError"
         },
         "403": {
-          "description": "The sign-in was not verified again in the last 10 minutes (message reverify).",
+          "description": "The sign-in was not verified again within the error's reverifyWithinMinutes (message reverify).",
           "body": "ApiError"
         }
       }

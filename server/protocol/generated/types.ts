@@ -6,6 +6,8 @@ export interface Account {
   status: AccountStatus;
   /** Only while deleting: when the account is deleted for good unless restored first. */
   deletesAt?: string;
+  /** How many days a deleted account can still be restored: deletesAt is this long after the deletion. */
+  restorableDays: number;
 }
 
 /** Every device is revoked and every token refused from the moment this is answered, except to read or restore the account. Signing in again before deletesAt can restore it. */
@@ -151,6 +153,8 @@ export interface ErrorDetail {
   message: string;
   /** The same as the response's x-request-id header, and how the server's logs find this request. */
   requestId: string;
+  /** Only with reverify_required: how recently the person must have proved their first factor. */
+  reverifyWithinMinutes?: number;
 }
 
 /** An account event's place in the log. Later events have larger ids. */

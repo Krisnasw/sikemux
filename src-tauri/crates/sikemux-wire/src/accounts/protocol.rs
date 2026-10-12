@@ -11,6 +11,8 @@ pub struct Account {
     /// Only while deleting: when the account is deleted for good unless restored first.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deletes_at: Option<String>,
+    /// How many days a deleted account can still be restored: deletesAt is this long after the deletion.
+    pub restorable_days: i64,
 }
 
 /// Every device is revoked and every token refused from the moment this is answered, except to read or restore the account. Signing in again before deletesAt can restore it.
@@ -224,6 +226,9 @@ pub struct ErrorDetail {
     pub message: String,
     /// The same as the response's x-request-id header, and how the server's logs find this request.
     pub request_id: String,
+    /// Only with reverify_required: how recently the person must have proved their first factor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reverify_within_minutes: Option<i64>,
 }
 
 /// An account event's place in the log. Later events have larger ids.

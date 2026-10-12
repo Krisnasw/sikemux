@@ -5,6 +5,7 @@ import type {
   ApiError,
   DeviceList,
   ErrorCode,
+  ErrorDetail,
 } from "@sikemux/protocol";
 
 import { config } from "./config.ts";
@@ -12,11 +13,14 @@ import { config } from "./config.ts";
 export class ApiProblem extends Error {
   readonly status: number;
   readonly code?: ErrorCode;
+  /** With reverify_required: how recently the person must have signed in. */
+  readonly reverifyWithinMinutes?: number;
 
-  constructor(message: string, status: number, code?: ErrorCode) {
+  constructor(message: string, status: number, detail?: ErrorDetail) {
     super(message);
     this.status = status;
-    this.code = code;
+    this.code = detail?.code;
+    this.reverifyWithinMinutes = detail?.reverifyWithinMinutes;
   }
 }
 
@@ -71,7 +75,7 @@ async function call(
     throw new ApiProblem(
       body?.error.message ?? `The API answered ${response.status}.`,
       response.status,
-      body?.error.code,
+      body?.error,
     );
   }
   return response;
