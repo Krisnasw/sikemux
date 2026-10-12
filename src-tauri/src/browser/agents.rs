@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use serde_json::{json, Value};
 use sikemux_core::acp::schema::v1::{EnvVariable, McpServer, McpServerStdio};
-use sikemux_pty::user_shell::login_shell_environment;
+use sikemux_pty::user_shell::user_variable;
 use tauri::{AppHandle, Manager};
 
 use super::{browser_state_dir, validate_agent_id, BrowserManager, BrowserMcpLaunch};
@@ -154,9 +154,7 @@ fn claude_browser_args(app: &AppHandle, launch: &BrowserMcpLaunch) -> AppResult<
     std::fs::create_dir_all(&directory)?;
     let path = directory.join("claude-mcp.json");
     let document = json!({ "mcpServers": { "sikemux-tools": mcp_server_document(launch) } });
-    let temporary = directory.join(format!(".claude-mcp-{}.json", uuid::Uuid::new_v4()));
-    std::fs::write(&temporary, serde_json::to_vec_pretty(&document)?)?;
-    std::fs::rename(temporary, &path)?;
+    sikemux_process::files::write_atomic(&path, &serde_json::to_vec_pretty(&document)?, false)?;
     Ok(vec![format!("--mcp-config={}", path.to_string_lossy())])
 }
 
@@ -172,10 +170,7 @@ fn codex_browser_args(launch: &BrowserMcpLaunch) -> AppResult<Vec<String>> {
 }
 
 fn inherited_opencode_config() -> Option<String> {
-    login_shell_environment()
-        .get("OPENCODE_CONFIG_CONTENT")
-        .cloned()
-        .or_else(|| std::env::var("OPENCODE_CONFIG_CONTENT").ok())
+    user_variable("OPENCODE_CONFIG_CONTENT")
 }
 
 fn opencode_browser_config(existing: Option<&str>, launch: &BrowserMcpLaunch) -> AppResult<String> {
@@ -232,7 +227,8 @@ async fn prepare_hermes_home(
         app,
         "hermes",
         agent_id,
-        &agent_home("HERMES_HOME", ".hermes"),
+        &crate::agents::config::hermes_root()
+            .ok_or_else(|| AppError::Other("the home folder is unavailable".into()))?,
         "config.yaml",
         "{}\n",
     )?;
@@ -268,7 +264,8 @@ async fn prepare_grok_home(
         app,
         "grok",
         agent_id,
-        &agent_home("GROK_HOME", ".grok"),
+        &crate::agents::config::grok_root()
+            .ok_or_else(|| AppError::Other("the home folder is unavailable".into()))?,
         "config.toml",
         "",
     )?;
@@ -276,13 +273,6 @@ async fn prepare_grok_home(
     args.extend(launch.args.iter().map(String::as_str));
     run_config_command(agent_program, &args, ("GROK_HOME", &home), "Grok").await?;
     Ok(home)
-}
-
-fn agent_home(variable: &str, default_name: &str) -> PathBuf {
-    login_shell_environment()
-        .get(variable)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| crate::system::user_home().join(default_name))
 }
 
 /// A private copy of the host's home: every entry is linked back to the real

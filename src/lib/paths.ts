@@ -38,12 +38,16 @@ export function isPathWithin(path: string, root: string): boolean {
 }
 
 export function prettyPath(path: string, home: string | null | undefined): string {
-    return home && path.startsWith(home) ? `~${path.slice(home.length)}` : path;
+    if (!home) return path;
+    const rest = relativePath(path, home);
+    if (rest === null) return path;
+    return rest ? `~${path.slice(path.length - rest.length - 1)}` : "~";
 }
 
 export function expandHome(path: string, home: string | null | undefined): string {
     if (!home) return path;
     if (path === "~") return home;
-    if (path.startsWith("~/")) return `${home}${path.slice(1)}`;
+    if (path.startsWith("~/") || path.startsWith("~\\")) return `${home}${path.slice(1)}`;
     return path;
 }
+

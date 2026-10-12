@@ -457,12 +457,7 @@ fn load(path: &Path) -> Store {
 }
 
 fn save(path: &Path, data: &[u8]) -> std::io::Result<()> {
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir)?;
-    }
-    let partial = path.with_extension("json.partial");
-    std::fs::write(&partial, data)?;
-    std::fs::rename(&partial, path)
+    sikemux_process::files::write_atomic(path, data, false)
 }
 
 #[cfg(test)]

@@ -230,11 +230,11 @@ mod mac {
             .core_launch()
             .ok_or_else(|| AppError::Other("the terminal core is not configured yet".into()))?;
         let state_dir = state_dir(&launch.socket);
-        std::fs::create_dir_all(&state_dir)?;
-        let path = settings_path(&state_dir);
-        let staged = path.with_extension("json.tmp");
-        std::fs::write(&staged, serde_json::to_vec_pretty(settings)?)?;
-        std::fs::rename(&staged, &path)?;
+        sikemux_process::files::write_atomic(
+            &settings_path(&state_dir),
+            &serde_json::to_vec_pretty(settings)?,
+            false,
+        )?;
         if !settings.enabled {
             stop(&state_dir);
             return Ok(());
