@@ -41,6 +41,11 @@ export function normalizePermissionMode(type: AgentType, mode: AgentPermissionMo
     return supportedPermissionModes(type).includes(mode) ? mode : "workspace-write";
 }
 
+/** The permission mode an agent runs in. */
+export function effectiveMode(agent: { type: AgentType; permissionMode?: AgentPermissionMode; skipPermissions?: boolean }): AgentPermissionMode {
+    return agent.permissionMode ?? (agent.skipPermissions ? "bypass" : normalizePermissionMode(agent.type, "workspace-write"));
+}
+
 export const AGENT_PERMISSION_COPY: Record<AgentPermissionMode, { label: string; detail: string; tone: "safe" | "balanced" | "open" | "danger" }> = {
     "read-only": {
         label: "Observe",

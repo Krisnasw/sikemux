@@ -10,14 +10,14 @@ import { parseReleaseCredits } from "../api/releases";
 import { normaliseKeybindingOverrides } from "../commands/keybindings";
 import type { CommandContext, CustomCommand, CustomCommandPlacement } from "../commands/registry";
 import { registerCustomThemes } from "../themes/bus";
-import { normalizePermissionMode } from "../agents/agentLaunch";
+import { effectiveMode, normalizePermissionMode } from "../agents/agentLaunch";
 import { ACCOUNT_AGENT_TYPES, AGENT_TYPES, hasAccounts, isAgentType } from "../agents/catalog";
 import { clampRailWidth } from "../lib/railWidths";
 import { mergePinnedIntoRoots, normaliseProjectRoots, pruneOnDemandWindows } from "./commands";
 import { agentPaneId } from "./selectors";
 import { collectPanes, newId, removePane } from "./layout";
 import { BROWSER_ACTIVE, deskEditorId, deskView, fileKey, simulatorKey } from "./desks";
-import { agentDirectCommand, agentStartup } from "./commands";
+import { agentExecutablePath, relaunchSpec } from "./commands/agentLaunchCommand";
 import { agentWindow } from "./agentWindow";
 import { getState, setState, useStore, type StoreState } from "./store";
 import { errMessage, notify } from "./toast";
@@ -994,20 +994,9 @@ export function applyHydrate(raw: string): HydrationResult {
                 if (claimedResumeIds.has(claim)) continue;
                 claimedResumeIds.add(claim);
             }
-            const permissionMode = normalizePermissionMode(
-                saved.type,
-                saved.permissionMode ?? (saved.skipPermissions ? "bypass" : "workspace-write"),
-            );
-            const profile = saved.profileId
-                ? providerProfiles.find((item) => item.id === saved.profileId && item.provider === saved.type)
-                : undefined;
-            const executablePath = profile?.executablePath || saved.executablePath;
-            const launchOptions = {
-                model: saved.model,
-                effort: saved.effort,
-                configPath: profile?.configPath,
-                environmentKeys: profile?.environmentKeys,
-            };
+            const permissionMode = normalizePermissionMode(saved.type, effectiveMode(saved));
+            const executablePath = agentExecutablePath({ providerProfiles }, saved);
+            const launch = relaunchSpec({ providerProfiles }, { ...saved, permissionMode });
             if (saved.profileId && !providerProfiles.some((profile) => profile.id === saved.profileId && profile.provider === saved.type)) {
                 delete saved.profileId;
             }
@@ -1016,8 +1005,7 @@ export function applyHydrate(raw: string): HydrationResult {
                 ...saved,
                 permissionMode,
                 executablePath,
-                startup: agentStartup(saved.type, saved.resumeId, permissionMode, executablePath, launchOptions),
-                directCommand: agentDirectCommand(saved.type, saved.resumeId, permissionMode, executablePath, launchOptions),
+                ...launch,
                 launchState: "dormant",
             };
             if (sid !== null) {

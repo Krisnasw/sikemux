@@ -8,7 +8,7 @@ import { noteSignedOut } from "../agents/statusRefresh";
 import { swallow } from "../state/toast";
 import type { FoldMemory } from "./longText";
 import { chatActions } from "./acpEvents";
-import { permissionModeOf } from "./chatStatus";
+import { effectiveMode as permissionModeOf } from "../agents/agentLaunch";
 import { afterSessionEnd, sessionEndOf, type Recovery } from "./sessionRecovery";
 import { claimChat } from "./chatClaims";
 import type { ChatAction, ChatState } from "./types";

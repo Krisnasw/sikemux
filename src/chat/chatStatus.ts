@@ -1,10 +1,6 @@
 import type { Agent, AgentBackendState } from "../state/types";
 import type { ChatState } from "./types";
 
-export function permissionModeOf(agent: Agent) {
-    return agent.permissionMode ?? (agent.skipPermissions ? "bypass" : "workspace-write");
-}
-
 export function knownEffort(effort: string | undefined): Agent["effort"] {
     return ["off", "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(effort ?? "")
         ? (effort as Agent["effort"])
