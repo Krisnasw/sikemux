@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { AgentStateIndicator, SubagentCount } from "../agents/AgentStateIndicator";
+import { AgentStateIndicator, showsAgentState, SubagentCount } from "../agents/AgentStateIndicator";
 import * as cmd from "../state/commands";
 import { useStore } from "../state/store";
 import { activeAgentId, agentIdsOf } from "../state/selectors";
@@ -45,13 +45,13 @@ export function AllProjectsAgents() {
                 const agent = agents[id];
                 if (!agent) continue;
                 const state = activity[id]?.state ?? "idle";
-                const working = state === "working" || (background[id] ?? 0) > 0;
-                const bucket: Bucket = state === "blocked" ? "blocked" : working ? "working" : state === "done" ? "done" : "idle";
-                rows.push({ agent, state: working && state !== "blocked" ? "working" : state, bucket, sessionName: session.name });
+                // A shell or subagent left running is not the agent at work; its mark says so instead.
+                const bucket: Bucket = state === "blocked" ? "blocked" : state === "working" ? "working" : state === "done" ? "done" : "idle";
+                rows.push({ agent, state, bucket, sessionName: session.name });
             }
         }
         return rows;
-    }, [sessionOrder, sessions, windows, windowsBySession, agents, activity, background]);
+    }, [sessionOrder, sessions, windows, windowsBySession, agents, activity]);
 
     const lastWorked = (row: OpenAgent) => activity[row.agent.id]?.lastWorkedAt ?? 0;
 
@@ -66,7 +66,7 @@ export function AllProjectsAgents() {
                 return (
                     <Panel key={id} variant="group" className={`agent-group${id === "blocked" ? " agent-attention" : ""}`}>
                         <PanelHeader label={`${label} ${rows.length}`} rule />
-                        {rows.map(({ agent, state, bucket, sessionName }) => (
+                        {rows.map(({ agent, state, sessionName }) => (
                             <div key={agent.id} className="agent-row-wrap">
                                 <button
                                     className={`agent-row${agent.id === shownAgentId ? " active" : ""}`}
@@ -78,9 +78,9 @@ export function AllProjectsAgents() {
                                     <span className="agent-title">{agent.title}</span>
                                     {(subagents[agent.id] ?? 0) > 0 && <SubagentCount count={subagents[agent.id]} />}
                                 </button>
-                                {bucket !== "idle" && (
+                                {showsAgentState(state, (background[agent.id] ?? 0) > 0) && (
                                     <span className="row-status">
-                                        <AgentStateIndicator state={state} />
+                                        <AgentStateIndicator state={state} background={(background[agent.id] ?? 0) > 0} />
                                     </span>
                                 )}
                                 <Tooltip label={`Close ${agent.title}`}>
