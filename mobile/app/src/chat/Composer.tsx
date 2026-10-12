@@ -6,6 +6,7 @@ import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 
 import { toolDiff } from '@mac/chat/diff';
 import { unknownCommand } from '@mac/chat/composerInput';
+import { contextShare, contextTone, money, tokenCount } from '@mac/chat/contextUsage';
 import { pickerSlots, sessionConfigs, type SessionConfig } from '@mac/chat/sessionConfig';
 import { toolKind, toolLabel, toolPath } from '@mac/chat/toolLabels';
 import type { AcpAvailableCommand, AcpPermissionRequest, AcpToolCall, ChatState, ContextUsage } from '@mac/chat/types';
@@ -174,26 +175,11 @@ function Commands({ matches, onPick }: { matches: AcpAvailableCommand[]; onPick:
   );
 }
 
-const tokens = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
-
-/** An adapter names its own currency, and Intl throws on a code it does not know. */
-function money({ amount, currency }: NonNullable<ContextUsage['cost']>): string {
-  try {
-    return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 2 }).format(amount);
-  } catch {
-    return `${amount.toFixed(2)} ${currency}`;
-  }
-}
-
-function usedShare(usage: ContextUsage): number {
-  return Math.min(1, Math.max(0, usage.used / usage.size));
-}
-
 /** The Mac's colour for how full the context is: the agent's own, then warm, then hot. */
 function usageColor(usage: ContextUsage, provider: string, colors: Palette): string {
-  const share = usedShare(usage);
-  if (share >= 0.9) return colors.danger;
-  if (share >= 0.7) return colors.warn;
+  const tone = contextTone(usage);
+  if (tone === 'hot') return colors.danger;
+  if (tone === 'warm') return colors.warn;
   return provider === 'claude' || provider === 'codex' ? brand[provider] : colors.accent;
 }
 
@@ -206,7 +192,7 @@ function ContextRing({ usage, provider, onPress }: { usage: ContextUsage; provid
   const styles = useStyles(makeStyles);
   const radius = (RING - RING_STROKE) / 2;
   const around = 2 * Math.PI * radius;
-  const share = usedShare(usage);
+  const share = contextShare(usage);
   return (
     <Pressable
       onPress={onPress}
@@ -365,12 +351,12 @@ function ConfigSheet({
           <View style={styles.contextTop}>
             <Text style={styles.contextLabel}>Context</Text>
             <Text style={styles.contextValue}>
-              {Math.round(usedShare(usage) * 100)}% · {tokens.format(usage.used)} of {tokens.format(usage.size)}
+              {Math.round(contextShare(usage) * 100)}% · {tokenCount(usage.used)} of {tokenCount(usage.size)}
             </Text>
           </View>
           <View style={styles.contextBar}>
             <View
-              style={[styles.contextFill, { width: `${usedShare(usage) * 100}%`, backgroundColor: usageColor(usage, provider, colors) }]}
+              style={[styles.contextFill, { width: `${contextShare(usage) * 100}%`, backgroundColor: usageColor(usage, provider, colors) }]}
             />
           </View>
           {usage.cost ? <Text style={styles.cost}>Session cost {money(usage.cost)}</Text> : null}
