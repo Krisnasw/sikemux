@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { JiraIssue, JiraStatus } from "../api";
+import type { JiraIssue, JiraIssueSummary, JiraStatus } from "../api";
 
 const api = vi.hoisted(() => ({
     status: vi.fn(),
@@ -133,7 +133,7 @@ describe("JiraPane", () => {
     it("narrows a board to the people picked through Jira, and to typed words on the cards shown", async () => {
         const kiran = { ...summary, key: "ABC-20", summary: "Dossier chart", assignee: { accountId: "k1", name: "Kiran Rao" } };
         const loose = { ...summary, key: "ABC-21", summary: "Dossier picker", assignee: null };
-        const columns = (issues: (typeof summary)[]) => [{ name: "In Progress", statusIds: ["3"], issues }];
+        const columns = (issues: JiraIssueSummary[]) => [{ name: "In Progress", statusIds: ["3"], issues }];
         api.board.mockImplementation(async (_id: number, _site: string | undefined, picked: string[] = []) => ({
             id: 7,
             name: "ABC board",
