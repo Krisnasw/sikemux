@@ -1,5 +1,6 @@
 import { invokeCommand as invoke } from "./invoke";
 import { IS_WINDOWS } from "../lib/platform";
+import { languageServerOf } from "../languages";
 import { getIpcTransport, type IpcUnsubscribe } from "./transport";
 
 export interface LspPos {
@@ -266,28 +267,25 @@ export function parseLspDocumentSymbols(value: unknown): readonly LspDocumentSym
     }
 }
 
-export function languageFromPath(path: string): string | null {
-    const file = path.split("/").pop()?.toLowerCase() ?? "";
-    const ext = file.includes(".") ? file.slice(file.lastIndexOf(".") + 1) : "";
-    if (["ts", "tsx", "mts", "cts"].includes(ext)) return "typescript";
-    if (["js", "jsx", "mjs", "cjs"].includes(ext)) return "javascript";
-    if (ext === "go") return "go";
-    if (ext === "rs") return "rust";
-    if (ext === "py") return "python";
-    return null;
+let servedLanguages: ReadonlySet<string> = new Set();
+let servedLanguagesAsked: Promise<void> | null = null;
+
+export function noteServedLanguages(languages: readonly string[]): void {
+    servedLanguages = new Set(languages);
 }
 
-export function documentLanguageIdFromPath(path: string): string | null {
-    const file = path.split("/").pop()?.toLowerCase() ?? "";
-    const ext = file.includes(".") ? file.slice(file.lastIndexOf(".") + 1) : "";
-    if (["ts", "mts", "cts"].includes(ext)) return "typescript";
-    if (ext === "tsx") return "typescriptreact";
-    if (["js", "mjs", "cjs"].includes(ext)) return "javascript";
-    if (ext === "jsx") return "javascriptreact";
-    if (ext === "go") return "go";
-    if (ext === "rs") return "rust";
-    if (ext === "py") return "python";
-    return null;
+/** Asks the native side once which languages a server can start for, including any a `SIKEMUX_LSP_<LANG>` variable adds. */
+export function loadServedLanguages(): Promise<void> {
+    servedLanguagesAsked ??= invoke<string[]>("lsp_languages").then(noteServedLanguages, () => {
+        servedLanguagesAsked = null;
+    });
+    return servedLanguagesAsked;
+}
+
+/** The language server a file is opened with, when one can start for its language. */
+export function languageFromPath(path: string): string | null {
+    const language = languageServerOf(path);
+    return language && servedLanguages.has(language) ? language : null;
 }
 
 export const uriToPath = (uri: string): string => {
