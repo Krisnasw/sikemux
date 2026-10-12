@@ -3,6 +3,7 @@ import { notify } from "../../../plugin-api/host";
 import { invalidate, useResourceEnabled } from "../../../plugin-api/resources";
 import { ContextMenu, EmptyState, IconRefresh, SkeletonRows, type ContextMenuItem } from "../../../plugin-api/ui";
 import { failureMessage, jiraApi, type JiraBoardView, type JiraColumn, type JiraIssueSummary } from "../api";
+import { boardPeople, matchingCards, pickKey, unassignedCount } from "../boardFilter";
 import { jiraBoardR } from "../resources";
 
 /** Where each card sits after the moves still on their way to Jira, by issue key and column index. */
@@ -43,16 +44,27 @@ export function JiraBoard({
     selected: string | null;
     onSelect: (key: string) => void;
 }) {
-    const found = useResourceEnabled(active, jiraBoardR, boardId, site);
+    const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+    const [words, setWords] = useState("");
+    const whole = useResourceEnabled(active, jiraBoardR, boardId, site, "");
+    const found = useResourceEnabled(active, jiraBoardR, boardId, site, pickKey(picked));
     const [moves, setMoves] = useState<Record<string, number>>({});
     const [dragging, setDragging] = useState<{ key: string; over: number | null } | null>(null);
     const [menu, setMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
     const justDragged = useRef(false);
 
-    if (found.status === "error") return <EmptyState message={found.error ?? "Jira could not open this board."} tone="error" />;
-    if (!found.data) return <SkeletonRows rows={6} label="Loading the board" />;
-    const board = found.data;
-    const columns = withMoves(board, moves);
+    if (whole.status === "error") return <EmptyState message={whole.error ?? "Jira could not open this board."} tone="error" />;
+    if (!whole.data) return <SkeletonRows rows={6} label="Loading the board" />;
+    const board = found.data ?? whole.data;
+    const columns = matchingCards(withMoves(board, moves), words);
+    const refresh = () => invalidate((kind) => kind === "jira.board");
+    const toggle = (who: string) =>
+        setPicked((now) => {
+            const next = new Set(now);
+            if (!next.delete(who)) next.add(who);
+            return next;
+        });
+    const nobody = unassignedCount(whole.data);
 
     const move = async (issue: JiraIssueSummary, to: number) => {
         const from = columns.findIndex((column) => column.issues.some((each) => each.key === issue.key));
@@ -62,6 +74,7 @@ export function JiraBoard({
         try {
             await jiraApi.moveIssue(issue.key, target, site || undefined);
             await found.refresh();
+            refresh();
             invalidate((kind) => kind === "jira.search" || kind === "jira.issue");
         } catch (error) {
             notify("error", `Move ${issue.key}: ${failureMessage(error)}`);
@@ -117,17 +130,57 @@ export function JiraBoard({
                         </span>
                     )}
                     <span className="jira-grow" />
-                    <button
-                        type="button"
-                        className="jira-icon-button"
-                        title="Refresh"
-                        aria-label="Refresh the board"
-                        onClick={() => void found.refresh()}>
+                    <button type="button" className="jira-icon-button" title="Refresh" aria-label="Refresh the board" onClick={refresh}>
                         <IconRefresh size={13} />
                     </button>
                 </div>
                 {board.sprint?.goal && <p className="jira-board-goal">{board.sprint.goal}</p>}
-                {board.truncated && <p className="jira-meta">Showing the first 300 issues. Narrow the board in Jira to see the rest.</p>}
+                {board.truncated && (
+                    <p className="jira-meta">Showing the first 300 issues. Pick people or narrow the board in Jira to see the rest.</p>
+                )}
+                <div className="jira-board-filter-row" role="group" aria-label="Filter the board">
+                    <input
+                        className="jira-board-search"
+                        value={words}
+                        onChange={(event) => setWords(event.target.value)}
+                        placeholder="Find a card"
+                        aria-label="Find a card"
+                        spellCheck={false}
+                    />
+                    <button type="button" className="jira-board-pick" aria-pressed={picked.has("me")} onClick={() => toggle("me")}>
+                        Only my issues
+                    </button>
+                    <span className="jira-board-people">
+                        {boardPeople(whole.data).map((person) => (
+                            <button
+                                key={person.accountId}
+                                type="button"
+                                className="jira-avatar jira-avatar-pick"
+                                title={`${person.name} · ${person.count}`}
+                                aria-label={person.name}
+                                aria-pressed={picked.has(person.accountId)}
+                                onClick={() => toggle(person.accountId)}>
+                                {initials(person.name)}
+                            </button>
+                        ))}
+                    </span>
+                    {nobody > 0 && (
+                        <button type="button" className="jira-board-pick" aria-pressed={picked.has("none")} onClick={() => toggle("none")}>
+                            Unassigned <span className="jira-board-count">{nobody}</span>
+                        </button>
+                    )}
+                    {(picked.size > 0 || words) && (
+                        <button
+                            type="button"
+                            className="jira-board-clear"
+                            onClick={() => {
+                                setPicked(new Set());
+                                setWords("");
+                            }}>
+                            Clear
+                        </button>
+                    )}
+                </div>
             </header>
             {board.kind === "scrum" && !board.sprint ? (
                 <EmptyState message="No sprint is running on this board." />

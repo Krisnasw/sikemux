@@ -163,6 +163,7 @@ function JiraWorkspace({ paneId, active, sites }: { paneId: string; active: bool
             </nav>
             {view.list.kind === "board" ? (
                 <JiraBoard
+                    key={view.list.id}
                     active={active}
                     boardId={view.list.id}
                     site={site}

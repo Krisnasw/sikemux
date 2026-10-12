@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { JiraIssue, JiraStatus } from "../api";
 
@@ -128,6 +128,37 @@ describe("JiraPane", () => {
         await act(async () => fireEvent.click(second));
         expect(api.setTask).toHaveBeenLastCalledWith("ABC-12", 1, "Keeps the 400", false, "acme.atlassian.net");
         expect(second).toBeChecked();
+    });
+
+    it("narrows a board to the people picked through Jira, and to typed words on the cards shown", async () => {
+        const kiran = { ...summary, key: "ABC-20", summary: "Dossier chart", assignee: { accountId: "k1", name: "Kiran Rao" } };
+        const loose = { ...summary, key: "ABC-21", summary: "Dossier picker", assignee: null };
+        const columns = (issues: (typeof summary)[]) => [{ name: "In Progress", statusIds: ["3"], issues }];
+        api.board.mockImplementation(async (_id: number, _site: string | undefined, picked: string[] = []) => ({
+            id: 7,
+            name: "ABC board",
+            kind: "kanban",
+            sprint: null,
+            columns: columns(picked.includes("k1") ? [kiran] : [summary, kiran, loose]),
+            truncated: false,
+        }));
+        render(<JiraPane paneId="jira-board-people" active />);
+        fireEvent.click(await screen.findByRole("button", { name: "ABC board" }));
+        expect(await screen.findAllByRole("listitem")).toHaveLength(3);
+
+        fireEvent.click(screen.getByRole("button", { name: "Kiran Rao" }));
+        await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+        expect(api.board).toHaveBeenLastCalledWith(7, "acme.atlassian.net", ["k1"]);
+        expect(screen.getByRole("button", { name: "Ana" })).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+        await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(3));
+        fireEvent.change(screen.getByRole("textbox", { name: "Find a card" }), { target: { value: "dossier" } });
+        expect(screen.getAllByRole("listitem").map((card) => card.textContent)).toEqual([
+            expect.stringContaining("Dossier chart"),
+            expect.stringContaining("Dossier picker"),
+        ]);
+        expect(screen.getByRole("group", { name: "Filter the board" })).toHaveTextContent("Unassigned 1");
     });
 
     it("puts a card back and says why when Jira will not move it", async () => {
