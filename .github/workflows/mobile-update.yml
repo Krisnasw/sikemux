@@ -35,6 +35,7 @@ on:
       - "src/lib/fuzzy.ts"
       - "src/lib/paths.ts"
       - "src/lib/platform.ts"
+      - "src/lib/urls.ts"
       - "src/state/agentStatus.ts"
       - "src/terminal/interactions.ts"
       - "src/ui/Icons.tsx"

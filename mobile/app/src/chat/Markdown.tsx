@@ -1,12 +1,14 @@
 import { Fragment, memo, useMemo, type ReactNode } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 
+import { safeWebUrl } from '@mac/lib/urls';
 import { CopyButton } from '@/ui/CopyButton';
 import { Icon } from '@/ui/Icon';
 import { fonts, italic, type Palette, useStyles } from '@/ui/theme';
 import { blocks, inlines, settledLength, type Block, type Inline } from './markdownBlocks';
 
-const OPENABLE = /^(https?:|mailto:)/i;
+/** A link the phone opens: the web links the Mac would open, and mail. */
+const openable = (url: string) => safeWebUrl(url) ?? (/^mailto:/i.test(url) ? url : null);
 
 function Link({ url, children, styles }: { url: string; children: ReactNode; styles: Styles }) {
   return (
@@ -45,14 +47,16 @@ function renderInline(nodes: Inline[], styles: Styles): ReactNode[] {
             {renderInline(node.children, styles)}
           </Text>
         );
-      case 'link':
-        return OPENABLE.test(node.url) ? (
-          <Link key={index} url={node.url} styles={styles}>
+      case 'link': {
+        const url = openable(node.url);
+        return url ? (
+          <Link key={index} url={url} styles={styles}>
             {renderInline(node.children, styles)}
           </Link>
         ) : (
           <Fragment key={index}>{renderInline(node.children, styles)}</Fragment>
         );
+      }
     }
   });
 }

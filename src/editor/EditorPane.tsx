@@ -51,7 +51,7 @@ import { EditorInsights } from "./EditorInsights";
 import { PaneField } from "../ui/ShaderField";
 import { basename, dirname, isPathWithin, joinPath, normalizePath } from "../lib/paths";
 import { localPath } from "../chat/imagePreview";
-import { safeWebUrl } from "../terminal/interactions";
+import { safeWebUrl } from "../lib/urls";
 import { keybindingLabelForAction } from "../commands/keybindings";
 
 const FileViewer = lazy(() => import("./viewers/FileViewer"));
