@@ -1,3 +1,4 @@
+import { splitSentContext, type SentContext } from "./promptContext";
 import { toolKind, toolTarget } from "./toolLabels";
 import type { AcpAsyncTask, AcpSubagent, ChatMessage, ChatPart } from "./types";
 
@@ -31,6 +32,37 @@ export function decodedFenceName(info: string): string {
     } catch {
         return info;
     }
+}
+
+function embeddedContext(content: Extract<ChatPart, { kind: "content" }>["content"]): SentContext | null {
+    if (content.type !== "resource" || !content.resource || typeof content.resource !== "object") return null;
+    const resource = content.resource as { uri?: unknown; text?: unknown };
+    if (typeof resource.uri !== "string") return null;
+    const firstLine = typeof resource.text === "string" ? resource.text.split("\n", 1)[0] : "";
+    return { uri: resource.uri, title: firstLine || resource.uri };
+}
+
+/* What a person sent with a message is shown by name: their own text stays
+   prose, and an issue they handed over stays a chip, not its whole text. */
+export function sentParts(message: ChatMessage): { parts: ChatPart[]; context: SentContext[] } {
+    const context = [...(message.context ?? [])];
+    if (message.role !== "user") return { parts: message.parts, context };
+    const parts: ChatPart[] = [];
+    for (const part of message.parts) {
+        const embedded = part.kind === "content" ? embeddedContext(part.content) : null;
+        if (embedded) {
+            context.push(embedded);
+            continue;
+        }
+        if (part.kind !== "text") {
+            parts.push(part);
+            continue;
+        }
+        const split = splitSentContext(part.text);
+        context.push(...split.context);
+        if (split.text) parts.push(split.context.length ? { ...part, text: split.text } : part);
+    }
+    return { parts, context: context.filter((item, index) => context.findIndex((other) => other.uri === item.uri) === index) };
 }
 
 export type PartGroup = { id: string; tools: Extract<ChatPart, { kind: "tool" }>[] } | { id: string; part: ChatPart };
@@ -67,6 +99,11 @@ export const isReply = (part: ChatPart) => part.kind === "text" || part.kind ===
 /* A page the agent showed and a subagent still at work stay in view when the turn around them folds. */
 export const outlivesFold = (part: ChatPart) =>
     (part.kind === "tool" && part.page !== undefined) || (part.kind === "subagent" && part.subagent.state === "running");
+
+/** The parts a message shows: all of them, or once the work before `from` is folded away, the reply and what outlives the fold. */
+export function shownParts(parts: ChatPart[], from: number): ChatPart[] {
+    return from > 0 ? parts.filter((part, index) => (index >= from && isReply(part)) || outlivesFold(part)) : parts;
+}
 
 const replyStart = (parts: ChatPart[], end: number) => {
     let start = end;

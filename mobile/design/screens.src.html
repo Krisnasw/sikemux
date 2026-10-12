@@ -266,6 +266,10 @@
   .sent-files { align-self: flex-end; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: flex-end; gap: 6px; max-width: 84%; margin: 12px 0 -6px; }
   .sent-files .thumb { width: 132px; height: 99px; border-radius: 10px; border: 1px solid var(--border); }
   .sent-files .file { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--ink-dim); }
+  .sent-files .context { display: flex; align-items: center; gap: 6px; max-width: 240px; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface-raised); font-size: 12px; color: var(--ink-dim); }
+  .sent-files .context .ico { color: var(--live); }
+  .sent-files .context b { font-weight: 500; color: var(--ink); }
+  .sent-files .context span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .viewer { background: rgba(0, 0, 0, .94); }
   .viewer-bar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; }
   .viewer-btn { flex: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--ink); display: grid; place-items: center; }
@@ -1672,6 +1676,7 @@
           <div class="sent-files">
             <span class="thumb photo"></span>
             <span class="file">{{IconFile:16}}<span class="file-words"><b>hero-copy.md</b><span>4 KB</span></span></span>
+            <span class="context">{{IconIssue:14}}<b>#412</b><span>Hero shows no download size</span></span>
           </div>
           <div class="msg-user">Match this screenshot, using the copy in the file</div>
           <div class="activity"><span class="glyph claude">{{IconClaude:20}}</span><span class="lbl">Reading…</span><span class="el">2s</span></div>
@@ -1692,7 +1697,7 @@
         </div>
       </div>
       <div class="home-bar"></div></div>
-      <figcaption><b>Sent with attachments</b><div class="note">The message carries its files above the bubble, at its right edge, as the Mac's chat shows them. A photo sent from this phone shows from the phone's own copy. A picture pasted on the computer is fetched from the host once and kept, showing as a chip with its name until it arrives; a file shows as a chip. A tap on a picture opens it over the whole screen. The agent gets the path of each, which the host keeps beside the pictures pasted into its own chats.</div></figcaption>
+      <figcaption><b>Sent with attachments</b><div class="note">The message carries its files above the bubble, at its right edge, as the Mac's chat shows them. A photo sent from this phone shows from the phone's own copy. A picture pasted on the computer is fetched from the host once and kept, showing as a chip with its name until it arrives; a file shows as a chip. A tap on a picture opens it over the whole screen. The agent gets the path of each, which the host keeps beside the pictures pasted into its own chats. An issue or pull request handed over with the message on the computer shows as a chip with its number and title, as on the Mac, never as the text the agent was given.</div></figcaption>
     </figure>
 
     <figure><div class="phone"><div class="island"></div>

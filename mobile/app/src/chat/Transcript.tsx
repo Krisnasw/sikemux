@@ -4,7 +4,8 @@ import { Animated, Easing, Image, Pressable, StyleSheet, Text, View } from 'reac
 import { durationLabel } from '@mac/chat/durationLabel';
 import { rateLabel, sentLabel, type RowMeta } from '@mac/chat/messageMeta';
 import { cutLongText } from '@mac/chat/longText';
-import { isReply, outlivesFold, subagentTask } from '@mac/chat/transcript';
+import { contextChip, type SentContext } from '@mac/chat/promptContext';
+import { groupParts, sentParts, shownParts, subagentTask } from '@mac/chat/transcript';
 import { callCount, callsLabel, workedLabel } from '@mac/chat/toolView';
 import type { PageRef } from '@mac/api/pages';
 import type { AccountMove, AcpContentBlock, AcpSubagent, AcpTaskNotice, AgentNotice, ChatMessage, ChatPart } from '@mac/chat/types';
@@ -19,7 +20,7 @@ import { FoldsContext, useFold } from './folds';
 import { Markdown } from './Markdown';
 import { SentAttachments } from './Attachments';
 import type { Attachment, Held, Unsent } from './session';
-import { ToolGroup, type ToolPart } from './Tools';
+import { ToolGroup } from './Tools';
 
 /** The chat's agent, whose mark its subagents carry. */
 export const ProviderContext = createContext('agent');
@@ -198,26 +199,47 @@ function PageCard({ page }: { page: PageRef }) {
   );
 }
 
-function userText(message: ChatMessage): string {
-  return message.parts.flatMap((part) => (part.kind === 'text' ? [part.text] : [])).join('\n');
+/** An issue, pull request or other item handed over with a message, by its number and title rather than its whole text. */
+function ContextChips({ items }: { items: SentContext[] }) {
+  const colors = useColors();
+  const styles = useStyles(makeStyles);
+  return (
+    <View style={styles.contextChips}>
+      {items.map((item) => {
+        const chip = contextChip(item);
+        return (
+          <View
+            key={item.uri}
+            style={styles.contextChip}
+            accessible
+            accessibilityLabel={`${chip.kind === 'issue' ? 'Issue' : chip.kind === 'pull' ? 'Pull request' : 'Context'} ${chip.number ? `#${chip.number} ` : ''}${chip.title}`}>
+            <Icon
+              name={chip.kind === 'issue' ? 'IconIssue' : chip.kind === 'pull' ? 'IconPullRequest' : 'IconFile'}
+              size={14}
+              color={chip.kind ? colors.live : colors.inkFaint}
+            />
+            {chip.number ? <Text style={styles.contextNumber}>#{chip.number}</Text> : null}
+            <Text style={styles.contextTitle} numberOfLines={1}>
+              {chip.title}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
 }
 
 /** A message's parts in order, with each run of tool calls drawn as one group. */
 function Parts({ id, parts, untimed, live }: { id: string; parts: ChatPart[]; untimed: boolean; live: boolean }) {
   const styles = useStyles(makeStyles);
-  const runs: (ChatPart | ToolPart[])[] = [];
-  for (const part of parts) {
-    const previous = runs[runs.length - 1];
-    if (part.kind === 'tool' && !part.page) {
-      if (Array.isArray(previous)) previous.push(part);
-      else runs.push([part]);
-    } else runs.push(part);
-  }
+  const groups = groupParts(parts);
   return (
     <>
-      {runs.map((run, index) => {
-        const last = live && index === runs.length - 1;
-        if (Array.isArray(run)) return <ToolGroup key={run[0].id} id={`${id}/${run[0].id}`} parts={run} untimed={untimed} live={last} />;
+      {groups.map((group, index) => {
+        const last = live && index === groups.length - 1;
+        if ('tools' in group)
+          return <ToolGroup key={group.id} id={`${id}/${group.id}`} parts={group.tools} untimed={untimed} live={last} />;
+        const run = group.part;
         switch (run.kind) {
           case 'text':
             return run.text.trim() ? <LongText key={run.id} id={run.id} text={run.text} live={last} style={styles.prose} /> : null;
@@ -330,11 +352,13 @@ export function Message({
     : undefined;
   if (message.role === 'user') {
     const failed = unsent?.state === 'failed';
-    const text = userText(message);
+    const { parts, context } = sentParts(message);
+    const text = parts.flatMap((part) => (part.kind === 'text' ? [part.text] : [])).join('\n\n');
     return (
       <View style={styles.userRow}>
         {message.attachments?.length ? <SentAttachments paths={message.attachments} sentFiles={sentFiles} /> : null}
-        {text || !message.attachments?.length ? (
+        {context.length ? <ContextChips items={context} /> : null}
+        {text || (!message.attachments?.length && !context.length) ? (
           <Pressable
             onPress={tap}
             onLongPress={keepLongPress}
@@ -367,12 +391,7 @@ export function Message({
   }
   return (
     <Pressable onPress={tap} onLongPress={keepLongPress} accessibilityHint={tap ? 'Tap for copy and how long it took' : undefined}>
-      <Parts
-        id={message.id}
-        parts={from > 0 ? message.parts.filter((part, at) => (at >= from && isReply(part)) || outlivesFold(part)) : message.parts}
-        untimed={untimed}
-        live={live}
-      />
+      <Parts id={message.id} parts={shownParts(message.parts, from)} untimed={untimed} live={live} />
       {strip ? <Strip meta={strip} mine={false} /> : null}
     </Pressable>
   );
@@ -535,6 +554,21 @@ const makeStyles = (colors: Palette) => {
       borderColor: colors.border,
       backgroundColor: colors.raised,
     },
+    contextChips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6, maxWidth: '84%', marginBottom: 6 },
+    contextChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      maxWidth: 240,
+      paddingVertical: 7,
+      paddingHorizontal: 10,
+      borderRadius: 9,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.raised,
+    },
+    contextNumber: { fontFamily: fonts.uiMedium, fontSize: 12, color: colors.ink },
+    contextTitle: { flexShrink: 1, fontFamily: fonts.ui, fontSize: 12, color: colors.inkDim },
     resourceText: { flexShrink: 1, fontFamily: fonts.mono, fontSize: 12, color: colors.ink },
     pageTitle: { flexShrink: 1, fontFamily: fonts.uiMedium, fontSize: 13, color: colors.ink },
     pageWhere: { fontFamily: fonts.ui, fontSize: 12, color: colors.inkFaint },
