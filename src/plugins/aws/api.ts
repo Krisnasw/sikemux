@@ -1,4 +1,5 @@
-import { createPluginBackend } from "../../plugin-api/backend";
+import { browserSignIn, createPluginBackend } from "../../plugin-api/backend";
+import { openSignInUrl, swallow } from "../../plugin-api/host";
 import { AWS_PLUGIN_ID } from "./kinds";
 
 const backend = createPluginBackend(AWS_PLUGIN_ID, {
@@ -126,11 +127,6 @@ export interface S3Bucket {
     created_at: string | null;
 }
 
-export interface SsoLogin {
-    readonly result: Promise<AwsLoginResult>;
-    cancel(): void;
-}
-
 export const awsApi = {
     profiles: () => backend.call<AwsProfile[]>("profiles", {}),
     identity: (profile: string, force = false) => backend.call<AwsIdentity>("identity", { profile, force }),
@@ -148,35 +144,8 @@ export const awsApi = {
     s3Buckets: (profile: string) => backend.call<S3Bucket[]>("s3Buckets", { profile }),
 
     /** Waits for the person to approve in their browser, so it streams rather than calls: a call would time out. */
-    ssoLogin(profile: string): SsoLogin {
-        let settle: { resolve: (result: AwsLoginResult) => void; reject: (error: unknown) => void } | null = null;
-        const result = new Promise<AwsLoginResult>((resolve, reject) => {
-            settle = { resolve, reject };
-        });
-        const finish = (outcome: AwsLoginResult | Error) => {
-            const pending = settle;
-            settle = null;
-            if (!pending) return;
-            if (outcome instanceof Error) pending.reject(outcome);
-            else pending.resolve(outcome);
-        };
-        const stream = backend.stream<AwsLoginResult>(
-            "ssoLogin",
-            { profile },
-            {
-                onItem: finish,
-                onEnd: () => finish(new Error("the sign-in ended without an answer")),
-                onError: (error) => finish(new Error(error.message)),
-            },
-        );
-        return {
-            result,
-            cancel() {
-                stream.stop();
-                finish(new Error("cancelled"));
-            },
-        };
-    },
+    ssoLogin: (profile: string) =>
+        browserSignIn<AwsLoginResult>(backend, "ssoLogin", (url) => void openSignInUrl(url).catch(swallow("open AWS")), { profile }),
 
     tailLogs: (
         params: { profile: string; logGroup: string; logStream: string | null; since: string },

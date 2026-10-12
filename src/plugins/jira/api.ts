@@ -1,4 +1,4 @@
-import { createPluginBackend } from "../../plugin-api/backend";
+import { browserSignIn, createPluginBackend } from "../../plugin-api/backend";
 import { invalidate } from "../../plugin-api/resources";
 import { JIRA_PLUGIN_ID } from "./kinds";
 
@@ -80,41 +80,6 @@ export interface JiraFilter {
 
 export const refreshJira = () => invalidate((kind) => kind.startsWith("jira."));
 
-interface BrowserSignInItem extends Partial<JiraStatus> {
-    url?: string;
-}
-
-export interface BrowserSignIn {
-    /** Resolves once the browser comes back and the account's sites are signed in, and rejects if it never does. */
-    done: Promise<JiraStatus>;
-    cancel(): void;
-}
-
-/** Waits for the browser to come back from Atlassian's sign-in page, which `openPage` is handed to show. */
-function signInWithBrowser(openPage: (url: string) => void): BrowserSignIn {
-    let cancel = () => {};
-    const done = new Promise<JiraStatus>((resolve, reject) => {
-        let status: JiraStatus | null = null;
-        const stream = backend.stream<BrowserSignInItem>(
-            "signInWithBrowser",
-            {},
-            {
-                onItem: (item) => {
-                    if (item.url) openPage(item.url);
-                    else status = item as JiraStatus;
-                },
-                onEnd: () => (status ? resolve(status) : reject(new Error("the sign-in ended without a site"))),
-                onError: reject,
-            },
-        );
-        cancel = () => {
-            stream.stop();
-            reject(new Error("cancelled"));
-        };
-    });
-    return { done, cancel: () => cancel() };
-}
-
 export interface JiraProject {
     key: string;
     name: string;
@@ -152,7 +117,8 @@ export interface JiraBoardView {
 export const jiraApi = {
     status: () => backend.call<JiraStatus>("status"),
     signIn: (site: string, email: string, token: string) => backend.call<JiraStatus>("signIn", { site, email, token }),
-    signInWithBrowser,
+    /** Waits for the browser to come back from Atlassian's sign-in page with the account's sites signed in. */
+    signInWithBrowser: (openPage: (url: string) => void) => browserSignIn<JiraStatus>(backend, "signInWithBrowser", openPage),
     signOut: (site: string) => backend.call<void>("signOut", { site }),
     search: (jql: string, site?: string, next?: string) => backend.call<JiraPage>("search", { jql, site, next, limit: 50 }),
     issue: (key: string, site?: string) => backend.call<JiraIssue>("issue", { key, site }),

@@ -216,7 +216,7 @@ describe("signing in with the browser", () => {
         const flow = streaming((handlers) => handlers.onEnd?.());
         const signIn = bitbucketApi.signInWithBrowser(vi.fn());
         flow.run();
-        await expect(signIn.done).rejects.toThrow("without an account");
+        await expect(signIn.done).rejects.toThrow("before it finished");
     });
 
     it("stops the stream when cancelled", async () => {

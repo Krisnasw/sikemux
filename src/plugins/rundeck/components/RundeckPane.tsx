@@ -36,7 +36,7 @@ export function RundeckPane({ paneId, active }: Props) {
                     initialUrl={status.data.url}
                     initialUser={status.data.user}
                     initialAllowInsecurePrivateHttp={status.data.allow_insecure_private_http}
-                    notice={status.data.configured ? (status.data.message ?? "Authentication failed") : undefined}
+                    status={{ authFailed: status.data.configured, message: status.data.message ?? "Authentication failed" }}
                     onDone={() => invalidate((kind) => kind.startsWith("rnd."))}
                 />
             );

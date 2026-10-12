@@ -1,4 +1,4 @@
-import { createPluginBackend, type PluginStreamHandlers } from "../../plugin-api/backend";
+import { browserSignIn, createPluginBackend, type PluginStreamHandlers } from "../../plugin-api/backend";
 import type {
     Annotation,
     Artifact,
@@ -61,45 +61,11 @@ export interface BitbucketStatus {
 
 const cannot = (what: string) => (): Promise<never> => Promise.reject(new Error(`Bitbucket cannot ${what}`));
 
-interface BrowserSignInItem extends Partial<BitbucketStatus> {
-    url?: string;
-}
-
-export interface BrowserSignIn {
-    /** Resolves with the account once the browser comes back, and rejects if it never does. */
-    done: Promise<BitbucketStatus>;
-    cancel(): void;
-}
-
-/** Waits for the browser to come back from Bitbucket's sign-in page, which `openPage` is handed to show. */
-function signInWithBrowser(openPage: (url: string) => void): BrowserSignIn {
-    let cancel = () => {};
-    const done = new Promise<BitbucketStatus>((resolve, reject) => {
-        let status: BitbucketStatus | null = null;
-        const stream = backend.stream<BrowserSignInItem>(
-            "signInWithBrowser",
-            {},
-            {
-                onItem: (item) => {
-                    if (item.url) openPage(item.url);
-                    else status = item as BitbucketStatus;
-                },
-                onEnd: () => (status ? resolve(status) : reject(new Error("the sign-in ended without an account"))),
-                onError: reject,
-            },
-        );
-        cancel = () => {
-            stream.stop();
-            reject(new Error("cancelled"));
-        };
-    });
-    return { done, cancel: () => cancel() };
-}
-
 export const bitbucketApi = {
     status: (account: string | null = null) => backend.call<BitbucketStatus>("status", { account }),
     signInWithToken: (token: string, email: string | null) => backend.call<BitbucketStatus>("signInWithToken", { token, email }),
-    signInWithBrowser,
+    /** Waits for the browser to come back from Bitbucket's sign-in page, which `openPage` is handed to show. */
+    signInWithBrowser: (openPage: (url: string) => void) => browserSignIn<BitbucketStatus>(backend, "signInWithBrowser", openPage),
 };
 
 function accountOf(status: BitbucketStatus): HostAccount {

@@ -105,3 +105,46 @@ export function createPluginBackend(pluginId: string, options: PluginBackendOpti
         },
     };
 }
+
+export interface BrowserSignIn<Result> {
+    /** Resolves with what signing in gave once the browser comes back, and rejects if it never does. */
+    readonly done: Promise<Result>;
+    cancel(): void;
+}
+
+/** What a browser sign-in rejects with when the person cancels it, which is not a failure to show. */
+export class SignInCancelled extends Error {
+    constructor() {
+        super("cancelled");
+    }
+}
+
+/**
+ * Waits for the browser to come back from a service's sign-in page. The stream sends the page as `{ url }`, which
+ * `openPage` is handed to show, and then what signing in gave.
+ */
+export function browserSignIn<Result>(
+    backend: PluginBackend,
+    method: string,
+    openPage: (url: string) => void,
+    params: unknown = {},
+): BrowserSignIn<Result> {
+    let cancel = () => {};
+    const done = new Promise<Result>((resolve, reject) => {
+        let answer: { result: Result } | null = null;
+        const stream = backend.stream<unknown>(method, params, {
+            onItem: (item) => {
+                const url = (item as { url?: unknown } | null)?.url;
+                if (typeof url === "string") openPage(url);
+                else answer = { result: item as Result };
+            },
+            onEnd: () => (answer ? resolve(answer.result) : reject(new Error("the sign-in ended before it finished"))),
+            onError: reject,
+        });
+        cancel = () => {
+            stream.stop();
+            reject(new SignInCancelled());
+        };
+    });
+    return { done, cancel: () => cancel() };
+}
