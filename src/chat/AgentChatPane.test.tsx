@@ -1212,7 +1212,7 @@ describe("AgentChatPane", () => {
         await waitFor(() => expect(mocks.eventListener).not.toBeNull());
 
         emit("status", { state: "starting" });
-        expect(screen.getAllByText("Starting agent…")[0]).toBeInTheDocument();
+        expect(document.querySelector(".chat-welcome")).not.toBeNull();
         emit("status", { state: "error", reason: "failed", message: "agent failed" });
         emit("error", { message: "agent failed" });
         expect(screen.getByText("Structured session unavailable.")).toBeInTheDocument();
@@ -1488,7 +1488,7 @@ describe("AgentChatPane", () => {
         const props = { agent, cwd: "/repo", active: true, onBusyChange: () => {} };
         const { rerender } = render(<AgentChatPane {...props} visible />);
         const editor = screen.getByRole("textbox", { name: "Message agent" }) as HTMLTextAreaElement;
-        expect(editor.placeholder).toBe("Connecting to agent session…");
+        expect(editor.placeholder).toContain("Ask about this project");
 
         await waitFor(() => expect(editor.placeholder).toContain("Ask about this project"));
         await nextFrame();

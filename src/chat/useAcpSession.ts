@@ -162,6 +162,12 @@ export function useAcpSession({
                     const { update } = action;
                     if (update.sessionUpdate === "account_switched" && typeof update.account === "string") noteAccount(update.account);
                     queueUpdate(action.sessionId, update);
+                    /* The saved history is all in while the agent is still starting,
+                       so the transcript shows now rather than when the agent answers. */
+                    if (update.sessionUpdate === "history_loaded" && !reattaching) {
+                        flushUpdates();
+                        setReplaying(false);
+                    }
                     continue;
                 }
                 dispatch(action);

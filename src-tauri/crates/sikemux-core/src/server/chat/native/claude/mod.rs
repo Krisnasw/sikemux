@@ -336,13 +336,16 @@ impl Backend for Claude {
                 sink.clone(),
             );
             tokio::task::spawn_blocking(move || -> Result<Option<String>, String> {
+                let loaded = || sink.update(&id, json!({ "sessionUpdate": "history_loaded" }));
                 let Some(path) = replay::transcript_path(&dir, &id) else {
+                    loaded();
                     return Ok(None);
                 };
                 let records = replay::with_subagents(&path, replay::read_chain(&path)?);
                 for (session, update) in replay::replay(&records, &id, &cwd) {
                     sink.update(&session, update);
                 }
+                loaded();
                 Ok(replay::resumed_model(&records))
             })
         });

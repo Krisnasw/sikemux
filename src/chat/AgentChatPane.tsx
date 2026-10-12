@@ -195,6 +195,7 @@ export function AgentChatPane({
         cwd,
         connection: state.connection,
         running: state.running,
+        replaying,
         commands: state.commands,
         steerable,
         dispatch,
@@ -307,7 +308,7 @@ export function AgentChatPane({
     const disconnected = displayState.connection === "error" || displayState.connection === "stopped";
     const resuming = recovery?.phase === "resuming";
     const failure = recovery?.phase === "failed" ? recovery : null;
-    const welcoming = displayState.messages.length === 0 && displayState.connection === "ready";
+    const welcoming = displayState.messages.length === 0 && (displayState.connection === "ready" || (!agent.resumeId && !disconnected));
     const startNewChat = () =>
         cmd.addAgent(agent.type, undefined, undefined, {
             permissionMode: agent.permissionMode,
@@ -316,7 +317,11 @@ export function AgentChatPane({
             cwd,
         });
     const chatAgent = useMemo(() => ({ id: agent.id, type: agent.type }), [agent.id, agent.type]);
-    const composerPlaceholder = placeholderFor(state, { resuming, disconnected, commands: state.commands.length > 0 });
+    const composerPlaceholder = placeholderFor(state, {
+        resuming,
+        disconnected,
+        commands: state.connection !== "ready" || state.commands.length > 0,
+    });
     const sessionActions = (
         <div className="chat-connection-actions">
             <button type="button" onClick={retry}>
