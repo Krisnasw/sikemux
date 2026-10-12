@@ -78,6 +78,7 @@ struct Tool {
 }
 
 struct Child {
+    name: String,
     /// The session whose transcript holds this subagent's card.
     parent: String,
     ended: bool,
@@ -765,11 +766,16 @@ impl Reader {
                 .join("\n"),
             _ => return,
         };
-        let Some(rest) = said.split("Command running in background with ID: ").nth(1) else {
+        // Claude sends a command to the background when asked to, or when it outlives its timeout.
+        let Some(rest) = said
+            .split("Command running in background with ID: ")
+            .nth(1)
+            .or_else(|| said.split("moved to the background (ID ").nth(1))
+        else {
             return;
         };
         let Some(task_id) = rest
-            .split(|ch: char| ch == '.' || ch.is_whitespace())
+            .split(|ch: char| ch == '.' || ch == ')' || ch.is_whitespace())
             .next()
         else {
             return;
@@ -978,12 +984,18 @@ impl Reader {
                     return;
                 };
                 let status = text(message, "status").unwrap_or("completed").to_owned();
-                self.task_ended(
-                    &id,
-                    &status,
-                    text(message, "summary"),
-                    text(message, "output_file"),
-                );
+                let summary = text(message, "summary");
+                // Work started outside any tracked task still wakes the agent.
+                if !self.tasks.contains_key(&id) && !self.subagents.contains_key(&id) {
+                    let name = summary
+                        .and_then(|summary| summary.split('"').nth(1))
+                        .or(summary)
+                        .unwrap_or("Background task")
+                        .to_owned();
+                    self.task_notice(&id, &name, &status);
+                    return;
+                }
+                self.task_ended(&id, &status, summary, text(message, "output_file"));
             }
             Some("background_tasks_changed") => {
                 let live: HashSet<&str> = message
@@ -1275,6 +1287,7 @@ impl Reader {
         self.subagents.insert(
             session_id.clone(),
             Child {
+                name: name.clone(),
                 parent: parent_session,
                 ended: false,
                 background,
@@ -1353,10 +1366,14 @@ impl Reader {
             }
             child.ended = true;
             let parent = child.parent.clone();
+            let woke = (child.background && parent == self.session_id).then(|| child.name.clone());
             self.sink.update(
                 &parent,
                 json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": task_id, "state": state }),
             );
+            if let Some(name) = woke {
+                self.task_notice(task_id, &name, status);
+            }
             return;
         }
         let Some(state) = task_state(status) else {
@@ -1377,6 +1394,15 @@ impl Reader {
             update["outputFilePath"] = json!(output);
         }
         self.sink.update(&self.session_id, update);
+    }
+
+    /// Background work Claude Code reports ending, which wakes the agent; the
+    /// transcript shows it so the turn that follows has a reason.
+    fn task_notice(&mut self, task_id: &str, name: &str, status: &str) {
+        self.sink.update(
+            &self.session_id,
+            json!({ "sessionUpdate": "task_notice", "taskId": task_id, "name": name, "state": status }),
+        );
     }
 
     /// A task the person stopped from the app, said at once rather than when

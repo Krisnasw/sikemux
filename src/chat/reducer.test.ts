@@ -409,7 +409,7 @@ describe("chat reducer", () => {
         });
     });
 
-    it("keeps a background agent's notice out even when its report has paragraphs", () => {
+    it("turns a background agent's notification into a notice, never its report, even when the report has paragraphs", () => {
         const notified = update(initialChatState, {
             sessionUpdate: "user_message_chunk",
             content: {
@@ -422,7 +422,10 @@ describe("chat reducer", () => {
             },
         });
 
-        expect(notified.messages).toEqual([]);
+        expect(notified.messages.flatMap((message) => message.parts)).toEqual([
+            { id: "notice-a41", kind: "notice", notice: { name: "Background task", state: "completed" } },
+        ]);
+        expect(notified.messages.some((message) => message.role === "user")).toBe(false);
     });
 
     it("keeps pasted markup with paragraphs that the harness did not write", () => {

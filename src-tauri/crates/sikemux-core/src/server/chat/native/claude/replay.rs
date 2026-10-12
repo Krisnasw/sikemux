@@ -786,9 +786,16 @@ pub fn replay(records: &[Value], session_id: &str, cwd: &Path) -> Vec<(String, V
         let at = str_field(record, "timestamp").and_then(crate::accounts::live::parse_rfc3339);
         let updates = replay.convert(&content, role, message_id.as_deref());
         let main_thread = parent.is_none();
-        let mut opens_turn = is_assistant && main_thread && turn_over && !updates.is_empty();
+        let wakes = main_thread && wakes_agent(record);
+        let mut opens_turn =
+            (is_assistant || wakes) && main_thread && turn_over && !updates.is_empty();
         for mut update in updates {
-            if main_thread && str_field(&update, "sessionUpdate") == Some("user_message_chunk") {
+            // Claude's note to itself that background work ended wakes it; the turn
+            // that follows is still one it began by itself.
+            if main_thread
+                && str_field(&update, "sessionUpdate") == Some("user_message_chunk")
+                && !wakes
+            {
                 turn_over = false;
             }
             super::super::stamp_replayed(&mut update, at, opens_turn);
@@ -928,6 +935,10 @@ fn collect_children(records: &[Value], session_id: &str) -> Vec<Child> {
         }
     }
     children
+}
+
+fn wakes_agent(record: &Value) -> bool {
+    content_text(record.pointer("/message/content")).contains("<task-notification>")
 }
 
 /// The agent and end state a `<task-notification>` Claude Code wrote to itself reports.

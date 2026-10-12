@@ -439,6 +439,47 @@ function spawnTask(state: ChatState, update: Record<string, unknown>): ChatState
     return { ...state, tasks: [...state.tasks, task], revision: state.revision + 1 };
 }
 
+const stampedAt = (update: Record<string, unknown>): number | null => {
+    const at = recordOf(recordOf(update._meta)?.sikemux)?.at;
+    return typeof at === "number" ? at : null;
+};
+
+/* Work that ends while the agent is idle is what wakes it, so its notice stands
+   between the turns, saying why the next one began, rather than at the end of
+   the last one. */
+function addNotice(state: ChatState, taskId: string, notice: AcpTaskNotice, at: number | null, betweenTurns = !state.running): ChatState {
+    const id = `notice-${taskId}`;
+    if (state.messages.some((message) => message.parts.some((part) => part.id === id))) return state;
+    const part: ChatPart = { id, kind: "notice", notice };
+    if (!betweenTurns) return { ...state, ...appendPart(state, part), revision: state.revision + 1 };
+    const message: ChatMessage = { id: `agent-part-${state.nextId}`, role: "assistant", parts: [part], opensTurn: { at } };
+    return { ...state, messages: [...state.messages, message], nextId: state.nextId + 1, revision: state.revision + 1 };
+}
+
+const NOTICE_STATES: Record<string, AcpTaskNotice["state"]> = {
+    completed: "completed",
+    failed: "failed",
+    stopped: "stopped",
+    killed: "stopped",
+    cancelled: "stopped",
+};
+
+/* Claude Code tells itself a background task ended in a tag the person never
+   sees. History keeps it, and it is the only record of why the next turn began. */
+function harnessNotice(state: ChatState, update: Record<string, unknown>): ChatState | null {
+    const text = textOf(recordOf(update.content)?.text);
+    if (!text?.includes("<task-notification>")) return null;
+    const tag = (name: string) => new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(text)?.[1]?.trim();
+    const taskId = tag("task-id");
+    const noticeState = NOTICE_STATES[tag("status") ?? ""];
+    if (!taskId || !noticeState) return state;
+    const summary = tag("summary");
+    const name = /"([^"]+)"/.exec(summary ?? "")?.[1] ?? summary ?? "Background task";
+    // History marks the notice that woke the agent; one that came mid-turn belongs to that turn.
+    const woke = !state.running && replayedTurnStart(update) !== null;
+    return addNotice(state, taskId, { name, state: noticeState }, stampedAt(update), woke);
+}
+
 function patchTask(state: ChatState, update: Record<string, unknown>): ChatState {
     const asyncTaskId = textOf(update.asyncTaskId);
     const index = state.tasks.findIndex((task) => task.asyncTaskId === asyncTaskId);
@@ -451,12 +492,8 @@ function patchTask(state: ChatState, update: Record<string, unknown>): ChatState
         const ended = state.tasks[index];
         const summary = textOf(update.summary) ?? ended.summary;
         const notice: AcpTaskNotice = { name: ended.name, state: taskState, ...(summary ? { summary } : {}) };
-        return {
-            ...state,
-            ...appendPart(state, { id: `notice-${ended.asyncTaskId}`, kind: "notice", notice }),
-            tasks: state.tasks.filter((_, position) => position !== index),
-            revision: state.revision + 1,
-        };
+        const noted = addNotice(state, ended.asyncTaskId, notice, stampedAt(update));
+        return { ...noted, tasks: state.tasks.filter((_, position) => position !== index), revision: state.revision + 1 };
     }
 
     const current = state.tasks[index];
@@ -534,6 +571,10 @@ function sessionUpdate(state: ChatState, sessionId: string, update: Record<strin
     });
     if (inSubagent) return inSubagent;
 
+    if (update.sessionUpdate === "user_message_chunk") {
+        const noticed = harnessNotice(state, update);
+        if (noticed) return noticed;
+    }
     if (update.sessionUpdate === "user_message_chunk" && state.suppressUserEcho) return state;
     const opening = state.turnOpening ?? replayedTurnStart(update);
     const streamed = transcriptUpdate(state, update, state.running, opening !== null);
@@ -560,6 +601,14 @@ function sessionUpdate(state: ChatState, sessionId: string, update: Record<strin
         case "async_task_progress":
         case "async_task_state_update":
             return patchTask(state, update);
+        case "task_notice": {
+            const taskId = textOf(update.taskId);
+            const noticeState = NOTICE_STATES[textOf(update.state) ?? ""];
+            if (!taskId || !noticeState) return state;
+            const summary = textOf(update.summary);
+            const notice: AcpTaskNotice = { name: textOf(update.name) ?? "Background task", state: noticeState, ...(summary ? { summary } : {}) };
+            return addNotice(state, taskId, notice, stampedAt(update));
+        }
         case "notice":
             return agentNotice(state, update);
         case "plan":
