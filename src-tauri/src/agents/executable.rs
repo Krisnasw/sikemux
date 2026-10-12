@@ -5,6 +5,7 @@ use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 use sikemux_core::agent_catalog::{AgentEntry, AGENTS};
+use sikemux_process::paths::expand_home;
 use sikemux_pty::user_shell::login_shell_environment;
 use tokio::process::Command;
 
@@ -28,19 +29,6 @@ const AGENT_UPDATE_SETTLE_DELAY: Duration = Duration::from_millis(350);
 fn healthy_agent_executables() -> &'static Mutex<HashMap<String, PathBuf>> {
     static CACHE: OnceLock<Mutex<HashMap<String, PathBuf>>> = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(HashMap::new()))
-}
-
-pub(super) fn expand_user_path(value: &str) -> PathBuf {
-    if value == "~" {
-        return crate::system::user_home();
-    }
-    if let Some(rest) = value
-        .strip_prefix("~/")
-        .or_else(|| value.strip_prefix("~\\"))
-    {
-        return crate::system::user_home().join(rest);
-    }
-    PathBuf::from(value)
 }
 
 pub(super) fn apply_process_config(command: &mut Command, agent: &str, config_path: Option<&str>) {
@@ -110,7 +98,7 @@ fn explicit_agent_candidates(value: &str) -> Vec<PathBuf> {
         return Vec::new();
     }
     if value.contains('/') || value.contains('\\') || value.starts_with('~') {
-        return vec![expand_user_path(value)];
+        return vec![expand_home(value)];
     }
     crate::system::find_executables(value)
 }

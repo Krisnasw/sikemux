@@ -1,5 +1,5 @@
 pub(crate) mod accounts;
-mod config;
+pub(crate) mod config;
 pub(crate) mod executable;
 pub(crate) mod models;
 pub(crate) mod sessions;
@@ -7,13 +7,11 @@ pub(crate) mod status;
 pub(crate) mod usage;
 pub(crate) mod watch;
 
-use std::path::PathBuf;
-
 use serde::{Deserialize, Serialize};
 
 pub(crate) use executable::resolve_agent_executable;
-pub use sikemux_core::agent_catalog::AgentKind;
 pub(crate) use sessions::context::session_transcript_path;
+pub use sikemux_core::agent_catalog::AgentKind;
 pub use watch::{note_streaming_session, watch_count};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -75,11 +73,4 @@ pub struct AgentUsage {
     plan: Option<String>,
     windows: Vec<AgentUsageWindow>,
     unavailable_reason: Option<String>,
-}
-
-fn home_path() -> Option<PathBuf> {
-    std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"))
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
 }
