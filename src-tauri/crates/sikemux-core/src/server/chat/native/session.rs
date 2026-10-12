@@ -4,7 +4,6 @@
 
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::time::Duration;
 
 use serde_json::{json, Value};
 use tokio::sync::{mpsc, oneshot};
@@ -18,9 +17,6 @@ use super::super::rebind::{
     error_message, next_account, on_account, switch_notice, Carried, Outcome, Rebind, Replay,
 };
 use super::super::{Chat, ChatCommand};
-
-/// How long a stopped turn may keep running before the agent is killed.
-const CANCEL_GRACE: Duration = Duration::from_secs(10);
 
 /// What the person sent, for the agent to read in its own form.
 #[derive(Clone)]
@@ -133,21 +129,12 @@ impl Sink {
     /// The agent began work nobody here asked for, such as answering a
     /// background task that finished.
     pub fn work_started(&self) {
-        if !self.chat.running.load(Ordering::Acquire)
-            && !self.chat.unprompted.swap(true, Ordering::AcqRel)
-        {
-            self.chat.emit(ChatEventKind::TurnStarted, json!({}));
-        }
+        self.chat.work_started();
     }
 
     /// The work nobody here asked for is over.
     pub fn work_ended(&self, stop_reason: &str) {
-        if self.chat.unprompted.swap(false, Ordering::AcqRel) {
-            self.chat.emit(
-                ChatEventKind::TurnCompleted,
-                json!({ "stopReason": stop_reason }),
-            );
-        }
+        self.chat.work_ended(stop_reason);
     }
 
     /// Settles turn `turn`, or hands a failure another account may fix to
@@ -625,19 +612,8 @@ pub(crate) async fn run<B: Backend>(
                 }
             }
             ChatCommand::Cancel => {
-                if let Err(error) = backend.cancel().await {
-                    chat.emit(ChatEventKind::Error, error_message(error));
-                }
-                if chat.running.load(Ordering::Acquire) {
-                    let cancelled = turn;
-                    let stalled = stalled_tx.clone();
-                    tokio::spawn(async move {
-                        tokio::time::sleep(CANCEL_GRACE).await;
-                        let _ = stalled.send(cancelled);
-                    });
-                } else {
-                    sink.work_ended("cancelled");
-                }
+                let sent = backend.cancel().await;
+                chat.cancel_sent(sent, turn, &stalled_tx);
             }
         }
     };

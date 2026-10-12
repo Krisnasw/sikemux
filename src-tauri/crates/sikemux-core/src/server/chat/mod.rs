@@ -25,8 +25,8 @@ use crate::protocol::{
     ChatLaunch, ChatMark, ChatStart, ChatState, Event, RequestId, Response,
 };
 
-use super::connection::{ClientConn, ClientId};
 use super::activity::Activity;
+use super::connection::{ClientConn, ClientId};
 use super::remote::unix_ms;
 use super::{Core, CoreError, CoreResult};
 use feed::{Feed, Standing};
@@ -38,6 +38,9 @@ const NOT_RUNNING: &str = "ACP session is not running";
 const STOPPED: &str = "ACP session stopped";
 /// How long a stop waits for an agent's process to be gone.
 const STOP_SETTLE: Duration = Duration::from_secs(2);
+/// How long a stopped turn may keep running before the agent is killed. The
+/// agent only reads a stop between steps, and a wedged tool never gets there.
+const CANCEL_GRACE: Duration = Duration::from_secs(10);
 
 pub(crate) enum ChatCommand {
     Prompt {
@@ -179,6 +182,47 @@ impl Chat {
             }
         }
         self.feed.emit(kind, payload);
+    }
+
+    /// The agent began work nobody here asked for, such as answering a
+    /// background task that finished.
+    pub(crate) fn work_started(&self) {
+        if !self.running.load(Ordering::Acquire) && !self.unprompted.swap(true, Ordering::AcqRel) {
+            self.emit(ChatEventKind::TurnStarted, serde_json::json!({}));
+        }
+    }
+
+    /// The work nobody here asked for is over.
+    pub(crate) fn work_ended(&self, stop_reason: &str) {
+        if self.unprompted.swap(false, Ordering::AcqRel) {
+            self.emit(
+                ChatEventKind::TurnCompleted,
+                serde_json::json!({ "stopReason": stop_reason }),
+            );
+        }
+    }
+
+    /// The agent was asked to stop, with `sent` saying whether the ask got
+    /// there. Turn `turn`, when it runs, has a while to end before `stalled`
+    /// is told; work nobody here asked for is over at once.
+    pub(crate) fn cancel_sent(
+        &self,
+        sent: Result<(), String>,
+        turn: u64,
+        stalled: &mpsc::UnboundedSender<u64>,
+    ) {
+        if let Err(error) = sent {
+            self.emit(ChatEventKind::Error, rebind::error_message(error));
+        }
+        if self.running.load(Ordering::Acquire) {
+            let stalled = stalled.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(CANCEL_GRACE).await;
+                let _ = stalled.send(turn);
+            });
+        } else {
+            self.work_ended("cancelled");
+        }
     }
 
     pub(crate) fn turn_running(&self) -> bool {
