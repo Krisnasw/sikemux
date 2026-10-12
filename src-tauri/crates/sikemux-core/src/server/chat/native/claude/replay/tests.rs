@@ -234,7 +234,7 @@ fn replay_routes_subagent_records_to_child_sessions() {
         user(
             "u1",
             Some("a1"),
-            json!([{ "type": "tool_result", "tool_use_id": "toolu_a", "content": "Agent stopped", "is_error": true }]),
+            json!([{ "type": "tool_result", "tool_use_id": "toolu_a", "content": "[Request interrupted by user for tool use]", "is_error": true }]),
         ),
     ];
     let child = format!("{SESSION}:replay-subagent:toolu_a");

@@ -7,6 +7,7 @@ pub(crate) mod feed;
 mod history;
 mod native;
 mod rebind;
+mod states;
 
 use std::collections::HashMap;
 use std::path::PathBuf;

@@ -5,8 +5,9 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::{json, Value};
 
+use super::super::super::states::{self, Subagent};
 use super::items;
-use super::subagents::{fallback_name, name_from_path, spawned, state_update, Addressed};
+use super::subagents::{name_from_path, Addressed};
 
 /// A title as the chat shows it: one line, or none when blank.
 pub(super) fn title(text: &str) -> Option<String> {
@@ -142,7 +143,7 @@ pub(super) fn replay(
     for child in announced.iter().filter(|child| !child.ended) {
         out.push((
             session.to_owned(),
-            state_update(&child.session, "disconnected"),
+            Subagent::Disconnected.update(&child.session),
         ));
     }
 }
@@ -161,7 +162,7 @@ fn replay_activity(
     };
     let name = name_from_path(
         item["agentPath"].as_str().unwrap_or_default(),
-        fallback_name(child),
+        states::unnamed(child),
     );
     let task = format!("Delegated task for {name}");
     let previous = announced.iter().position(|known| known.child == child);
@@ -176,7 +177,10 @@ fn replay_activity(
             } else {
                 format!("{child}:generation:{generation}")
             };
-            out.push((session.to_owned(), spawned(&child_session, &name, &task)));
+            out.push((
+                session.to_owned(),
+                states::spawned(&child_session, &name, &task),
+            ));
             let entry = Announced {
                 child: child.to_owned(),
                 generation,
@@ -208,7 +212,7 @@ fn replay_activity(
         }
         Some(kind @ ("completed" | "interrupted")) => {
             let Some(at) = previous else {
-                out.push((session.to_owned(), spawned(child, &name, &task)));
+                out.push((session.to_owned(), states::spawned(child, &name, &task)));
                 announced.push(Announced {
                     child: child.to_owned(),
                     generation: 1,
@@ -220,15 +224,10 @@ fn replay_activity(
             if announced[at].ended {
                 return;
             }
-            let state = if kind == "completed" {
-                "completed"
-            } else {
-                "cancelled"
+            let Some(state) = states::outcome(kind).map(Subagent::from) else {
+                return;
             };
-            out.push((
-                session.to_owned(),
-                state_update(&announced[at].session, state),
-            ));
+            out.push((session.to_owned(), state.update(&announced[at].session)));
             announced[at].ended = true;
         }
         _ => {}
@@ -375,6 +374,6 @@ mod tests {
         );
         assert_eq!(out[1].1["name"], "Helper");
         assert_eq!(out[3].1["state"], "completed");
-        assert_eq!(out[5].1, state_update("lost", "disconnected"));
+        assert_eq!(out[5].1, Subagent::Disconnected.update("lost"));
     }
 }

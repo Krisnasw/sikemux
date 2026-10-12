@@ -17,6 +17,7 @@ use crate::protocol::{
 use super::super::access::Peer;
 use super::super::connection::{ClientConn, ClientId};
 use super::history::{History, Page, MAX_HISTORY_BYTES};
+use super::states::{Subagent, Task};
 
 /// One frame's worth of streamed updates travels as a single event. Each
 /// notification on its own costs a script eval in the webview, and an adapter
@@ -141,9 +142,7 @@ fn track_subagent(running: &mut HashSet<String>, payload: &Value) {
         Some("subagent_spawned") if !in_subagent => {
             running.insert(id.to_owned());
         }
-        Some("subagent_state_update")
-            if update.get("state").and_then(Value::as_str) != Some("running") =>
-        {
+        Some("subagent_state_update") if subagent_ended(update) => {
             running.remove(id);
         }
         _ => {}
@@ -166,24 +165,43 @@ fn track_task(tasks: &mut HashMap<String, bool>, subagents: &HashSet<String>, pa
     let Some(id) = update.get("asyncTaskId").and_then(Value::as_str) else {
         return;
     };
-    let state = update.get("state").and_then(Value::as_str);
+    let state = update
+        .get("state")
+        .and_then(Value::as_str)
+        .and_then(Task::parse);
     match update.get("sessionUpdate").and_then(Value::as_str) {
         Some("async_task_spawned") => {
             tasks.entry(id.to_owned()).or_insert(true);
         }
         Some("async_task_progress" | "async_task_state_update") => match state {
-            Some("completed" | "failed" | "stopped") => {
+            Some(state) if state.ended() => {
                 tasks.remove(id);
             }
             Some(state) => {
                 if let Some(running) = tasks.get_mut(id) {
-                    *running = state == "running";
+                    *running = state == Task::Running;
                 }
             }
             None => {}
         },
         _ => {}
     }
+}
+
+fn subagent_ended(update: &Value) -> bool {
+    update
+        .get("state")
+        .and_then(Value::as_str)
+        .and_then(Subagent::parse)
+        .is_some_and(Subagent::ended)
+}
+
+fn task_ended(update: &Value) -> bool {
+    update
+        .get("state")
+        .and_then(Value::as_str)
+        .and_then(Task::parse)
+        .is_some_and(Task::ended)
 }
 
 fn chunk(payload: &Value) -> Option<Chunk<'_>> {
@@ -426,7 +444,7 @@ impl Replay {
                     self.hold(Holds::Subagent(id), index, event);
                 }
             }
-            "subagent_state_update" if text("state").as_deref() != Some("running") => {
+            "subagent_state_update" if subagent_ended(update) => {
                 if let Some(id) = text("subagentSessionId") {
                     self.standing
                         .retain(|(held, ..)| *held != Holds::Subagent(id.clone()));
@@ -441,11 +459,7 @@ impl Replay {
                 let Some(id) = text("asyncTaskId") else {
                     return;
                 };
-                let ended = matches!(
-                    text("state").as_deref(),
-                    Some("completed" | "failed" | "stopped")
-                );
-                if ended {
+                if task_ended(update) {
                     self.standing.retain(|(held, ..)| {
                         *held != Holds::TaskSpawned(id.clone())
                             && *held != Holds::TaskLatest(id.clone())

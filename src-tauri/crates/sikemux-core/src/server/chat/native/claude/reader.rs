@@ -10,13 +10,11 @@ use tokio::task::AbortHandle;
 
 use crate::acp::account::{Failure, FailureKind};
 
+use super::super::super::states::{self, Held, Subagent, Task as TaskState};
 use super::super::session::{Sink, TurnEnd};
 use super::control::Control;
 use super::permission;
 use super::tools::{self, TaskPlan};
-
-/// A child session's updates are held until it is announced, but only so many.
-const MAX_HELD_PER_CHILD: usize = 64;
 
 /// Text Claude Code shows instead of an answer when the account is out of
 /// usage, taken from the Agent SDK.
@@ -106,8 +104,11 @@ pub(crate) struct Reader {
     children: HashMap<String, String>,
     /// Subagents by their session, which is the task id Claude gave them.
     subagents: HashMap<String, Child>,
-    held: HashMap<String, Vec<Value>>,
+    held: HashMap<String, Held<Value>>,
     tasks: HashMap<String, Task>,
+    /// Shell commands Claude Code waits on in the turn. It reports their end
+    /// like background work's, but their tool result already says it.
+    foreground: HashSet<String>,
     compaction: Option<String>,
     /// The list Claude's task tools keep, shown as the chat's plan.
     task_plan: TaskPlan,
@@ -258,32 +259,11 @@ fn local_output(content: &str) -> Option<String> {
     (!output.is_empty()).then(|| output.to_owned())
 }
 
-fn task_state(status: &str) -> Option<&'static str> {
-    Some(match status {
-        "pending" | "running" => "running",
-        "paused" => "paused",
-        "completed" => "completed",
-        "failed" => "failed",
-        "killed" | "cancelled" | "stopped" => "stopped",
-        _ => return None,
-    })
-}
-
-fn subagent_state(status: &str) -> Option<&'static str> {
-    Some(match status {
-        "completed" => "completed",
-        "failed" => "failed",
-        "killed" | "cancelled" | "stopped" => "cancelled",
-        "disconnected" => "disconnected",
-        _ => return None,
-    })
-}
-
 fn task_type(kind: Option<&str>) -> String {
     match kind {
         Some("local_bash") => "shell".into(),
         Some("local_workflow") => "workflow".into(),
-        Some("local_monitor" | "mcp") => "monitor".into(),
+        Some("monitor_mcp" | "monitor_ws") => "monitor".into(),
         Some(other) => other.into(),
         None => "task".into(),
     }
@@ -311,6 +291,7 @@ impl Reader {
             subagents: HashMap::new(),
             held: HashMap::new(),
             tasks: HashMap::new(),
+            foreground: HashSet::new(),
             compaction: None,
             task_plan: TaskPlan::default(),
             used: None,
@@ -346,12 +327,7 @@ impl Reader {
         match self.children.get(parent) {
             Some(session) if self.subagents.get(session).is_none_or(|child| child.ended) => {}
             Some(session) => self.sink.update(session, update),
-            None => {
-                let held = self.held.entry(parent.to_owned()).or_default();
-                if held.len() < MAX_HELD_PER_CHILD {
-                    held.push(update);
-                }
-            }
+            None => self.held.entry(parent.to_owned()).or_default().push(update),
         }
     }
 
@@ -832,14 +808,16 @@ impl Reader {
             self.sink.update(&self.session_id, update);
         }
         let answers = text(result, "user_message_uuid");
+        // A turn that background work started, rather than a message, carries its origin.
+        let woken = result.get("origin").is_some();
         let ended = {
             let Ok(mut shared) = self.shared.lock() else {
                 return;
             };
-            let ends = shared
-                .turn
-                .as_ref()
-                .is_some_and(|turn| answers.is_none_or(|uuid| uuid == turn.latest));
+            let ends = shared.turn.as_ref().is_some_and(|turn| match answers {
+                Some(uuid) => uuid == turn.latest,
+                None => !woken,
+            });
             if ends {
                 shared.turn.take()
             } else {
@@ -988,6 +966,9 @@ impl Reader {
                 let summary = text(message, "summary");
                 // Work started outside any tracked task still wakes the agent.
                 if !self.tasks.contains_key(&id) && !self.subagents.contains_key(&id) {
+                    if self.foreground.contains(&id) {
+                        return;
+                    }
                     let name = summary
                         .and_then(|summary| summary.split('"').nth(1))
                         .or(summary)
@@ -1186,10 +1167,23 @@ impl Reader {
             Some(backgrounded) => backgrounded,
             None => !matches!(kind, Some("local_bash" | "local_agent")),
         };
-        if !backgrounded || self.tasks.contains_key(&task_id) {
+        if !backgrounded {
+            self.foreground.insert(task_id);
             return;
         }
-        let task_type = task_type(kind);
+        if self.tasks.contains_key(&task_id) {
+            return;
+        }
+        // Claude Code reports a monitor as a shell; only the tool that started it tells them apart.
+        let monitor = spawner
+            .as_deref()
+            .and_then(|id| self.tools.get(id))
+            .is_some_and(|tool| tool.name == "Monitor");
+        let task_type = if monitor {
+            "monitor".to_owned()
+        } else {
+            task_type(kind)
+        };
         let fallback = match task_type.as_str() {
             "shell" => "Shell",
             "workflow" => "Workflow",
@@ -1235,61 +1229,37 @@ impl Reader {
     }
 
     fn spawn_child(&mut self, task_id: &str, spawner: &str, message: &Value) {
-        if self.children.contains_key(spawner) {
-            return;
-        }
         let session_id = task_id.to_owned();
+        // An agent that finished with its own background work still running is
+        // started again by that work, under the call that first spawned it.
         if self.subagents.contains_key(task_id) {
             self.resume_child(&session_id, spawner, message);
+            return;
+        }
+        if self.children.contains_key(spawner) {
             return;
         }
         let (input, parent_session) = self.tools.get(spawner).map_or_else(
             || (Value::Null, self.session_id.clone()),
             |tool| (tool.input.clone(), tool.session.clone()),
         );
-        let first = |values: &[Option<&str>]| {
-            values
-                .iter()
-                .flatten()
-                .map(|value| value.trim())
-                .find(|value| !value.is_empty())
-                .map(str::to_owned)
-        };
-        let name = first(&[
+        let name = states::first_text(&[
             text(&input, "name"),
             text(&input, "description"),
             text(&input, "subagent_type"),
             text(message, "description"),
             text(message, "subagent_type"),
         ])
-        .unwrap_or_else(|| {
-            let tail: String = task_id
-                .chars()
-                .rev()
-                .take(8)
-                .collect::<Vec<_>>()
-                .into_iter()
-                .rev()
-                .collect();
-            format!("Agent {tail}")
-        });
-        let task = first(&[
+        .unwrap_or_else(|| states::unnamed(task_id));
+        let task = states::first_text(&[
             text(&input, "prompt"),
             text(&input, "description"),
             text(message, "prompt"),
             text(message, "description"),
         ])
-        .unwrap_or_else(|| "Delegated task".to_owned());
-        self.sink.update(
-            &parent_session,
-            json!({
-                "sessionUpdate": "subagent_spawned",
-                "subagentSessionId": session_id,
-                "name": name,
-                "task": task,
-                "capabilities": {},
-            }),
-        );
+        .unwrap_or_else(|| states::UNNAMED_TASK.to_owned());
+        self.sink
+            .update(&parent_session, states::spawned(&session_id, &name, &task));
         let background = message
             .get("is_backgrounded")
             .and_then(Value::as_bool)
@@ -1325,10 +1295,8 @@ impl Reader {
         let parent = child.parent.clone();
         if child.ended {
             child.ended = false;
-            self.sink.update(
-                &parent,
-                json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": session_id, "state": "running" }),
-            );
+            self.sink
+                .update(&parent, Subagent::Running.update(session_id));
         }
         for update in self.held.remove(spawner).unwrap_or_default() {
             self.sink.update(session_id, update);
@@ -1371,35 +1339,39 @@ impl Reader {
         output: Option<&str>,
     ) {
         if let Some(child) = self.subagents.get_mut(task_id) {
-            let Some(state) = subagent_state(status) else {
+            let Some(state) = states::outcome(status).map(Subagent::from) else {
                 return;
             };
             if child.ended {
                 return;
             }
             child.ended = true;
-            let parent = child.parent.clone();
-            let woke = (child.background && parent == self.session_id).then(|| child.name.clone());
-            self.sink.update(
-                &parent,
-                json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": task_id, "state": state }),
-            );
+            let (parent, background, name) =
+                (child.parent.clone(), child.background, child.name.clone());
+            // An agent whose spawner has already finished reports to the chat itself.
+            let reports_to_chat = parent == self.session_id
+                || self
+                    .subagents
+                    .get(&parent)
+                    .is_some_and(|spawner| spawner.ended);
+            let woke = (background && reports_to_chat).then_some(name);
+            self.sink.update(&parent, state.update(task_id));
             if let Some(name) = woke {
                 self.task_notice(task_id, &name, status);
             }
             return;
         }
-        let Some(state) = task_state(status) else {
+        let Some(state) = TaskState::from_status(status).filter(|state| state.ended()) else {
             return;
         };
         let Some(task) = self.tasks.get_mut(task_id) else {
             return;
         };
-        if task.ended || state == "running" || state == "paused" {
+        if task.ended {
             return;
         }
         task.ended = true;
-        let mut update = json!({ "sessionUpdate": "async_task_state_update", "asyncTaskId": task_id, "state": state });
+        let mut update = state.update(task_id);
         if let Some(summary) = summary {
             update["summary"] = json!(summary);
         }
@@ -1412,9 +1384,12 @@ impl Reader {
     /// Background work Claude Code reports ending, which wakes the agent; the
     /// transcript shows it so the turn that follows has a reason.
     fn task_notice(&mut self, task_id: &str, name: &str, status: &str) {
+        let Some(state) = TaskState::from_status(status).filter(|state| state.ended()) else {
+            return;
+        };
         self.sink.update(
             &self.session_id,
-            json!({ "sessionUpdate": "task_notice", "taskId": task_id, "name": name, "state": status }),
+            json!({ "sessionUpdate": "task_notice", "taskId": task_id, "name": name, "state": state.as_str() }),
         );
     }
 
@@ -1426,10 +1401,8 @@ impl Reader {
         };
         task.ended = true;
         let name = task.name.clone();
-        self.sink.update(
-            &self.session_id,
-            json!({ "sessionUpdate": "async_task_state_update", "asyncTaskId": task_id, "state": "stopped" }),
-        );
+        self.sink
+            .update(&self.session_id, TaskState::Stopped.update(task_id));
         self.sink.update(
             &self.session_id,
             json!({ "sessionUpdate": "notice", "severity": "info", "title": "Task stopped by user", "description": format!("{name}.") }),
@@ -1449,10 +1422,8 @@ impl Reader {
             })
             .collect();
         for (parent, session_id) in stopped {
-            self.sink.update(
-                &parent,
-                json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": session_id, "state": "cancelled" }),
-            );
+            self.sink
+                .update(&parent, Subagent::Cancelled.update(&session_id));
         }
     }
 
@@ -1466,10 +1437,8 @@ impl Reader {
             .map(|(session_id, child)| (child.parent.clone(), session_id.clone()))
             .collect();
         for (parent, session_id) in live {
-            self.sink.update(
-                &parent,
-                json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": session_id, "state": "disconnected" }),
-            );
+            self.sink
+                .update(&parent, Subagent::Disconnected.update(&session_id));
         }
         for child in self.subagents.values_mut() {
             child.ended = true;
