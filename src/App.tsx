@@ -36,7 +36,7 @@ import { CliOpenBridge } from "./shell/CliOpenBridge";
 import { DeepLinkBridge } from "./shell/DeepLinkBridge";
 import { git } from "./api/git";
 import { runKeybindingAction, useKeymap } from "./commands/keymap";
-import { getKeybindingAction } from "./commands/keybindings";
+import { getKeybindingAction, QUIT_AND_STOP_SHORTCUT } from "./commands/keybindings";
 import { usePinchZoom } from "./shell/pinchZoom";
 import { introduceNotifications, useAgentNotifications } from "./agents/agentNotifications";
 import { useVoiceDictation } from "./voice/dictation";
@@ -54,7 +54,6 @@ import * as cmd from "./state/commands";
 import { offerSavedSessions, restoreCoreSessions } from "./workspace/restoreCoreSessions";
 import { startSpareShells } from "./terminal/spareShell";
 import { coreSessionsApi } from "./api/coreSessions";
-import { IS_MACOS } from "./lib/platform";
 import { applyHydrate, canFlushPersist, flushPersist, hydrationAllowsPersistence, subscribePersist, type HydrationResult } from "./state/persist";
 import {
     dispatchFolder,
@@ -648,7 +647,7 @@ function ApplicationCommandPalette() {
             title: "Quit and Stop Everything",
             detail: "Stop every terminal, terminal agent and task, then quit. Plain Quit leaves them running.",
             category: "Application",
-            shortcut: IS_MACOS ? "⌥⌘Q" : undefined,
+            shortcut: QUIT_AND_STOP_SHORTCUT ?? undefined,
             execute: runStandalone("app.quit-and-stop-everything", () => void quitAndStopEverything()),
         },
         {
