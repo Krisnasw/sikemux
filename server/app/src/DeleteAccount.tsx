@@ -1,7 +1,7 @@
 import { useAuth, useReverification } from "@clerk/react";
 import { useId, useState, type SubmitEvent } from "react";
 
-import { api, ApiProblem } from "./api.ts";
+import { api, ApiProblem, problemText, signedInToken } from "./api.ts";
 import { errorCode } from "./clerkErrors.ts";
 import type { Load } from "./Devices.tsx";
 import { BackIcon } from "./icons.tsx";
@@ -44,8 +44,9 @@ export function DeleteAccount({
   const fieldId = useId();
 
   const deleteAccount = useReverification(async () => {
-    const token = await getToken({ skipCache: true });
-    if (!token) throw new Error("Sign in again to delete your account.");
+    const token = await signedInToken(getToken, "delete your account", {
+      fresh: true,
+    });
     try {
       return await api.deleteAccount(token);
     } catch (error) {
@@ -66,11 +67,7 @@ export function DeleteAccount({
     } catch (error) {
       setBusy(false);
       if (errorCode(error) === "reverification_cancelled") return;
-      setProblem(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong; try again.",
-      );
+      setProblem(problemText(error));
     }
   };
 
