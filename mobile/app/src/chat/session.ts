@@ -2,6 +2,7 @@ import { ChatAttachment, MobileError, type ChatMark, type ConnectionLike } from 
 import { File } from 'expo-file-system';
 
 import { chatActions, recordOf } from '@mac/chat/acpEvents';
+import { combine, nextBatch } from '@mac/chat/queuedMessages';
 import { chatReducer, initialChatState } from '@mac/chat/reducer';
 import type { AcpPermissionRequest, ChatAction, ChatMessage, ChatState } from '@mac/chat/types';
 
@@ -38,23 +39,8 @@ export type Attachment = {
 /** A message waiting behind the running turn. */
 export type Held = { id: string; text: string; attachments: Attachment[] };
 
-/** The messages that go out together once the turn ends; a slash command only works as the whole prompt, so it goes alone. */
-function nextBatch(queued: Held[]): Held[] {
-  const isCommand = (held: Held) => held.text.startsWith('/');
-  if (!queued.length || isCommand(queued[0])) return queued.slice(0, 1);
-  const command = queued.findIndex(isCommand);
-  return command === -1 ? queued : queued.slice(0, command);
-}
-
-function combined(messages: Held[]): { text: string; attachments: Attachment[] } {
-  return {
-    text: messages
-      .map((held) => held.text)
-      .filter(Boolean)
-      .join('\n\n'),
-    attachments: messages.flatMap((held) => held.attachments),
-  };
-}
+/** Held messages sent as one, each file once. */
+const combined = (messages: Held[]) => combine(messages, (attachment) => attachment.path ?? attachment.id);
 
 export type ChatSnapshot = {
   /** The chat as the host tells it, with what this phone sent added in place. */

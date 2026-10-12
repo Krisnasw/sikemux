@@ -316,7 +316,7 @@ export function AgentChatPane({
             cwd,
         });
     const chatAgent = useMemo(() => ({ id: agent.id, type: agent.type }), [agent.id, agent.type]);
-    const composerPlaceholder = placeholderFor(state, { resuming, disconnected });
+    const composerPlaceholder = placeholderFor(state, { resuming, disconnected, commands: state.commands.length > 0 });
     const sessionActions = (
         <div className="chat-connection-actions">
             <button type="button" onClick={retry}>

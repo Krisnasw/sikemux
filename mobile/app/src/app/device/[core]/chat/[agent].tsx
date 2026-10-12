@@ -21,7 +21,7 @@ import { activityText, composerPlaceholder } from '@mac/chat/chatStatus';
 import { sentPrompts } from '@mac/chat/promptHistory';
 import { activeToolLabel } from '@mac/chat/toolLabels';
 import { outlivesFold, workFolds, type WorkFold } from '@mac/chat/transcript';
-import type { ChatMessage, ChatState } from '@mac/chat/types';
+import type { ChatMessage } from '@mac/chat/types';
 import { ChatMenu } from '@/chat/ChatMenu';
 import { askTitle, Composer, RecentSheet } from '@/chat/Composer';
 import { FoldsContext } from '@/chat/folds';
@@ -50,13 +50,6 @@ const FOLLOW = 0.1;
 
 function capitalised(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1) + (text.endsWith('.') ? '' : '.');
-}
-
-function placeholderFor(state: ChatState, disconnected: boolean): string {
-  if (disconnected) return 'Reconnect to continue this conversation';
-  if (state.connection !== 'ready') return composerPlaceholder(state, { resuming: false, disconnected });
-  if (state.running) return 'Send to queue behind the running turn';
-  return state.commands.length ? 'Ask about this project, or type / for commands' : 'Ask about this project';
 }
 
 /** Above the composer while the host is out of reach: the chat stays, and what is sent waits. */
@@ -402,7 +395,11 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
               commands={state.commands}
               requests={chat.permissions}
               answering={chat.answering}
-              placeholder={placeholderFor(state, live.status !== 'open')}
+              placeholder={composerPlaceholder(state, {
+                resuming: false,
+                disconnected: live.status !== 'open',
+                commands: state.commands.length > 0,
+              })}
               permissionMode={chat.permissionMode ?? info?.permissionMode ?? ''}
               modeLocked={
                 state.running || chat.permissions.length > 0 || chat.changingMode || state.connection !== 'ready' || live.status !== 'open'

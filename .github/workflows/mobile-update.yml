@@ -32,6 +32,7 @@ on:
       - "src/agents/generated/**"
       - "src/chat/**"
       - "src/lib/format.ts"
+      - "src/lib/fuzzy.ts"
       - "src/lib/paths.ts"
       - "src/lib/platform.ts"
       - "src/state/agentStatus.ts"

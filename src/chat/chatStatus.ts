@@ -52,14 +52,17 @@ export function activityText(
             : null;
 }
 
+/** `commands` says whether the agent offers slash commands; a chat not started yet is taken to. */
 export function composerPlaceholder(
     state: Pick<ChatState, "connection" | "running">,
-    { resuming, disconnected }: { resuming: boolean; disconnected: boolean },
+    { resuming, disconnected, commands = true }: { resuming: boolean; disconnected: boolean; commands?: boolean },
 ): string {
-    return state.connection === "ready"
+    return state.connection === "ready" && !disconnected
         ? state.running
             ? "Send to queue behind the running turn"
-            : "Ask about this project, or type / for commands"
+            : commands
+              ? "Ask about this project, or type / for commands"
+              : "Ask about this project"
         : resuming
           ? "Resuming — this message sends as soon as the session is back"
           : disconnected

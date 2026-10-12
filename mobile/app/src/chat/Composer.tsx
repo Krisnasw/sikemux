@@ -5,6 +5,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { toolDiff } from '@mac/chat/diff';
+import { unknownCommand } from '@mac/chat/composerInput';
 import { pickerSlots, sessionConfigs, type SessionConfig } from '@mac/chat/sessionConfig';
 import { toolKind, toolLabel, toolPath } from '@mac/chat/toolLabels';
 import type { AcpAvailableCommand, AcpPermissionRequest, AcpToolCall, ChatState, ContextUsage } from '@mac/chat/types';
@@ -521,6 +522,11 @@ export const Composer = memo(function Composer({
   const send = () => {
     const text = draft.trim();
     if (!sendable || offline || uploading) return;
+    const unknown = unknownCommand(text, commands);
+    if (unknown) {
+      session.report(`/${unknown} is not available in this session`);
+      return;
+    }
     haptics.tap();
     void session.send(text).then((sent) => {
       if (!sent) return;

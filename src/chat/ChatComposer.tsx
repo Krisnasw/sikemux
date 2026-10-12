@@ -23,7 +23,7 @@ import { finishDictationInto, useVoice, writesInto } from "../voice/dictation";
 import { ContextMeter } from "./ContextMeter";
 import { imagesInClipboard, savePastedClipboard } from "./pasteImage";
 import { arrowsBrowse, recallPrompt, type HistoryPosition } from "./promptHistory";
-import { entryName, mergePaths, projectEntries, rankEntries, removeToken, tokenAt, type ProjectEntry } from "./composerInput";
+import { commandMatches, entryName, mergePaths, projectEntries, rankEntries, removeToken, tokenAt, type ProjectEntry } from "./composerInput";
 import { receiveForAgent } from "../agents/agentInbox";
 import type { AcpAvailableCommand, ChatState, ContextUsage } from "./types";
 import type { OutgoingMessage } from "./queuedMessages";
@@ -306,9 +306,7 @@ export function ChatComposer({
     };
 
     const slashCommands = useMemo(() => {
-        if (token?.trigger !== "/") return [];
-        const needle = token.needle.toLowerCase();
-        return commands.filter((command) => command.name.toLowerCase().includes(needle)).slice(0, 8);
+        return token?.trigger === "/" ? commandMatches(commands, token.needle) : [];
     }, [commands, token?.trigger, token?.needle]);
 
     const files = useResourceEnabled(token?.trigger === "@" && !!cwd, filesListR, cwd);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type RefObject
 import { acpApi, type PromptContext } from "../api/acp";
 import type { Agent } from "../state/types";
 import * as cmd from "../state/commands";
+import { unknownCommand } from "./composerInput";
 import { combineQueued, nextBatch, type OutgoingMessage, type QueuedMessage } from "./queuedMessages";
 import type { AcpAvailableCommand, ChatAction, ChatState } from "./types";
 
@@ -75,9 +76,9 @@ export function usePromptQueue({
 
     /** Says whether the composer may clear what it just handed over. */
     const send = (outgoing: OutgoingMessage, steerNow: boolean): boolean => {
-        const commandName = outgoing.text.match(/^\/([^\s]+)/)?.[1];
-        if (commandName && commands.length > 0 && !commands.some((command) => command.name === commandName)) {
-            onError(`/${commandName} is not available in this session`);
+        const unknown = unknownCommand(outgoing.text, commands);
+        if (unknown) {
+            onError(`/${unknown} is not available in this session`);
             return false;
         }
         onError(null);
