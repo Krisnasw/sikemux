@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
 use crate::acp::account::{self, Failure, FailureKind};
-use crate::acp::SessionEnd;
+use crate::acp::{permission, SessionEnd};
 use crate::protocol::{ChatContext, ChatEventKind, ChatLaunch, ChatStart};
 
 use super::super::rebind::{
@@ -169,39 +169,26 @@ impl Sink {
     /// permission request: the session, the tool call and its `options`.
     /// Answers with the chosen option's id, or none when it was cancelled.
     pub async fn ask(&self, mut request: Value) -> Option<String> {
-        let options: Vec<(String, String)> = request
-            .get("options")
-            .and_then(Value::as_array)
-            .map(|options| {
-                options
-                    .iter()
-                    .filter_map(|option| {
-                        Some((
-                            option.get("optionId")?.as_str()?.to_owned(),
-                            option.get("kind")?.as_str()?.to_owned(),
-                        ))
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
         if self.chat.approves() {
-            let allowed = options
-                .iter()
-                .find(|(_, kind)| kind == "allow_once")
-                .or_else(|| options.iter().find(|(_, kind)| kind == "allow_always"));
-            if let Some((id, _)) = allowed {
-                return Some(id.clone());
+            if let Some(option_id) = permission::approval(&request) {
+                return Some(option_id);
             }
         }
+        let option_ids = request
+            .get("options")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|option| Some(option.get("optionId")?.as_str()?.to_owned()))
+            .collect();
         let request_id = Uuid::new_v4().to_string();
         if let Some(object) = request.as_object_mut() {
             object.insert("requestId".into(), Value::String(request_id.clone()));
         }
         let (answer, answered) = oneshot::channel();
-        let ids = options.into_iter().map(|(id, _)| id).collect();
         if self
             .chat
-            .hold_permission(request_id, ids, answer, request.clone())
+            .hold_permission(request_id, option_ids, answer, request.clone())
         {
             self.chat.emit(ChatEventKind::PermissionRequest, request);
         }
