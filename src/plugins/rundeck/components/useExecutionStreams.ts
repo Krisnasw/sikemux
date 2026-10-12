@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { failureMessage } from "../../../plugin-api/backend";
 import { swallow } from "../../../plugin-api/host";
 import { rundeckApi, type LogEntry, type LogTick, type RundeckExecution, type RundeckWorkflowState } from "../api";
 
@@ -81,7 +82,7 @@ export function useExecutionStreams(executionId: number, active: boolean) {
                     else watchId = id;
                 })
                 .catch((e) => {
-                    if (alive && startedIn === generation) setWatchErr(String(e));
+                    if (alive && startedIn === generation) setWatchErr(failureMessage(e));
                 })
                 .finally(() => {
                     watchStarting = false;

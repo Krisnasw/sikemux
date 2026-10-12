@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { confirmDialog, openUrl, swallow } from "../../../plugin-api/host";
 import { useResourceEnabled } from "../../../plugin-api/resources";
 import { IconCheck, IconClock, IconClose, IconExternal, IconFetch, IconGit, IconStop, IconTimer, IconUser } from "../../../plugin-api/ui";
-import { errorMessage, rundeckApi, type RundeckStep } from "../api";
+import { failureMessage, rundeckApi, type RundeckStep } from "../api";
 import * as cmd from "../state";
 import type { JobRef } from "../state";
 import { rndJobDetailR } from "../resources";
@@ -72,7 +72,7 @@ export function RundeckExecution({ paneId, level, active }: Props) {
             const result = await rundeckApi.abort(level.executionId);
             if (result.abort?.status === "failed") setAbortErr(`Rundeck refused to abort: ${result.abort.reason ?? "no reason given"}`);
         } catch (e) {
-            setAbortErr(errorMessage(e));
+            setAbortErr(failureMessage(e));
         } finally {
             setAborting(false);
         }

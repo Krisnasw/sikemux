@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { failureMessage } from "../../../plugin-api/backend";
 import { focusSignInBrowser, openSignInUrl, swallow } from "../../../plugin-api/host";
 import { invalidate, useResource, useResourceEnabled } from "../../../plugin-api/resources";
 import { IconAws, SignInScreen, SignInWaiting } from "../../../plugin-api/ui";
@@ -73,12 +74,12 @@ function SignedOut({ profile, profiles }: { profile: string; profiles: AwsProfil
             if (loginRef.current !== login) return;
             if (result.success) {
                 await awsApi.identity(profile, true).catch(swallow("refresh AWS identity"));
-                invalidate((kind, args) => kind === awsIdentityR.kind && args[0] === profile);
+                invalidate((kind, args) => kind.startsWith("aws.") && args[0] === profile);
             } else {
                 setFailure(result.stderr.trim() || "AWS turned the sign-in down");
             }
         } catch (e) {
-            if (loginRef.current === login) setFailure(String(e));
+            if (loginRef.current === login) setFailure(failureMessage(e));
         } finally {
             if (loginRef.current === login) {
                 loginRef.current = null;

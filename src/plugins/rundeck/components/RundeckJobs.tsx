@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { git, openUrl, swallow, useActiveProjectCwd } from "../../../plugin-api/host";
 import { useResourceEnabled } from "../../../plugin-api/resources";
 import { EmptyState, IconChevron, IconExternal, IconFetch, IconGit, IconRun, IconWarning, SkeletonRows, Tooltip } from "../../../plugin-api/ui";
-import { errorMessage, type MatrixCell, type RundeckExecution } from "../api";
+import { failureMessage, type MatrixCell, type RundeckExecution } from "../api";
 import { rndExecutionsR, rndJobDetailR, rndJobsR, rndMatrixR } from "../resources";
 import * as cmd from "../state";
 import type { JobRef, RundeckLevel } from "../state";
@@ -571,7 +571,7 @@ function JobInspector({ paneId, active, cell, job, now }: { paneId: string; acti
             const status = await git.status(job.repoPath);
             openForm(status.branch === "HEAD" ? "" : status.branch);
         } catch (e) {
-            setActionError(errorMessage(e));
+            setActionError(failureMessage(e));
         }
     };
     const openRun = (executionId: number) => cmd.rundeckPush(paneId, { kind: "execution", ...job, executionId });

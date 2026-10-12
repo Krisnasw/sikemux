@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { confirmDialog, git, notify, swallow } from "../../../plugin-api/host";
 import { invalidate, useResourceEnabled } from "../../../plugin-api/resources";
 import { IconRun, IconWarning, SkeletonRows } from "../../../plugin-api/ui";
-import { errorMessage, rundeckApi, type JobDetail, type JobOption, type PlanResult } from "../api";
+import { failureMessage, rundeckApi, type JobDetail, type JobOption, type PlanResult } from "../api";
 import * as cmd from "../state";
 import type { JobRef } from "../state";
 import { rndExecutionsR, rndJobDetailR, rndJobsR, rndPlanR } from "../resources";
@@ -204,7 +204,7 @@ function RunForm({ paneId, level, active, detail, permalink, children }: FormPro
             }
 
             const result = await runJob(detail.options, values, advanced, detail.node_filter, level.jobId, runAtTime).catch((e: unknown) => {
-                throw pushed ? new Error(`${branch} was pushed, but Rundeck rejected the run: ${errorMessage(e)}`) : e;
+                throw pushed ? new Error(`${branch} was pushed, but Rundeck rejected the run: ${failureMessage(e)}`) : e;
             });
             if (result.recovered) notify("info", "The run request timed out, but the run was found in Rundeck.");
             invalidate(
@@ -213,7 +213,7 @@ function RunForm({ paneId, level, active, detail, permalink, children }: FormPro
             void watchRun(cmd.jobRefOf(level), result.id).catch(swallow("watch the run"));
             cmd.rundeckReplace(paneId, { kind: "execution", ...cmd.jobRefOf(level), executionId: result.id });
         } catch (e) {
-            setError(errorMessage(e));
+            setError(failureMessage(e));
         } finally {
             setBusy(false);
         }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { errorMessage, rundeckApi } from "../api";
+import { failureMessage, rundeckApi } from "../api";
 import { Checkbox, IconRundeck, SignInScreen } from "../../../plugin-api/ui";
 
 interface Props {
@@ -44,7 +44,7 @@ export function RundeckLogin({ initialUrl = "", initialUser = "", initialAllowIn
             }
             onDone();
         } catch (e) {
-            setError(errorMessage(e));
+            setError(failureMessage(e));
         } finally {
             setBusy(false);
         }

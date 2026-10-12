@@ -1,8 +1,10 @@
-import { createPluginBackend, isPluginFailure } from "../../plugin-api/backend";
+import { createPluginBackend } from "../../plugin-api/backend";
 import { invalidate } from "../../plugin-api/resources";
 import { JIRA_PLUGIN_ID } from "./kinds";
 
-const backend = createPluginBackend(JIRA_PLUGIN_ID);
+export { failureMessage } from "../../plugin-api/backend";
+
+const backend = createPluginBackend(JIRA_PLUGIN_ID, { signInStatus: (kind) => kind === "jira.status" });
 
 export interface JiraSite {
     host: string;
@@ -76,30 +78,7 @@ export interface JiraFilter {
     jql: string;
 }
 
-export function failureMessage(error: unknown): string {
-    return isPluginFailure(error) ? error.message : String(error);
-}
-
-export function isSignedOut(error: unknown): boolean {
-    if (!isPluginFailure(error)) return false;
-    return (
-        error.category === "auth" ||
-        error.category === "unconfigured" ||
-        (error.category === "http" && (error.status === 401 || error.status === 403))
-    );
-}
-
 export const refreshJira = () => invalidate((kind) => kind.startsWith("jira."));
-
-/** Only the sign-in status is checked again; refreshing every list would refetch the one that just failed, forever. */
-async function read<T>(method: string, params?: unknown): Promise<T> {
-    try {
-        return await backend.call<T>(method, params);
-    } catch (error) {
-        if (isSignedOut(error)) invalidate((kind) => kind === "jira.status");
-        throw error;
-    }
-}
 
 interface BrowserSignInItem extends Partial<JiraStatus> {
     url?: string;
@@ -175,21 +154,22 @@ export const jiraApi = {
     signIn: (site: string, email: string, token: string) => backend.call<JiraStatus>("signIn", { site, email, token }),
     signInWithBrowser,
     signOut: (site: string) => backend.call<void>("signOut", { site }),
-    search: (jql: string, site?: string, next?: string) => read<JiraPage>("search", { jql, site, next, limit: 50 }),
-    issue: (key: string, site?: string) => read<JiraIssue>("issue", { key, site }),
-    comment: (key: string, body: string, site?: string) => read<JiraComment>("comment", { key, body, site }),
+    search: (jql: string, site?: string, next?: string) => backend.call<JiraPage>("search", { jql, site, next, limit: 50 }),
+    issue: (key: string, site?: string) => backend.call<JiraIssue>("issue", { key, site }),
+    comment: (key: string, body: string, site?: string) => backend.call<JiraComment>("comment", { key, body, site }),
     transition: (key: string, to: string, site?: string) =>
-        read<{ status: string | null; transitions: JiraTransition[] }>("transition", { key, to, site }),
-    assign: (key: string, who: { accountId?: string | null; me?: boolean }, site?: string) => read<void>("assign", { key, ...who, site }),
+        backend.call<{ status: string | null; transitions: JiraTransition[] }>("transition", { key, to, site }),
+    assign: (key: string, who: { accountId?: string | null; me?: boolean }, site?: string) => backend.call<void>("assign", { key, ...who, site }),
     /** Ticks or clears the `index`th task of the description; `text` must still be its words. */
-    setTask: (key: string, index: number, text: string, done: boolean, site?: string) => read<void>("setTask", { key, index, text, done, site }),
-    assignable: (key: string, query: string, site?: string) => read<JiraPerson[]>("assignable", { key, query, site }),
-    filters: (site?: string) => read<JiraFilter[]>("filters", { site }),
-    projects: (site?: string) => read<JiraProject[]>("projects", { site }),
-    boards: (site?: string) => read<JiraBoard[]>("boards", { site }),
-    board: (id: number, site?: string) => read<JiraBoardView>("board", { id, site }),
+    setTask: (key: string, index: number, text: string, done: boolean, site?: string) =>
+        backend.call<void>("setTask", { key, index, text, done, site }),
+    assignable: (key: string, query: string, site?: string) => backend.call<JiraPerson[]>("assignable", { key, query, site }),
+    filters: (site?: string) => backend.call<JiraFilter[]>("filters", { site }),
+    projects: (site?: string) => backend.call<JiraProject[]>("projects", { site }),
+    boards: (site?: string) => backend.call<JiraBoard[]>("boards", { site }),
+    board: (id: number, site?: string) => backend.call<JiraBoardView>("board", { id, site }),
     /** Moves an issue into a board column through whichever transition leads to one of its statuses. */
     moveIssue: (key: string, column: JiraColumn, site?: string) =>
-        read<void>("moveIssue", { key, statusIds: column.statusIds, column: column.name, site }),
+        backend.call<void>("moveIssue", { key, statusIds: column.statusIds, column: column.name, site }),
     keys: (text: string) => backend.call<string[]>("keys", { text }),
 };
