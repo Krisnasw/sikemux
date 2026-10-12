@@ -3,6 +3,7 @@ import type { Agent, PaneNode, Session, TabRef, Window, WindowRole } from "./typ
 import { agentDisplay, lastWorkedAt, type AgentDisplay } from "./agentStatus";
 import type { StoreState } from "./store";
 import { collectPanes, openSides } from "./layout";
+import { relativePath } from "../lib/paths";
 
 export const selectSessionIds = (state: StoreState): readonly string[] => state.sessionOrder;
 export const selectFocusMode = (state: Pick<StoreState, "sideRailOpen" | "agentRailOpen">): boolean => !state.sideRailOpen && !state.agentRailOpen;
@@ -82,6 +83,12 @@ export function terminalLabel(win: Window | undefined, pane: PaneNode, titles: R
     const home = win?.role === "term" ? collectPanes(win.root).find((candidate) => candidate.kind === "terminal") : undefined;
     if (win?.customName && home?.id === pane.id) return win.customName;
     return titles[pane.id] || pane.title || win?.name || "terminal";
+}
+
+/** The open project in this folder. */
+export function projectSessionId(state: Pick<StoreState, "sessionOrder" | "sessions">, cwd: string): string | null {
+    if (!cwd) return null;
+    return state.sessionOrder.find((id) => state.sessions[id]?.kind === "project" && relativePath(state.sessions[id].cwd, cwd) === "") ?? null;
 }
 
 /** The window an agent lives in, wherever it is. */

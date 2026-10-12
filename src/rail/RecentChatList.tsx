@@ -4,6 +4,7 @@ import { selectedProviderProfile } from "../agents/agentProfiles";
 import { canDeleteChats } from "../agents/catalog";
 import { AgentTitleInput } from "../agents/AgentTitleInput";
 import * as cmd from "../state/commands";
+import { projectSessionId } from "../state/selectors";
 import { useStore } from "../state/store";
 import { AgentIcon } from "../ui/Icons";
 import { Panel, PanelHeader } from "../ui/Panel";
@@ -24,8 +25,10 @@ export function RecentChatList({ recent, providers }: { recent: RecentChats; pro
     if (recent.chats.length === 0) return null;
 
     const providerOf = (chat: RecentChat) => providers.find((provider) => provider.type === chat.agent);
-    const projectOf = (chat: RecentChat) =>
-        sessionOrder.map((id) => sessions[id]).find((session) => session?.kind === "project" && session.cwd === chat.project);
+    const projectOf = (chat: RecentChat) => {
+        const id = projectSessionId({ sessionOrder, sessions }, chat.project);
+        return id ? sessions[id] : undefined;
+    };
 
     const open = (chat: RecentChat) => {
         const project = projectOf(chat);
