@@ -32,7 +32,7 @@ import { agentMenu, renameAgentPrompt } from "./agentMenu";
 import { TabBar, type TabDescriptor } from "./TabBar";
 import type { TabDragOut, TabPoint } from "./useTabReorder";
 import { AgentIcon, IconArrowUp, IconPlus, WindowIcon } from "../ui/Icons";
-import { AgentStateIndicator, showsAgentState, SubagentCount } from "../agents/AgentStateIndicator";
+import { AgentStateIndicator, BackgroundCounts, showsAgentState } from "../agents/AgentStateIndicator";
 import { renderWorkbenchItem } from "../workbench/renderers";
 import { FileIcon } from "../ui/FileIcon";
 import { fsapi } from "../api/fs";
@@ -465,7 +465,7 @@ const WorkspaceTabsBar = memo(function WorkspaceTabsBar({ session }: { session: 
                                 <AgentIcon type={agent.type} size={19} />
                             </span>
                         ),
-                        badge: display.subagents > 0 ? <SubagentCount count={display.subagents} /> : undefined,
+                        badge: display.subagents + display.tasks > 0 ? <BackgroundCounts display={display} /> : undefined,
                         accessory: showsAgentState(display) ? <AgentStateIndicator display={display} /> : undefined,
                     },
                 ];

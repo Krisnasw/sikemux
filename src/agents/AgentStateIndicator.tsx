@@ -3,18 +3,16 @@ import { animate } from "../lib/motion";
 import type { AgentDisplay } from "../state/agentStatus";
 import { IconAgent, IconCommand } from "../ui/Icons";
 
-const BACKGROUND_LABEL = "Shells or monitors still running";
 const TWINKLE_CELLS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 /**
  * A twinkling grid while an agent works, a dot once it has something waiting for you,
  * and nothing while it sits idle — a rail of idle agents would be a column of
  * dots carrying no information, since the row already says the agent exists.
- * Left-over shells get the terminal glyph instead of a dot, so they do not read
- * as the same amber dot that means the agent is waiting on you.
+ * Subagents and shells left running show as counts beside the title instead.
  */
 export function showsAgentState(display: AgentDisplay): boolean {
-    return display.group !== "idle" || display.subagents + display.tasks > 0;
+    return display.group !== "idle";
 }
 
 /**
@@ -64,7 +62,7 @@ function useStateChange(tone: string) {
 }
 
 export function AgentStateIndicator({ display, unread = false }: { display: AgentDisplay; unread?: boolean }) {
-    const tone = display.group !== "idle" ? display.group : showsAgentState(display) ? "background" : "idle";
+    const tone = display.group;
     const mark = useStateChange(tone);
     if (tone === "working") {
         const label = display.label;
@@ -79,20 +77,41 @@ export function AgentStateIndicator({ display, unread = false }: { display: Agen
         );
     }
     if (tone === "idle") return null;
-    const label = tone === "background" ? BACKGROUND_LABEL : display.label;
+    const label = display.label;
     return (
         <span ref={mark} className={`agent-activity state-${tone}${unread ? " unread" : ""}`} title={label} aria-label={label} role="img">
-            {tone === "background" ? <IconCommand size={11} className="agent-state-icon" /> : <span className="agent-state-dot" aria-hidden="true" />}
+            <span className="agent-state-dot" aria-hidden="true" />
         </span>
     );
 }
 
-export function SubagentCount({ count }: { count: number }) {
+function SubagentCount({ count }: { count: number }) {
     const label = `${count} ${count === 1 ? "subagent" : "subagents"} running`;
     return (
-        <span className="subagent-count" title={label} aria-label={label} role="img">
+        <span className="work-count subagent-count" title={label} aria-label={label} role="img">
             <IconAgent size={10} />
             <span aria-hidden="true">{count}</span>
+        </span>
+    );
+}
+
+function ShellCount({ count }: { count: number }) {
+    const label = `${count} ${count === 1 ? "shell or monitor" : "shells or monitors"} running`;
+    return (
+        <span className="work-count shell-count" title={label} aria-label={label} role="img">
+            <IconCommand size={11} />
+            <span aria-hidden="true">{count}</span>
+        </span>
+    );
+}
+
+/** The subagents and shells an agent still has going, shown whatever its turn is doing. */
+export function BackgroundCounts({ display }: { display: AgentDisplay }) {
+    if (display.subagents === 0 && display.tasks === 0) return null;
+    return (
+        <span className="work-counts">
+            {display.subagents > 0 && <SubagentCount count={display.subagents} />}
+            {display.tasks > 0 && <ShellCount count={display.tasks} />}
         </span>
     );
 }

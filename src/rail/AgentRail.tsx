@@ -12,7 +12,7 @@ import { useStore } from "../state/store";
 import { activeAgentId, agentDisplayOf, agentIdsOf, agentsAwaitingInput } from "../state/selectors";
 import { type Agent, type AgentType } from "../state/types";
 import { AgentIcon, IconClose, IconInbox, IconPlus, IconSearch } from "../ui/Icons";
-import { AgentStateIndicator, showsAgentState, SubagentCount } from "../agents/AgentStateIndicator";
+import { AgentStateIndicator, BackgroundCounts, showsAgentState } from "../agents/AgentStateIndicator";
 import { AgentTitleInput } from "../agents/AgentTitleInput";
 import { AgentContextMenu } from "../workspace/AgentContextMenu";
 import { AGENT_LABELS, agentDisplay, sortByAttention } from "../state/agentStatus";
@@ -417,7 +417,7 @@ export function AgentRailBody() {
                                             }}>
                                             {glyph}
                                             <span className="agent-title">{a.title}</span>
-                                            {display.subagents > 0 && <SubagentCount count={display.subagents} />}
+                                            <BackgroundCounts display={display} />
                                         </button>
                                     )}
                                     {showsAgentState(display) && (

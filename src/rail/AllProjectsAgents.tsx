@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { AgentStateIndicator, showsAgentState, SubagentCount } from "../agents/AgentStateIndicator";
+import { AgentStateIndicator, BackgroundCounts, showsAgentState } from "../agents/AgentStateIndicator";
 import * as cmd from "../state/commands";
 import { useStore } from "../state/store";
 import { AGENT_GROUPS, AGENT_LABELS, lastWorkedAt, type AgentDisplay } from "../state/agentStatus";
@@ -56,7 +56,7 @@ export function AllProjectsAgents() {
                                         <AgentIcon type={agent.type} size={20} />
                                     </span>
                                     <span className="agent-title">{agent.title}</span>
-                                    {display.subagents > 0 && <SubagentCount count={display.subagents} />}
+                                    <BackgroundCounts display={display} />
                                 </button>
                                 {showsAgentState(display) && (
                                     <span className="row-status">

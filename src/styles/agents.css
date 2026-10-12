@@ -66,9 +66,6 @@
     place-items: center;
     color: var(--text-tertiary);
 }
-.agent-state-icon {
-    display: block;
-}
 .agent-state-loader {
     display: grid;
     grid-template-columns: repeat(3, 2.5px);
@@ -149,8 +146,7 @@
 .agent-activity.state-done {
     color: var(--acc);
 }
-.agent-activity.state-blocked,
-.agent-activity.state-background {
+.agent-activity.state-blocked {
     color: var(--warn);
 }
 .agent-activity.state-working {
@@ -165,7 +161,13 @@
 .agent-activity.state-stopped {
     color: var(--text-tertiary);
 }
-.subagent-count {
+.work-counts {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+.work-count {
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -180,8 +182,11 @@
     stroke: none;
     color: color-mix(in srgb, var(--live) 70%, var(--text-tertiary));
 }
-.tab-wrap.active .subagent-count,
-.agent-row.active .subagent-count {
+.shell-count svg {
+    color: color-mix(in srgb, var(--warn) 70%, var(--text-tertiary));
+}
+.tab-wrap.active .work-count,
+.agent-row.active .work-count {
     color: var(--text-secondary);
 }
 @keyframes agent-activity-spin {
