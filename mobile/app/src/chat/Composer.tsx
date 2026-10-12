@@ -7,7 +7,7 @@ import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg'
 import { toolDiff } from '@mac/chat/diff';
 import { unknownCommand } from '@mac/chat/composerInput';
 import { contextShare, contextTone, money, tokenCount } from '@mac/chat/contextUsage';
-import { pickerSlots, sessionConfigs, type SessionConfig } from '@mac/chat/sessionConfig';
+import { currentLabel, pickerSlots, sessionConfigs, type SessionConfig } from '@mac/chat/sessionConfig';
 import { toolKind, toolLabel, toolPath } from '@mac/chat/toolLabels';
 import type { AcpAvailableCommand, AcpPermissionRequest, AcpToolCall, ChatState, ContextUsage } from '@mac/chat/types';
 import { canSwitchMode, isYolo } from '@mac/agents/agentLaunch';
@@ -24,11 +24,6 @@ import { pickFiles, pickPhotos } from './pick';
 import { MAX_ATTACHMENTS, type Attachment, type ChatSession } from './session';
 import { useDraft } from './useChat';
 import { matchingCommands } from './commands';
-
-function current(config?: SessionConfig): string | undefined {
-  if (!config) return undefined;
-  return config.options.find((option) => option.value === config.currentValue)?.label ?? config.currentValue;
-}
 
 export function askTitle(request: AcpPermissionRequest): string {
   const kind = toolKind(request.toolCall);
@@ -465,8 +460,8 @@ export const Composer = memo(function Composer({
   const typing = useKeyboardShown();
   const configs = sessionConfigs(setup);
   const slots = pickerSlots(configs, provider as never);
-  const model = current(slots[0]?.config);
-  const effort = current(slots[1]?.config);
+  const model = currentLabel(slots[0]?.config);
+  const effort = currentLabel(slots[1]?.config);
   const pulls = !draft && onRecent !== undefined;
   const pullUp = useMemo(
     () =>

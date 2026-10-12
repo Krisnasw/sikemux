@@ -1,3 +1,4 @@
+import { recordOf } from "./acpEvents";
 import { toolDiff, toolFailure } from "./diff";
 import { toolPage } from "./pages";
 import { toolOutput } from "./toolOutput";
@@ -46,8 +47,6 @@ export const initialChatState: ChatState = {
 type Transcript = { messages: ChatMessage[]; nextId: number };
 
 const textOf = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
-const recordOf = (value: unknown): Record<string, unknown> | undefined =>
-    typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 
 /* The agent echoes the notifications its harness writes to itself, and those
    are one block of tags with no prose around them. Markdown drops such a block

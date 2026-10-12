@@ -8,7 +8,7 @@ import { agentCatalogR } from "../state/resources.defs";
 import { useStore } from "../state/store";
 import { DEFAULT_PROVIDER_PROFILE_SELECTION, type Agent, type ProviderProfile } from "../state/types";
 import { leavingMenu } from "../lib/motion";
-import { pickerSlots, sessionConfigs, type ConfigChoice, type SessionConfig } from "./sessionConfig";
+import { currentLabel, pickerSlots, sessionConfigs, type ConfigChoice, type SessionConfig } from "./sessionConfig";
 
 interface Choice extends ConfigChoice {
     icon?: ReactNode;
@@ -241,10 +241,7 @@ export function ComposerPickers({
             {pickerSlots(configs, agent.type).map(({ id, config }) => {
                 const model = id === "model";
                 const name = model ? "Model" : "Reasoning effort";
-                const label =
-                    config?.options.find((option) => option.value === config.currentValue)?.label ??
-                    config?.currentValue ??
-                    (model ? agent.model || "Model" : agent.effort || "Effort");
+                const label = currentLabel(config) ?? (model ? agent.model || "Model" : agent.effort || "Effort");
                 const options = config?.options || [];
                 return (
                     <Picker
