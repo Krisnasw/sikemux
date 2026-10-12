@@ -78,7 +78,8 @@ struct Tool {
 }
 
 struct Child {
-    session_id: String,
+    /// The session whose transcript holds this subagent's card.
+    parent: String,
     ended: bool,
     background: bool,
 }
@@ -100,9 +101,10 @@ pub(crate) struct Reader {
     stream_message_id: Option<String>,
     tools: HashMap<String, Tool>,
     shown: HashSet<String>,
-    /// Subagents by the tool call that spawned them.
-    children: HashMap<String, Child>,
-    generations: HashMap<String, u32>,
+    /// The subagent each spawning or resuming tool call speaks for, by the call.
+    children: HashMap<String, String>,
+    /// Subagents by their session, which is the task id Claude gave them.
+    subagents: HashMap<String, Child>,
     held: HashMap<String, Vec<Value>>,
     tasks: HashMap<String, Task>,
     compaction: Option<String>,
@@ -305,7 +307,7 @@ impl Reader {
             tools: HashMap::new(),
             shown: HashSet::new(),
             children: HashMap::new(),
-            generations: HashMap::new(),
+            subagents: HashMap::new(),
             held: HashMap::new(),
             tasks: HashMap::new(),
             compaction: None,
@@ -341,8 +343,8 @@ impl Reader {
             return;
         };
         match self.children.get(parent) {
-            Some(child) if child.ended => {}
-            Some(child) => self.sink.update(&child.session_id, update),
+            Some(session) if self.subagents.get(session).is_none_or(|child| child.ended) => {}
+            Some(session) => self.sink.update(session, update),
             None => {
                 let held = self.held.entry(parent.to_owned()).or_default();
                 if held.len() < MAX_HELD_PER_CHILD {
@@ -356,7 +358,7 @@ impl Reader {
     fn session_of(&self, parent: Option<&str>) -> String {
         parent
             .and_then(|parent| self.children.get(parent))
-            .map_or_else(|| self.session_id.clone(), |child| child.session_id.clone())
+            .map_or_else(|| self.session_id.clone(), Clone::clone)
     }
 
     pub fn handle(&mut self, message: Value) {
@@ -1211,13 +1213,11 @@ impl Reader {
         if self.children.contains_key(spawner) {
             return;
         }
-        let generation = self.generations.entry(task_id.to_owned()).or_insert(0);
-        *generation += 1;
-        let session_id = if *generation == 1 {
-            task_id.to_owned()
-        } else {
-            format!("{task_id}:generation:{generation}")
-        };
+        let session_id = task_id.to_owned();
+        if self.subagents.contains_key(task_id) {
+            self.resume_child(&session_id, spawner, message);
+            return;
+        }
         let (input, parent_session) = self.tools.get(spawner).map_or_else(
             || (Value::Null, self.session_id.clone()),
             |tool| (tool.input.clone(), tool.session.clone()),
@@ -1271,16 +1271,41 @@ impl Reader {
             .unwrap_or_else(|| {
                 input.get("run_in_background").and_then(Value::as_bool) == Some(true)
             });
-        self.children.insert(
-            spawner.to_owned(),
+        self.children.insert(spawner.to_owned(), session_id.clone());
+        self.subagents.insert(
+            session_id.clone(),
             Child {
-                session_id: session_id.clone(),
+                parent: parent_session,
                 ended: false,
                 background,
             },
         );
         for update in self.held.remove(spawner).unwrap_or_default() {
             self.sink.update(&session_id, update);
+        }
+    }
+
+    /// A message sent to a subagent wakes the one already on screen, so its
+    /// card picks up where it left off rather than a second card starting.
+    fn resume_child(&mut self, session_id: &str, spawner: &str, message: &Value) {
+        self.children
+            .insert(spawner.to_owned(), session_id.to_owned());
+        let Some(child) = self.subagents.get_mut(session_id) else {
+            return;
+        };
+        if let Some(background) = message.get("is_backgrounded").and_then(Value::as_bool) {
+            child.background = background;
+        }
+        let parent = child.parent.clone();
+        if child.ended {
+            child.ended = false;
+            self.sink.update(
+                &parent,
+                json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": session_id, "state": "running" }),
+            );
+        }
+        for update in self.held.remove(spawner).unwrap_or_default() {
+            self.sink.update(session_id, update);
         }
     }
 
@@ -1319,35 +1344,18 @@ impl Reader {
         summary: Option<&str>,
         output: Option<&str>,
     ) {
-        let generation_prefix = format!("{task_id}:generation:");
-        let of_task = |child: &Child| {
-            child.session_id == task_id || child.session_id.starts_with(&generation_prefix)
-        };
-        if self.children.values().any(of_task) {
+        if let Some(child) = self.subagents.get_mut(task_id) {
             let Some(state) = subagent_state(status) else {
                 return;
             };
-            let Some(child) = self
-                .children
-                .values_mut()
-                .find(|child| !child.ended && of_task(child))
-            else {
+            if child.ended {
                 return;
-            };
+            }
             child.ended = true;
-            let session_id = child.session_id.clone();
-            let parent = self
-                .tools
-                .iter()
-                .find(|(id, _)| {
-                    self.children
-                        .get(*id)
-                        .is_some_and(|child| child.session_id == session_id)
-                })
-                .map_or_else(|| self.session_id.clone(), |(_, tool)| tool.session.clone());
+            let parent = child.parent.clone();
             self.sink.update(
                 &parent,
-                json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": session_id, "state": state }),
+                json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": task_id, "state": state }),
             );
             return;
         }
@@ -1393,19 +1401,15 @@ impl Reader {
     /// background run on.
     fn end_foreground_subagents(&mut self) {
         let stopped: Vec<(String, String)> = self
-            .children
+            .subagents
             .iter_mut()
             .filter(|(_, child)| !child.ended && !child.background)
-            .map(|(spawner, child)| {
+            .map(|(session_id, child)| {
                 child.ended = true;
-                (spawner.clone(), child.session_id.clone())
+                (child.parent.clone(), session_id.clone())
             })
             .collect();
-        for (spawner, session_id) in stopped {
-            let parent = self
-                .tools
-                .get(&spawner)
-                .map_or_else(|| self.session_id.clone(), |tool| tool.session.clone());
+        for (parent, session_id) in stopped {
             self.sink.update(
                 &parent,
                 json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": session_id, "state": "cancelled" }),
@@ -1417,16 +1421,10 @@ impl Reader {
     pub fn close(&mut self) {
         self.control.close();
         let live: Vec<(String, String)> = self
-            .children
+            .subagents
             .iter()
             .filter(|(_, child)| !child.ended)
-            .map(|(spawner, child)| {
-                let parent = self
-                    .tools
-                    .get(spawner)
-                    .map_or_else(|| self.session_id.clone(), |tool| tool.session.clone());
-                (parent, child.session_id.clone())
-            })
+            .map(|(session_id, child)| (child.parent.clone(), session_id.clone()))
             .collect();
         for (parent, session_id) in live {
             self.sink.update(
@@ -1434,7 +1432,7 @@ impl Reader {
                 json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": session_id, "state": "disconnected" }),
             );
         }
-        for child in self.children.values_mut() {
+        for child in self.subagents.values_mut() {
             child.ended = true;
         }
         if let Ok(permissions) = self.permissions.lock() {
