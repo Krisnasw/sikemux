@@ -1,7 +1,17 @@
 import { useCallback, useState, type MouseEvent, type ReactNode } from "react";
 import { gitOverviewR, notify, reportError, swallow, useActiveProjectCwd } from "../../../plugin-api/host";
 import { useResourceEnabled } from "../../../plugin-api/resources";
-import { ContextMenu, Dropdown, EmptyState, IconCopy, IconExternal, Markdown, SkeletonRows, type ContextMenuItem } from "../../../plugin-api/ui";
+import {
+    ContextMenu,
+    Dropdown,
+    EmptyState,
+    IconClose,
+    IconCopy,
+    IconExternal,
+    Markdown,
+    SkeletonRows,
+    type ContextMenuItem,
+} from "../../../plugin-api/ui";
 import { failureMessage, jiraApi, refreshJira, type JiraIssue, type JiraIssueSummary, type JiraPerson } from "../api";
 import { jiraBoardsR, jiraFiltersR, jiraIssueR, jiraProjectsR, jiraSearchR, jiraStatusR } from "../resources";
 import { copyIssue, issueMenu, openIssue } from "../issueLinks";
@@ -182,7 +192,7 @@ function JiraWorkspace({ paneId, active, sites }: { paneId: string; active: bool
                 />
             )}
             {view.list.kind === "board" && !view.issue ? null : view.issue ? (
-                <IssueDetail active={active} issueKey={view.issue} site={site} />
+                <IssueDetail active={active} issueKey={view.issue} site={site} onClose={() => updateJiraView(paneId, { issue: null })} />
             ) : (
                 <div className="jira-detail">
                     <EmptyState message="Pick an issue to read it, comment, move it along or assign it." />
@@ -301,7 +311,7 @@ function useMenu(): [ReactNode, (event: MouseEvent, items: ContextMenuItem[]) =>
     ];
 }
 
-function IssueDetail({ active, issueKey, site }: { active: boolean; issueKey: string; site: string }) {
+function IssueDetail({ active, issueKey, site, onClose }: { active: boolean; issueKey: string; site: string; onClose: () => void }) {
     const found = useResourceEnabled(active, jiraIssueR, issueKey, site);
     if (found.status === "error")
         return (
@@ -315,10 +325,10 @@ function IssueDetail({ active, issueKey, site }: { active: boolean; issueKey: st
                 <SkeletonRows rows={6} label={`Loading ${issueKey}`} />
             </div>
         );
-    return <IssueBody key={found.data.key} issue={found.data} site={site} refresh={() => void found.refresh()} />;
+    return <IssueBody key={found.data.key} issue={found.data} site={site} refresh={() => void found.refresh()} onClose={onClose} />;
 }
 
-function IssueBody({ issue, site, refresh }: { issue: JiraIssue; site: string; refresh: () => void }) {
+function IssueBody({ issue, site, refresh, onClose }: { issue: JiraIssue; site: string; refresh: () => void; onClose: () => void }) {
     const [menu, setMenu] = useMenu();
     const [comment, setComment] = useState("");
     const [busy, setBusy] = useState(false);
@@ -374,6 +384,10 @@ function IssueBody({ issue, site, refresh }: { issue: JiraIssue; site: string; r
                         aria-label="Open in browser"
                         onClick={() => openIssue(issue)}>
                         <IconExternal size={12} />
+                    </button>
+                    <span className="jira-grow" />
+                    <button type="button" className="jira-icon-button" title="Close" aria-label="Close the issue" onClick={onClose}>
+                        <IconClose size={12} />
                     </button>
                 </span>
                 <h2>{issue.summary}</h2>

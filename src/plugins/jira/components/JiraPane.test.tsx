@@ -161,6 +161,17 @@ describe("JiraPane", () => {
         expect(screen.getByRole("group", { name: "Filter the board" })).toHaveTextContent("Unassigned 1");
     });
 
+    it("closes an opened issue back to the whole board", async () => {
+        render(<JiraPane paneId="jira-board-close" active />);
+        fireEvent.click(await screen.findByRole("button", { name: "ABC board" }));
+        fireEvent.click(await screen.findByRole("listitem"));
+        expect(await screen.findByRole("article", { name: "ABC-12 Fix the login race" })).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Close the issue" }));
+        expect(screen.queryByRole("article")).not.toBeInTheDocument();
+        expect(screen.getByRole("list", { name: "In Progress" })).toHaveTextContent("Fix the login race");
+    });
+
     it("puts a card back and says why when Jira will not move it", async () => {
         api.moveIssue.mockRejectedValue({ category: "bad-params", message: "ABC-12's workflow has no way into Done from where it is now" });
         render(<JiraPane paneId="jira-board-refused" active />);
