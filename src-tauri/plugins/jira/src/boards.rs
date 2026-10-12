@@ -101,11 +101,39 @@ pub async fn boards(data_dir: &Path, request: BoardsRequest) -> JiraResult<Vec<B
     Ok(boards_of(&body))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct BoardRequest {
     pub id: u64,
     #[serde(default)]
     pub site: Option<String>,
+    /// Account ids whose cards to show. With none of these set, the whole board shows.
+    #[serde(default)]
+    pub people: Vec<String>,
+    #[serde(default)]
+    pub mine: bool,
+    #[serde(default)]
+    pub unassigned: bool,
+}
+
+/// The JQL that keeps only the cards of the people picked on a board, or nothing when nobody is.
+pub fn people_clause(request: &BoardRequest) -> Option<String> {
+    let mut picks = Vec::new();
+    if !request.people.is_empty() {
+        let ids: Vec<String> = request
+            .people
+            .iter()
+            .map(|id| format!("\"{}\"", id.replace('\\', "\\\\").replace('"', "\\\"")))
+            .collect();
+        picks.push(format!("assignee in ({})", ids.join(", ")));
+    }
+    if request.mine {
+        picks.push("assignee = currentUser()".to_string());
+    }
+    if request.unassigned {
+        picks.push("assignee is EMPTY".to_string());
+    }
+    (!picks.is_empty()).then(|| format!("({})", picks.join(" OR ")))
 }
 
 /// Puts each issue in the column that holds its status, keeping the board's column order.
@@ -227,24 +255,24 @@ pub async fn board(data_dir: &Path, request: BoardRequest) -> JiraResult<BoardVi
         Some(field) => format!("{SUMMARY_FIELDS},{field}"),
         None => SUMMARY_FIELDS.into(),
     };
+    let people = people_clause(&request);
     let (issues, truncated) = match &sprint {
         Some(sprint) => {
             issues_from(
                 &credentials,
                 &format!("{base}/sprint/{}/issue", sprint.id),
                 &fields,
-                None,
+                people.as_deref(),
             )
             .await?
         }
         None => {
-            issues_from(
-                &credentials,
-                &format!("{base}/issue"),
-                &fields,
-                Some("statusCategory != Done OR updated >= -14d ORDER BY Rank ASC"),
-            )
-            .await?
+            let recent = "(statusCategory != Done OR updated >= -14d)";
+            let jql = match &people {
+                Some(people) => format!("{people} AND {recent} ORDER BY Rank ASC"),
+                None => format!("{recent} ORDER BY Rank ASC"),
+            };
+            issues_from(&credentials, &format!("{base}/issue"), &fields, Some(&jql)).await?
         }
     };
     Ok(BoardView {
@@ -313,6 +341,28 @@ pub async fn move_issue(data_dir: &Path, request: MoveRequest) -> JiraResult<()>
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn people_clause_keeps_the_whole_board_when_nobody_is_picked() {
+        assert_eq!(people_clause(&BoardRequest::default()), None);
+    }
+
+    #[test]
+    fn people_clause_matches_anyone_picked() {
+        let request = BoardRequest {
+            people: vec!["5b10:ac8d".into(), "6c2\"x".into()],
+            mine: true,
+            unassigned: true,
+            ..BoardRequest::default()
+        };
+        assert_eq!(
+            people_clause(&request).as_deref(),
+            Some(
+                r#"(assignee in ("5b10:ac8d", "6c2\"x") OR assignee = currentUser() OR assignee is EMPTY)"#
+            )
+        );
+    }
+
     use super::*;
 
     fn issue(key: &str, status: &str) -> Value {
