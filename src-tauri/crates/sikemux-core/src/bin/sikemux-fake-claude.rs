@@ -149,6 +149,7 @@ impl Claude {
 
     fn turn(&self, uuid: &str, text: &str) {
         self.interrupted.store(false, Ordering::Release);
+        self.send(json!({ "type": "command_lifecycle", "command_uuid": uuid, "state": "started" }));
         let message_id = format!("msg-{uuid}");
         let mut words = text.split_whitespace();
         match words.next().unwrap_or_default() {
@@ -362,9 +363,6 @@ fn main() {
                 let mut echo = message.clone();
                 echo["isReplay"] = json!(true);
                 claude.send(echo);
-                if message.get("priority").and_then(Value::as_str) == Some("now") {
-                    claude.interrupted.store(true, Ordering::Release);
-                }
                 let _ = turns.send((uuid, text));
             }
             _ => {}

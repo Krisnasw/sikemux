@@ -8,7 +8,7 @@ mod reader;
 mod replay;
 mod tools;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
@@ -470,7 +470,8 @@ impl Backend for Claude {
             shared.sent.insert(uuid.clone());
             shared.turn = Some(Turn {
                 number: turn,
-                latest: uuid.clone(),
+                messages: HashSet::from([uuid.clone()]),
+                waiting: HashSet::new(),
                 cancelled: false,
                 failure: None,
             });
@@ -496,11 +497,13 @@ impl Backend for Claude {
             }
             shared.sent.insert(uuid.clone());
             if let Some(turn) = shared.turn.as_mut() {
-                turn.latest = uuid.clone();
+                turn.messages.insert(uuid.clone());
+                turn.waiting.insert(uuid.clone());
             }
         }
+        // Claude Code takes it in after the turn's next tool call, or once the turn ends.
         self.writer()
-            .send(&user_message(&uuid, content, Some("now")))?;
+            .send(&user_message(&uuid, content, Some("next")))?;
         Ok("injected".into())
     }
 
@@ -520,7 +523,7 @@ impl Backend for Claude {
         }
         self.running
             .control
-            .request(json!({ "subtype": "interrupt" }))
+            .request(json!({ "subtype": "interrupt", "cancel_queued": true }))
             .await
             .map(drop)
     }

@@ -51,9 +51,13 @@ const TERMINAL_COMMANDS: [&str; 8] = [
 /// both see it.
 pub(crate) struct Turn {
     pub number: u64,
-    /// The last message sent into the turn: its prompt, or a message steered
-    /// into it since. The result that answers it ends the turn.
-    pub latest: String,
+    /// Every message sent into the turn: its prompt and any steered in since.
+    /// Claude Code answers a steered message folded into the turn with the
+    /// result for the prompt, and one it held until the turn ended with its own.
+    pub messages: HashSet<String>,
+    /// Steered messages Claude Code has queued but not yet taken in, whose
+    /// own result is still to come.
+    pub waiting: HashSet<String>,
     pub cancelled: bool,
     pub failure: Option<Failure>,
 }
@@ -344,6 +348,18 @@ impl Reader {
             Some("user") => self.user(&message),
             Some("result") => self.result(&message),
             Some("system") => self.system(&message),
+            Some("command_lifecycle") => {
+                if text(&message, "state") == Some("queued") {
+                    return;
+                }
+                if let (Some(uuid), Ok(mut shared)) =
+                    (text(&message, "command_uuid"), self.shared.lock())
+                {
+                    if let Some(turn) = shared.turn.as_mut() {
+                        turn.waiting.remove(uuid);
+                    }
+                }
+            }
             Some("conversation_reset") => {
                 self.task_plan.clear();
                 self.send(None, self.task_plan.plan());
@@ -792,7 +808,7 @@ impl Reader {
                 return;
             };
             let ends = shared.turn.as_ref().is_some_and(|turn| match answers {
-                Some(uuid) => uuid == turn.latest,
+                Some(uuid) => turn.messages.contains(uuid) && turn.waiting.is_empty(),
                 None => !woken,
             });
             if ends {
