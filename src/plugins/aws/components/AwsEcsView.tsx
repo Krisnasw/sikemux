@@ -26,11 +26,11 @@ import {
     TaskMeter,
     copy,
     matches,
-    relative,
     useRegion,
     useReportCount,
     type Health,
 } from "./parts";
+import { formatAgo } from "../../../plugin-api/format";
 
 interface ViewProps {
     profile: string;
@@ -325,7 +325,7 @@ function Services({
                             {
                                 header: "Deployed",
                                 width: "13%",
-                                cell: (s) => <span className="aws-num dim">{relative(s.primary_updated_at ?? s.primary_created_at)}</span>,
+                                cell: (s) => <span className="aws-num dim">{formatAgo(s.primary_updated_at ?? s.primary_created_at)}</span>,
                             },
                             {
                                 header: "Status",
@@ -406,7 +406,7 @@ function ServiceInspector({
             <Facts
                 items={[
                     { label: "Status", value: SERVICE_STATE[serviceHealth(service)] },
-                    { label: "Deployed", value: relative(service.primary_updated_at ?? service.primary_created_at) },
+                    { label: "Deployed", value: formatAgo(service.primary_updated_at ?? service.primary_created_at) },
                     { label: "Log group", value: logs.data?.log_group ?? (logs.status === "loading" ? "…" : null), copy: true },
                 ]}
             />
@@ -419,7 +419,7 @@ function ServiceInspector({
                         <span className="aws-mono aws-grow">{t.task_id.slice(0, 12)}</span>
                         <span className="aws-num dim">
                             {t.availability_zone ? `${t.availability_zone.slice(-2)} · ` : ""}
-                            {relative(t.started_at)}
+                            {formatAgo(t.started_at)}
                         </span>
                         <IconChevron size={12} />
                     </button>
@@ -485,7 +485,7 @@ function ServicePage({
                             <State health={serviceHealth(info)} label={SERVICE_STATE[serviceHealth(info)]} />
                             <span className="aws-num dim">
                                 {info.running ?? 0}/{info.desired ?? 0} tasks · deployed{" "}
-                                {relative(info.primary_updated_at ?? info.primary_created_at)}
+                                {formatAgo(info.primary_updated_at ?? info.primary_created_at)}
                             </span>
                         </span>
                     )
@@ -580,7 +580,7 @@ function TasksList({
                         { header: "Private IP", width: "13%", cell: (t) => <Cell>{t.private_ip ?? "—"}</Cell> },
                         { header: "Zone", width: "12%", cell: (t) => <Cell>{t.availability_zone ?? "—"}</Cell> },
                         { header: "Size", width: "14%", cell: (t) => <Cell dim>{taskSize(t)}</Cell> },
-                        { header: "Started", width: "10%", cell: (t) => <Cell dim>{relative(t.started_at)}</Cell> },
+                        { header: "Started", width: "10%", cell: (t) => <Cell dim>{formatAgo(t.started_at)}</Cell> },
                         {
                             header: "",
                             width: "4%",

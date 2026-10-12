@@ -34,7 +34,7 @@ export function formatDuration(ms: number | null | undefined): string {
     if (ms === null || ms === undefined || !Number.isFinite(ms)) return "—";
     if (ms <= 0) return "0s";
     if (ms < 1) return `${Math.round(ms * 1000)}µs`;
-    if (ms < 1000) return `${Number(ms.toFixed(ms < 10 ? 1 : 0))}ms`;
+    if (ms < 1000) return `${Number(ms.toPrecision(3))}ms`;
     if (ms < 10_000) return `${Number((ms / 1000).toFixed(1))}s`;
     const seconds = Math.round(ms / 1000);
     if (seconds < 60) return `${seconds}s`;

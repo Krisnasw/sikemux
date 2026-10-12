@@ -24,11 +24,11 @@ import {
     Tag,
     copy,
     matches,
-    relative,
     useRegion,
     useReportCount,
     type Health,
 } from "./parts";
+import { formatAgo, formatDuration } from "../../../plugin-api/format";
 
 interface ViewProps {
     profile: string;
@@ -111,7 +111,7 @@ export function AwsEc2View({ profile, active }: ViewProps) {
                             { header: "Type", width: "13%", cell: (i) => <Cell>{i.instance_type ?? "—"}</Cell> },
                             { header: "Private IP", width: "14%", cell: (i) => <Cell>{i.private_ip ?? "—"}</Cell> },
                             { header: "Public IP", width: "15%", cell: (i) => <Cell dim={!i.public_ip}>{i.public_ip ?? "—"}</Cell> },
-                            { header: "Launched", width: "12%", cell: (i) => <Cell dim>{relative(i.launch_time)}</Cell> },
+                            { header: "Launched", width: "12%", cell: (i) => <Cell dim>{formatAgo(i.launch_time)}</Cell> },
                         ]}
                     />
                 )}
@@ -144,7 +144,7 @@ export function AwsEc2View({ profile, active }: ViewProps) {
                             { label: "Public IP", value: selected.public_ip, copy: true },
                             {
                                 label: "Launched",
-                                value: selected.launch_time ? `${relative(selected.launch_time)} · ${selected.launch_time.slice(0, 10)}` : null,
+                                value: selected.launch_time ? `${formatAgo(selected.launch_time)} · ${selected.launch_time.slice(0, 10)}` : null,
                             },
                             { label: "Instance ID", value: selected.instance_id, copy: true },
                         ]}
@@ -182,11 +182,6 @@ function runtimeFamily(runtime: string | null): string {
 function memory(mb: number | null): string {
     if (!mb) return "—";
     return mb >= 1024 ? `${+(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
-}
-
-function duration(seconds: number | null): string {
-    if (!seconds) return "—";
-    return seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`;
 }
 
 export function AwsLambdaView({ profile, active }: ViewProps) {
@@ -276,8 +271,13 @@ function LambdaList({ profile, active }: ViewProps) {
                                     </span>
                                 ),
                             },
-                            { header: "Timeout", width: "11%", align: "right", cell: (f) => <Cell>{duration(f.timeout)}</Cell> },
-                            { header: "Modified", width: "13%", align: "right", cell: (f) => <Cell dim>{relative(f.last_modified)}</Cell> },
+                            {
+                                header: "Timeout",
+                                width: "11%",
+                                align: "right",
+                                cell: (f) => <Cell>{f.timeout ? formatDuration(f.timeout * 1000) : "—"}</Cell>,
+                            },
+                            { header: "Modified", width: "13%", align: "right", cell: (f) => <Cell dim>{formatAgo(f.last_modified)}</Cell> },
                         ]}
                     />
                 )}
@@ -312,14 +312,14 @@ function LambdaInspector({ profile, fn, region }: { profile: string; fn: LambdaF
             <Stats
                 items={[
                     { label: "Memory", value: memory(fn.memory_size) },
-                    { label: "Timeout", value: duration(fn.timeout) },
+                    { label: "Timeout", value: fn.timeout ? formatDuration(fn.timeout * 1000) : "—" },
                 ]}
             />
             <Facts
                 items={[
                     { label: "Runtime", value: fn.runtime },
                     { label: "Handler", value: fn.handler, copy: true },
-                    { label: "Modified", value: fn.last_modified ? `${relative(fn.last_modified)} · ${fn.last_modified.slice(0, 10)}` : null },
+                    { label: "Modified", value: fn.last_modified ? `${formatAgo(fn.last_modified)} · ${fn.last_modified.slice(0, 10)}` : null },
                     { label: "Log group", value: `/aws/lambda/${fn.name}`, copy: true },
                 ]}
             />
@@ -539,7 +539,7 @@ export function AwsS3View({ profile, active }: ViewProps) {
                         columns={[
                             { header: "Bucket", width: "62%", cell: (b) => <span className="aws-name">{b.name}</span> },
                             { header: "Created", width: "20%", cell: (b) => <Cell>{b.created_at?.slice(0, 10) ?? "—"}</Cell> },
-                            { header: "Age", width: "16%", align: "right", cell: (b) => <Cell dim>{relative(b.created_at)}</Cell> },
+                            { header: "Age", width: "16%", align: "right", cell: (b) => <Cell dim>{formatAgo(b.created_at)}</Cell> },
                         ]}
                     />
                 )}
@@ -568,7 +568,7 @@ export function AwsS3View({ profile, active }: ViewProps) {
                             { label: "ARN", value: `arn:aws:s3:::${selected.name}`, copy: true },
                             {
                                 label: "Created",
-                                value: selected.created_at ? `${selected.created_at.slice(0, 10)} · ${relative(selected.created_at)}` : null,
+                                value: selected.created_at ? `${selected.created_at.slice(0, 10)} · ${formatAgo(selected.created_at)}` : null,
                             },
                         ]}
                     />

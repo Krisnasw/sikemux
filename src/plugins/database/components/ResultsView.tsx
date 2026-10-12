@@ -1,7 +1,8 @@
 import { memo, useState, type MouseEvent, type ReactNode } from "react";
 import { copyText, swallow } from "../../../plugin-api/host";
 import type { Cell, QueryOutcome, ResultColumn, ResultSet } from "../api";
-import { cellText, duration, mainResult, summary, toCsv, toTsv } from "../results";
+import { cellText, mainResult, summary, toCsv, toTsv } from "../results";
+import { formatDuration } from "../../../plugin-api/format";
 
 /** Rows drawn at a time; more are added on request so a 10,000-row result stays quick to show. */
 const PAGE = 1000;
@@ -32,7 +33,7 @@ export function ResultsView({ outcome, actions }: { outcome: QueryOutcome; actio
                     </div>
                 )}
                 <span className="db-meta" role="status">
-                    {summary(result)} · {duration(outcome.millis)}
+                    {summary(result)} · {formatDuration(outcome.millis)}
                 </span>
                 <span className="db-grow" />
                 {result.columns.length > 0 && (

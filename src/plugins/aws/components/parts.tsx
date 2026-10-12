@@ -8,19 +8,6 @@ import { IconExternal } from "./icons";
 
 export type Health = "ok" | "warn" | "fail" | "off";
 
-export function relative(iso: string | null | undefined): string {
-    if (!iso) return "—";
-    const t = Date.parse(iso);
-    if (Number.isNaN(t)) return "—";
-    const d = Math.max(0, (Date.now() - t) / 1000);
-    if (d < 60) return "just now";
-    if (d < 3600) return `${Math.floor(d / 60)}m ago`;
-    if (d < 86400) return `${Math.floor(d / 3600)}h ago`;
-    if (d < 86400 * 30) return `${Math.floor(d / 86400)}d ago`;
-    if (d < 86400 * 365) return `${Math.floor(d / (86400 * 30))}mo ago`;
-    return `${Math.floor(d / (86400 * 365))}y ago`;
-}
-
 export function useRegion(profile: string): string {
     const profiles = useResource(awsProfilesR).data;
     return profiles?.find((p) => p.name === profile)?.region ?? "us-east-1";

@@ -6,12 +6,13 @@ import { errorMessage, type MatrixCell, type RundeckExecution } from "../api";
 import { rndExecutionsR, rndJobDetailR, rndJobsR, rndMatrixR } from "../resources";
 import * as cmd from "../state";
 import type { JobRef, RundeckLevel } from "../state";
-import { branchOf, branchOptionName, childSegment, duration, groupSegments, inGroup, isLiveStatus, isProdTarget, relativeTime } from "../shape";
+import { branchOf, branchOptionName, childSegment, duration, groupSegments, inGroup, isLiveStatus, isProdTarget } from "../shape";
 import { statusKind } from "./branchStyle";
 import { newestExecutions } from "./executionProgress";
 import { useNow } from "./hooks";
 import { reusableOptions } from "./options";
 import { BranchChip, Filter, FolderChip, Header, Seg, Status, Tag, levelCrumbs } from "./parts";
+import { formatAgo } from "../../../plugin-api/format";
 
 interface Props {
     paneId: string;
@@ -318,7 +319,7 @@ function JobList({
                                                 {cell.latest ? <Status status={cell.latest.status} /> : <span className="rnd-dim">Never run</span>}
                                             </td>
                                             <td className="rnd-cell-sub">{cell.latest?.user ?? "—"}</td>
-                                            <td className="r rnd-cell-dim">{when ? relativeTime(when, now) : "—"}</td>
+                                            <td className="r rnd-cell-dim">{when ? formatAgo(when, now) : "—"}</td>
                                             <td className="r rnd-cell-dim">
                                                 {cell.latest ? duration(cell.latest.started_at, cell.latest.ended_at, now) || "—" : "—"}
                                             </td>
@@ -489,9 +490,7 @@ function CompareRow({
                             {cell.latest ? <Status status={cell.latest.status} /> : <span className="rnd-dim">Never run</span>}
                         </div>
                         <div className="rnd-compare-foot">
-                            <span className="rnd-compare-when">
-                                {cell.latest ? `${cell.latest.user} · ${when ? relativeTime(when, now) : ""}` : ""}
-                            </span>
+                            <span className="rnd-compare-when">{cell.latest ? `${cell.latest.user} · ${when ? formatAgo(when, now) : ""}` : ""}</span>
                             {drift && (
                                 <span className="rnd-drift">
                                     <IconWarning size={11} />
@@ -646,7 +645,7 @@ function JobInspector({ paneId, active, cell, job, now }: { paneId: string; acti
                         <BranchChip branch={deployed.branch} />
                         <span className="rnd-live-m">
                             #{deployed.execution_id}
-                            {deployed.ended_at ? ` · ${relativeTime(deployed.ended_at, now)}` : ""}
+                            {deployed.ended_at ? ` · ${formatAgo(deployed.ended_at, now)}` : ""}
                         </span>
                         <IconChevron size={11} />
                     </button>
@@ -688,7 +687,7 @@ function JobInspector({ paneId, active, cell, job, now }: { paneId: string; acti
                             <Status status={ex.status} label="" />
                             <span className="rnd-run-id">#{ex.id}</span>
                             <span className="rnd-run-branch">{branchOf(ex.job?.options, branchOptions) ?? ex.user ?? ""}</span>
-                            <span className="rnd-run-when">{started(ex) ? relativeTime(started(ex)!, now) : ""}</span>
+                            <span className="rnd-run-when">{started(ex) ? formatAgo(started(ex)!, now) : ""}</span>
                             <span className="rnd-run-dur">{duration(started(ex), ended(ex), now)}</span>
                             <IconChevron size={11} />
                         </button>

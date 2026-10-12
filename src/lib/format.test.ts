@@ -10,6 +10,13 @@ describe("formatDuration", () => {
         expect(formatDuration(3_780_000)).toBe("1h 3m");
         expect(formatDuration(null)).toBe("—");
     });
+
+    it("keeps the precision a latency needs under a second", () => {
+        expect(formatDuration(0.25)).toBe("250µs");
+        expect(formatDuration(12.34)).toBe("12.3ms");
+        expect(formatDuration(1_530)).toBe("1.5s");
+        expect(formatDuration(42_000)).toBe("42s");
+    });
 });
 
 describe("formatAgo", () => {
