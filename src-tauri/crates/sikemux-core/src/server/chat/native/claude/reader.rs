@@ -1427,22 +1427,9 @@ impl Reader {
         }
     }
 
-    /// Every subagent and task still running is gone with the agent.
+    /// Claude Code is gone: nothing it asked can be answered any more.
     pub fn close(&mut self) {
         self.control.close();
-        let live: Vec<(String, String)> = self
-            .subagents
-            .iter()
-            .filter(|(_, child)| !child.ended)
-            .map(|(session_id, child)| (child.parent.clone(), session_id.clone()))
-            .collect();
-        for (parent, session_id) in live {
-            self.sink
-                .update(&parent, Subagent::Disconnected.update(&session_id));
-        }
-        for child in self.subagents.values_mut() {
-            child.ended = true;
-        }
         if let Ok(permissions) = self.permissions.lock() {
             for handle in permissions.values() {
                 handle.abort();

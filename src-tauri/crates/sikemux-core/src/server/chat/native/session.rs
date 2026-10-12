@@ -119,6 +119,12 @@ impl Sink {
         );
     }
 
+    /// The agent's process was replaced under the chat, taking everything it
+    /// had going with it.
+    pub fn agent_gone(&self) {
+        self.chat.feed.agent_gone();
+    }
+
     /// Whether a turn this side prompted is being answered.
     pub fn running(&self) -> bool {
         self.chat.running.load(Ordering::Acquire)

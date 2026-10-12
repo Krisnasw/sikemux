@@ -679,6 +679,7 @@ fn launch(core: &Arc<Core>, chat: &Arc<Chat>, mut queue: mpsc::UnboundedReceiver
                 }
                 None => connection::run(ending.clone(), launch, &mut queue, rebind.take()).await,
             };
+            ending.feed.agent_gone();
             match ran {
                 Ok(rebind::Outcome::Rebind(next)) => {
                     ending.set_current(next.launch.clone());

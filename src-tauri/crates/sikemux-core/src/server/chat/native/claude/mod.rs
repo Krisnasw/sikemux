@@ -637,6 +637,7 @@ impl Backend for Claude {
         )
         .await?;
         self.running = running;
+        self.sink.agent_gone();
         self.session_id = session_id;
         if self.effort != config::DEFAULT {
             self.apply_effort().await?;
