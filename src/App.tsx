@@ -52,6 +52,7 @@ import { fsapi } from "./api/fs";
 import { emit } from "./state/bus";
 import * as cmd from "./state/commands";
 import { offerSavedSessions, restoreCoreSessions } from "./workspace/restoreCoreSessions";
+import { startSpareShells } from "./terminal/spareShell";
 import { coreSessionsApi } from "./api/coreSessions";
 import { IS_MACOS } from "./lib/platform";
 import { applyHydrate, canFlushPersist, flushPersist, hydrationAllowsPersistence, subscribePersist, type HydrationResult } from "./state/persist";
@@ -748,6 +749,7 @@ export default function App() {
     useEffect(() => {
         let disposed = false;
         let unsub = () => {};
+        let stopSpareShells = () => {};
         let bootFinished = false;
         let hydrationResult: HydrationResult | null = null;
         const bootSpan = performanceTelemetry.startTrace("startup.boot");
@@ -812,6 +814,7 @@ export default function App() {
                     setBootReady(true);
                     introduceNotifications();
                     void restoreCoreSessions();
+                    stopSpareShells = startSpareShells();
                 }
                 finishBoot(disposed ? "cancelled" : writable ? "success" : "error");
             });
@@ -819,6 +822,7 @@ export default function App() {
             disposed = true;
             finishBoot("cancelled");
             unsub();
+            stopSpareShells();
             workbenchRuntime.stop();
         };
     }, []);
