@@ -3,7 +3,8 @@ import { IconChevron, IconGit, IconPanelLeft, IconRefresh, IconSearch, Tooltip }
 import * as cmd from "../state";
 import type { JobRef, RundeckLevel } from "../state";
 import { groupSegments, isProdTarget } from "../shape";
-import { statusKind } from "./branchStyle";
+import { branchKind, statusKind } from "./branchStyle";
+import "../branch.css";
 
 /** The Rundeck server the pane is signed in to, as a host name. */
 export const RundeckHost = createContext<string | null>(null);
@@ -210,9 +211,8 @@ export function Status({ status, label }: { status: string | null | undefined; l
 
 export function BranchChip({ branch }: { branch: string | null | undefined }) {
     if (!branch) return <span className="rnd-dim">—</span>;
-    const kind = branch.startsWith("feat") || branch.startsWith("feature") ? "feat" : /^(release|hotfix)\//.test(branch) ? "rel" : "";
     return (
-        <span className={`rnd-branch${kind ? ` ${kind}` : ""}`} title={branch}>
+        <span className={`rnd-branch rnd-branch-${branchKind(branch)}`} title={branch}>
             <IconGit size={12} />
             <span>{branch}</span>
         </span>

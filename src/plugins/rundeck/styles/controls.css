@@ -198,10 +198,9 @@
     max-width: 100%;
     height: 22px;
     padding: 0 var(--space-2);
-    border: 1px solid var(--border);
+    border: 1px solid color-mix(in oklab, currentColor 32%, transparent);
     border-radius: var(--radius-1);
     font-size: var(--text-xs);
-    color: var(--text-secondary);
     vertical-align: middle;
 }
 .rnd-branch svg {
@@ -212,14 +211,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-.rnd-branch.feat {
-    border-color: color-mix(in oklab, var(--git-renamed) 32%, transparent);
-    color: var(--git-renamed);
-}
-.rnd-branch.rel {
-    border-color: color-mix(in oklab, var(--acc) 32%, transparent);
-    color: color-mix(in oklab, var(--acc) 70%, var(--ink));
 }
 
 .rnd-folder,
