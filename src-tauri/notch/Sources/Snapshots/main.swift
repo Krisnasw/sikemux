@@ -23,7 +23,13 @@ let fixture = #"""
         {"type": "select", "id": "effort", "name": "Effort", "category": "thought_level", "currentValue": "high", "options": [
           {"value": "low", "name": "Low"}, {"value": "medium", "name": "Medium"}, {"value": "high", "name": "High"}, {"value": "max", "name": "Max"}
         ]}
-      ]},
+      ],
+       "model": {"id": "model", "current": "opus", "choices": [
+         {"value": "opus", "label": "Opus 5.5"}, {"value": "sonnet", "label": "Sonnet 5.5"}, {"value": "haiku", "label": "Haiku 4.5"}
+       ]},
+       "effort": {"id": "effort", "current": "high", "choices": [
+         {"value": "low", "label": "Low"}, {"value": "medium", "label": "Medium"}, {"value": "high", "label": "High"}, {"value": "max", "label": "Max"}
+       ]}},
       {"id": "codex", "provider": "codex", "label": "Codex", "permissionMode": "bypass", "configOptions": null},
       {"id": "opencode", "provider": "opencode", "label": "OpenCode", "permissionMode": "bypass", "configOptions": null},
       {"id": "grok", "provider": "grok", "label": "Grok", "permissionMode": "bypass", "configOptions": null}

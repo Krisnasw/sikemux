@@ -19,6 +19,7 @@ use crate::protocol::{
 use super::chat;
 use super::connection::ClientConn;
 use super::{Core, CoreError, CoreResult};
+use crate::acp::pickers;
 
 const MAX_PROJECTS: usize = 512;
 const MAX_LAUNCHERS: usize = 64;
@@ -317,17 +318,23 @@ impl Workspaces {
             launchers: published
                 .launchers
                 .iter()
-                .map(|launcher| LauncherInfo {
-                    id: launcher.id.clone(),
-                    provider: launcher.provider.clone(),
-                    label: launcher.label.clone(),
-                    permission_mode: launcher.permission_mode.clone(),
-                    config_options: published
+                .map(|launcher| {
+                    let config_options = published
                         .config_options
                         .get(&launcher.provider)
                         .cloned()
-                        .unwrap_or(Value::Null),
-                    status: launcher.status.clone(),
+                        .unwrap_or(Value::Null);
+                    let (model, effort) = pickers::pickers(&config_options);
+                    LauncherInfo {
+                        id: launcher.id.clone(),
+                        provider: launcher.provider.clone(),
+                        label: launcher.label.clone(),
+                        permission_mode: launcher.permission_mode.clone(),
+                        config_options,
+                        status: launcher.status.clone(),
+                        model,
+                        effort,
+                    }
                 })
                 .collect(),
             palette: published.palette.clone(),

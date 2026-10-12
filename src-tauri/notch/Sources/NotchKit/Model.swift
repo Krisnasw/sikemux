@@ -1,47 +1,5 @@
 import Foundation
 
-/// Any JSON value, kept whole for the parts the core passes through untouched.
-enum JSONValue: Decodable, Equatable {
-    case null
-    case bool(Bool)
-    case number(Double)
-    case string(String)
-    case array([JSONValue])
-    case object([String: JSONValue])
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if container.decodeNil() {
-            self = .null
-        } else if let value = try? container.decode(Bool.self) {
-            self = .bool(value)
-        } else if let value = try? container.decode(Double.self) {
-            self = .number(value)
-        } else if let value = try? container.decode(String.self) {
-            self = .string(value)
-        } else if let value = try? container.decode([JSONValue].self) {
-            self = .array(value)
-        } else {
-            self = .object(try container.decode([String: JSONValue].self))
-        }
-    }
-
-    subscript(key: String) -> JSONValue? {
-        if case .object(let fields) = self { return fields[key] }
-        return nil
-    }
-
-    var string: String? {
-        if case .string(let value) = self { return value }
-        return nil
-    }
-
-    var array: [JSONValue] {
-        if case .array(let values) = self { return values }
-        return []
-    }
-}
-
 struct DeviceView: Decodable, Equatable {
     let workspace: Workspace
     let sessions: [SessionInfo]
@@ -67,7 +25,8 @@ struct Launcher: Decodable, Equatable {
     let provider: String
     let label: String
     let permissionMode: String
-    let configOptions: JSONValue?
+    let model: ConfigSelect?
+    let effort: ConfigSelect?
 }
 
 struct SessionInfo: Decodable, Equatable {
@@ -245,55 +204,24 @@ extension DeviceView {
 }
 
 /// One choice a session offers, such as a model.
-struct ConfigChoice: Equatable, Hashable {
+struct ConfigChoice: Decodable, Equatable, Hashable {
     let value: String
     let label: String
 }
 
-struct ConfigSelect: Equatable {
+struct ConfigSelect: Decodable, Equatable {
     let id: String
     let current: String
     let choices: [ConfigChoice]
 }
 
-/// The model and effort pickers a launcher's last session offered, read the
-/// way `src/chat/sessionConfig.ts` reads them.
+/// The model and effort pickers a launcher's last session offered, as the core reads them.
 struct LauncherConfig: Equatable {
     let model: ConfigSelect?
     let effort: ConfigSelect?
 
-    private static let legacyEffort = ["claude": "effort", "codex": "reasoning_effort"]
-
     init(_ launcher: Launcher?) {
-        let selects: [(category: String?, select: ConfigSelect)] = (launcher?.configOptions?.array ?? []).compactMap { row in
-            guard row["type"]?.string == "select", let id = row["id"]?.string, let current = row["currentValue"]?.string
-            else { return nil }
-            return (row["category"]?.string, ConfigSelect(id: id, current: current, choices: Self.choices(row["options"])))
-        }
-        model = selects.first { $0.select.id == "model" }?.select
-        let legacy = launcher.flatMap { Self.legacyEffort[$0.provider] }
-        effort = (selects.first { $0.category == "thought_level" } ?? selects.first { $0.select.id == legacy })?.select
-    }
-
-    private static func choices(_ value: JSONValue?) -> [ConfigChoice] {
-        (value?.array ?? []).flatMap { row -> [ConfigChoice] in
-            if case .array = row["options"] ?? .null { return choices(row["options"]) }
-            guard let value = row["value"]?.string, let name = row["name"]?.string else { return [] }
-            return [ConfigChoice(value: value, label: versioned(name, row["description"]?.string))]
-        }
-    }
-
-    /// The agent names a model without its release number ("Opus") and leaves
-    /// that number in the description ("Opus 5 with 1M context"), so put it back.
-    private static func versioned(_ label: String, _ description: String?) -> String {
-        guard let description,
-              let match = description.range(of: #"^\p{L}+\s+\d+(\.\d+)?\b"#, options: .regularExpression)
-        else { return label }
-        let named = description[match].split(separator: " ")
-        guard named.count == 2, let head = label.split(separator: " ").first else { return label }
-        let family = String(named[0])
-        let version = String(named[1])
-        guard head.lowercased() == family.lowercased(), !label.contains(version) else { return label }
-        return label.replacingOccurrences(of: String(head), with: "\(head) \(version)", options: .anchored)
+        model = launcher?.model
+        effort = launcher?.effort
     }
 }
