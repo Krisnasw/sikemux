@@ -54,6 +54,7 @@ export const jiraBoardsR = resource({
 
 export const jiraBoardR = resource({
     kind: "jira.board",
-    fetch: (id: number, site: string): Promise<JiraBoardView> => jiraApi.board(id, site || undefined),
+    fetch: (id: number, site: string, picked: string): Promise<JiraBoardView> =>
+        jiraApi.board(id, site || undefined, picked ? picked.split(",") : []),
     staleAfterMs: 30_000,
 });

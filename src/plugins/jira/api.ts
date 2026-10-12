@@ -133,7 +133,15 @@ export const jiraApi = {
     filters: (site?: string) => backend.call<JiraFilter[]>("filters", { site }),
     projects: (site?: string) => backend.call<JiraProject[]>("projects", { site }),
     boards: (site?: string) => backend.call<JiraBoard[]>("boards", { site }),
-    board: (id: number, site?: string) => backend.call<JiraBoardView>("board", { id, site }),
+    /** A board, narrowed to the cards of the people picked: account ids, plus "me" and "none" for unassigned. */
+    board: (id: number, site?: string, picked: string[] = []) =>
+        backend.call<JiraBoardView>("board", {
+            id,
+            site,
+            people: picked.filter((each) => each !== "me" && each !== "none"),
+            mine: picked.includes("me"),
+            unassigned: picked.includes("none"),
+        }),
     /** Moves an issue into a board column through whichever transition leads to one of its statuses. */
     moveIssue: (key: string, column: JiraColumn, site?: string) =>
         backend.call<void>("moveIssue", { key, statusIds: column.statusIds, column: column.name, site }),
