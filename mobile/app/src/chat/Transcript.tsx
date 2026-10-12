@@ -5,6 +5,7 @@ import { durationLabel } from '@mac/chat/durationLabel';
 import { rateLabel, sentLabel, type RowMeta } from '@mac/chat/messageMeta';
 import { cutLongText } from '@mac/chat/longText';
 import { isReply, outlivesFold, subagentTask } from '@mac/chat/transcript';
+import { callCount, callsLabel, workedLabel } from '@mac/chat/toolView';
 import type { PageRef } from '@mac/api/pages';
 import type { AccountMove, AcpContentBlock, AcpSubagent, AcpTaskNotice, AgentNotice, ChatMessage, ChatPart } from '@mac/chat/types';
 import { CopyButton } from '@/ui/CopyButton';
@@ -79,7 +80,7 @@ function Subagent({ subagent, untimed }: { subagent: AcpSubagent; untimed: boole
         onPress={() => setOpen(!open)}
         style={({ pressed }) => [styles.subagentHead, pressed && { backgroundColor: colors.active }]}
         accessibilityRole="button"
-        accessibilityLabel={`Subagent ${subagent.name}, ${SUBAGENT_WORDS[subagent.state]}${calls ? `, ${calls} calls` : ''}`}
+        accessibilityLabel={`Subagent ${subagent.name}, ${SUBAGENT_WORDS[subagent.state]}${calls ? `, ${callCount(calls)}` : ''}`}
         accessibilityState={{ expanded: open }}>
         <View style={[styles.chevron, open && { transform: [{ rotate: '90deg' }] }]}>
           <Icon name="IconChevron" size={10} color={colors.inkDim} />
@@ -97,11 +98,7 @@ function Subagent({ subagent, untimed }: { subagent: AcpSubagent; untimed: boole
             {subagentTask(subagent.task)}
           </Text>
         )}
-        {calls ? (
-          <Text style={styles.subagentCalls}>
-            {calls} {calls === 1 ? 'call' : 'calls'}
-          </Text>
-        ) : null}
+        {calls ? <Text style={styles.subagentCalls}>{callCount(calls)}</Text> : null}
         <View style={styles.subagentMark}>
           <SubagentMark state={subagent.state} />
         </View>
@@ -397,9 +394,8 @@ export function WorkSummary({
 }) {
   const colors = useColors();
   const styles = useStyles(makeStyles);
-  const verb = thought ? 'Thought' : 'Worked';
-  const worked = took === null ? verb : `${verb} for ${durationLabel(took)}`;
-  const counted = `${calls} tool call${calls === 1 ? '' : 's'}`;
+  const worked = workedLabel(took, thought);
+  const counted = callsLabel(calls);
   return (
     <View style={styles.work}>
       <Pressable

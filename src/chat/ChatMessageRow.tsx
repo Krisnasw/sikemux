@@ -26,6 +26,7 @@ import { FoldedMarkdown, warmChatMarkdown } from "./ChatMarkdown";
 import { ChatPage } from "./ChatPage";
 import { ToolGroup } from "./ToolGroup";
 import { ToolRow } from "./ToolRow";
+import { callCount } from "./toolView";
 import { attachmentName, formatDetail, groupParts, isReply, outlivesFold, subagentTask } from "./transcript";
 import type { AccountMove, AcpSubagent, AcpTaskNotice, AgentNotice, ChatMessage, ChatPart } from "./types";
 import { ContextChipLabel } from "./ContextChip";
@@ -261,11 +262,7 @@ function SubagentPart({ subagent }: { subagent: AcpSubagent }) {
                     <span className="chat-subagent-task">{subagentTask(subagent.task)}</span>
                 )}
                 <span className="chat-subagent-end">
-                    {calls > 0 && (
-                        <span className="chat-subagent-calls">
-                            {calls} {calls === 1 ? "call" : "calls"}
-                        </span>
-                    )}
+                    {calls > 0 && <span className="chat-subagent-calls">{callCount(calls)}</span>}
                     <SubagentStateMark state={subagent.state} />
                 </span>
             </summary>
