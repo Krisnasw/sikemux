@@ -4,6 +4,7 @@
 
 pub mod accounts;
 pub mod acp;
+pub mod agent_catalog;
 pub mod cli;
 #[cfg(unix)]
 pub mod client;

@@ -22,11 +22,8 @@ const CONFIG_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// The hosts that can be told about the browser tools. Anything else launches
 /// untouched.
-pub const SUPPORTED_AGENTS: &[&str] =
-    &["claude", "codex", "grok", "hermes", "omp", "opencode", "pi"];
-
 pub fn is_supported(agent_type: &str) -> bool {
-    SUPPORTED_AGENTS.contains(&agent_type)
+    crate::agents::AgentKind::from_name(agent_type).is_some()
 }
 
 /// What the agent needs to start with: arguments in front of the ones the pane

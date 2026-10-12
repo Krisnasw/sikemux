@@ -1,3 +1,4 @@
+import { hasUsage } from "../../agents/catalog";
 import { pluginDocuments } from "../../plugins/documents";
 import { taskPtyBindings } from "../../tasks/nativeRuntime";
 import { invalidate } from "../resources";
@@ -183,7 +184,7 @@ function closeWindowNow(id: string): void {
         for (const paneId of taskPaneIds) taskPtyBindings.release(paneId);
         if (closingAgent) {
             closeAgentDesk(closingAgent.id);
-            if (closingAgent.type === "claude" || closingAgent.type === "codex") {
+            if (hasUsage(closingAgent.type)) {
                 invalidate((kind) => kind === "agents.catalog" || kind === "agents.usage");
             }
         }

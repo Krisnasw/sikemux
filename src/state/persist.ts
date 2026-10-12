@@ -11,6 +11,7 @@ import { normaliseKeybindingOverrides } from "../commands/keybindings";
 import type { CommandContext, CustomCommand, CustomCommandPlacement } from "../commands/registry";
 import { registerCustomThemes } from "../themes/bus";
 import { normalizePermissionMode } from "../agents/agentLaunch";
+import { ACCOUNT_AGENT_TYPES, AGENT_TYPES, hasAccounts, isAgentType } from "../agents/catalog";
 import { clampRailWidth } from "../lib/railWidths";
 import { mergePinnedIntoRoots, normaliseProjectRoots, pruneOnDemandWindows } from "./commands";
 import { agentPaneId } from "./selectors";
@@ -323,7 +324,6 @@ function isRecent(value: unknown): value is RecentEntry {
     return isRecord(value) && isSessionKind(value.kind) && typeof value.name === "string" && typeof value.cwd === "string";
 }
 
-const AGENT_TYPES = new Set<AgentType>(["claude", "codex", "hermes", "pi", "opencode", "omp", "grok"]);
 const AGENT_PROVIDERS = new Set<AgentProvider>(["claude", "codex", "gemini"]);
 const AGENT_PERMISSION_MODES = new Set<AgentPermissionMode>(["read-only", "workspace-write", "full-access", "bypass"]);
 
@@ -370,7 +370,7 @@ function normaliseProviderProfiles(value: unknown, fallback: ProviderProfile[]):
 function normaliseAccountAutoSwitch(value: unknown): StoreState["accountAutoSwitch"] {
     const saved = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
     const result: StoreState["accountAutoSwitch"] = {};
-    for (const provider of ["claude", "codex"] as const) if (saved[provider] === true) result[provider] = true;
+    for (const provider of ACCOUNT_AGENT_TYPES) if (saved[provider] === true) result[provider] = true;
     return result;
 }
 
@@ -386,7 +386,7 @@ function normaliseProviderProfileSelection(
         const selected = value[type];
         if (typeof selected !== "string") continue;
         const profile = profilesById.get(selected);
-        if (profile && (type === "claude" || type === "codex") && profile.provider === type) selection[type] = selected;
+        if (profile && hasAccounts(type) && profile.provider === type) selection[type] = selected;
     }
     return selection;
 }
@@ -407,7 +407,7 @@ function toAgentWorktree(value: unknown): AgentWorktree | undefined {
 
 const AGENT_EFFORTS = new Set(["off", "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]);
 function toPersistedAgent(value: unknown): PersistedAgent | null {
-    if (!isRecord(value) || typeof value.id !== "string" || !value.id || !AGENT_TYPES.has(value.type as AgentType)) return null;
+    if (!isRecord(value) || typeof value.id !== "string" || !value.id || !isAgentType(value.type)) return null;
     if (typeof value.title !== "string" || !value.title.trim()) return null;
     const resumeId = typeof value.resumeId === "string" && value.resumeId.trim() ? value.resumeId : undefined;
     const ptyId = isCoreSessionId(value.ptyId) ? value.ptyId : undefined;
@@ -1200,7 +1200,7 @@ export function applyHydrate(raw: string): HydrationResult {
                 : prefs.defaultAgentPermissionMode === "bypass"
                   ? "bypass"
                   : "workspace-write",
-        lastAgentType: AGENT_TYPES.has(prefs.lastAgentType as AgentType) ? (prefs.lastAgentType as AgentType) : null,
+        lastAgentType: isAgentType(prefs.lastAgentType) ? prefs.lastAgentType : null,
         languageServerTrust: booleansByPath(prefs.languageServerTrust),
         agentWorktreeDefaults: booleansByPath(prefs.agentWorktreeDefaults),
     });

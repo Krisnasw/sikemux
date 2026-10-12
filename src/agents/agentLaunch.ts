@@ -1,4 +1,5 @@
 import type { AgentEffort, AgentPermissionMode, AgentType } from "../state/types";
+import { canBypassPermissions } from "./catalog";
 
 export interface AgentLaunchOptions {
     resumeId?: string;
@@ -8,16 +9,6 @@ export interface AgentLaunchOptions {
 }
 
 export const MAX_AGENT_MODEL_LENGTH = 256;
-
-export const AGENT_NAMES: Readonly<Record<AgentType, string>> = {
-    claude: "Claude",
-    codex: "Codex",
-    hermes: "Hermes",
-    pi: "Pi",
-    opencode: "OpenCode",
-    omp: "Oh My Pi",
-    grok: "Grok",
-};
 
 const AGENT_EFFORTS: Readonly<Record<AgentType, readonly AgentEffort[]>> = {
     claude: ["low", "medium", "high", "xhigh", "max"],
@@ -34,17 +25,11 @@ const AGENT_EFFORTS: Readonly<Record<AgentType, readonly AgentEffort[]>> = {
 export const AGENT_PERMISSION_MODES: readonly AgentPermissionMode[] = ["workspace-write", "bypass"];
 
 export function supportedPermissionModes(type: AgentType): readonly AgentPermissionMode[] {
-    return type === "claude" || type === "codex" || type === "hermes" || type === "omp" || type === "grok"
-        ? AGENT_PERMISSION_MODES
-        : ["workspace-write"];
+    return canBypassPermissions(type) ? AGENT_PERMISSION_MODES : ["workspace-write"];
 }
 
 /** Agents the built-in chat can drive over ACP. Pi has no ACP mode of its own. */
 export type ChatAgentType = Exclude<AgentType, "pi">;
-
-export function isAgentType(value: string): value is AgentType {
-    return Object.hasOwn(AGENT_EFFORTS, value);
-}
 
 export const CHAT_AGENT_TYPES: readonly ChatAgentType[] = ["codex", "claude", "opencode", "omp", "grok", "hermes"];
 

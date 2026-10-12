@@ -34,7 +34,8 @@ import { useChat } from '@/chat/useChat';
 import { retry as reconnect, useDevices, useLive, type Live } from '@/devices/hub';
 import { dismissCardsFor } from '@/notify/cards';
 import { deviceName } from '@/devices/paired';
-import { chatTitle, providerName } from '@/devices/words';
+import { agentLabel } from '@mac/agents/catalog';
+import { chatTitle } from '@/devices/words';
 import { haptics } from '@/ui/haptics';
 import { AgentIcon, Icon } from '@/ui/Icon';
 import { Button } from '@/ui/controls';
@@ -207,8 +208,8 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
   const openRecent = () => setRecent(true);
   useEffect(() => dismissCardsFor(core, agentId), [core, agentId]);
   useArrivals(state.running, request?.requestId, {
-    done: `${providerName(provider)} finished`,
-    asks: request ? `${providerName(provider)} asks: ${askTitle(request)}` : '',
+    done: `${agentLabel(provider)} finished`,
+    asks: request ? `${agentLabel(provider)} asks: ${askTitle(request)}` : '',
   });
   const list = useRef<FlashListRef<ChatMessage>>(null);
   const [away, setAway] = useState(false);
@@ -248,7 +249,7 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
   }, []);
   const toEnd = () => requestAnimationFrame(() => list.current?.scrollToEnd({ animated: true }));
   const activity = activityText({ ...state, permissions: chat.permissions }, activeToolLabel(state.messages));
-  const title = state.title ?? (info ? chatTitle(info) : providerName(provider));
+  const title = state.title ?? (info ? chatTitle(info) : agentLabel(provider));
   const watchOnly = access === 'watch';
   const steerable = state.capabilities.steering === true && state.running && !watchOnly;
   const liveShown = hasLiveWork(fresh) && chat.attached === 'live';
@@ -446,7 +447,7 @@ function ChatScreen({ core, agentId }: { core: string; agentId: string }) {
         onClose={() => setMenu(false)}
         core={core}
         agentId={agentId}
-        agentName={providerName(provider)}
+        agentName={agentLabel(provider)}
         hostName={hostName}
         onRecent={recalls ? openRecent : undefined}
         onStop={

@@ -3,6 +3,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "rea
 import type { AgentInfo } from "../api/agents";
 import { usePageVisible } from "../hooks/usePageVisible";
 import { selectedAgentRuntimeProfiles, selectedProviderProfile } from "../agents/agentProfiles";
+import { hasUsage, type UsageAgentType } from "../agents/catalog";
 import * as cmd from "../state/commands";
 import { useShortcutLabel, withShortcut } from "../commands/useShortcutLabel";
 import { useResource, useResourceEnabled } from "../state/resources";
@@ -29,11 +30,6 @@ import { useRecentChats } from "./useRecentChats";
 import { LEAVES_SETTINGS } from "../settings/leaveSettings";
 
 const USAGE_REFRESH_MS = 5 * 60_000;
-type UsageAgentType = "claude" | "codex";
-
-function isUsageAgent(type: AgentType | null): type is UsageAgentType {
-    return type === "claude" || type === "codex";
-}
 
 const persistedSessionIdOf = (a: Agent) => a.resumeId ?? a.id;
 
@@ -315,13 +311,8 @@ export function AgentRailBody() {
                     allAgents={allAgents}
                 />
                 <div className="agent-empty">agents are project-scoped</div>
-                {!allAgents && isUsageAgent(selectedType) && selectedUsage && (
-                    <AgentAccountsPanel
-                        provider={selectedType}
-                        usage={selectedUsage}
-                        label={selectedProvider?.label}
-                        command={selectedProvider?.command}
-                    />
+                {!allAgents && hasUsage(selectedType) && selectedUsage && (
+                    <AgentAccountsPanel provider={selectedType} usage={selectedUsage} command={selectedProvider?.command} />
                 )}
             </>
         );
@@ -457,13 +448,8 @@ export function AgentRailBody() {
             </div>
             {/* The rail's footer: plan limits sit under the agents they apply
                 to, out of the way of the list you came here to use. */}
-            {!allAgents && isUsageAgent(selectedType) && selectedUsage && (
-                <AgentAccountsPanel
-                    provider={selectedType}
-                    usage={selectedUsage}
-                    label={selectedProvider?.label}
-                    command={selectedProvider?.command}
-                />
+            {!allAgents && hasUsage(selectedType) && selectedUsage && (
+                <AgentAccountsPanel provider={selectedType} usage={selectedUsage} command={selectedProvider?.command} />
             )}
         </>
     );
@@ -604,7 +590,7 @@ function AgentHeader({
                     <Tooltip
                         key={a.type}
                         label={
-                            isUsageAgent(a.type) && usagePeaks[a.type] != null
+                            hasUsage(a.type) && usagePeaks[a.type] != null
                                 ? `${a.label} — ${Math.round(usagePeaks[a.type]!)}% of the busiest limit used`
                                 : a.label
                         }>

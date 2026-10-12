@@ -1,17 +1,15 @@
 import { useState } from "react";
 import type { AgentInfo, RecentChat } from "../api/agents";
 import { selectedProviderProfile } from "../agents/agentProfiles";
+import { canDeleteChats } from "../agents/catalog";
 import { AgentTitleInput } from "../agents/AgentTitleInput";
 import * as cmd from "../state/commands";
 import { useStore } from "../state/store";
-import type { AgentType } from "../state/types";
 import { AgentIcon } from "../ui/Icons";
 import { Panel, PanelHeader } from "../ui/Panel";
 import { TreeContextMenu } from "./FileTree";
 import { chatKey, type RecentChats } from "./useRecentChats";
 import { formatAge } from "../lib/format";
-
-const DELETABLE: ReadonlySet<AgentType> = new Set(["claude", "codex"]);
 
 /** Saved chats, each resumed in the project it ran in. */
 export function RecentChatList({ recent, providers }: { recent: RecentChats; providers: AgentInfo[] }) {
@@ -114,7 +112,7 @@ export function RecentChatList({ recent, providers }: { recent: RecentChats; pro
                     items={[
                         { label: "Open", run: () => open(menu.chat) },
                         { label: "Rename…", run: () => setRenaming(chatKey(menu.chat)) },
-                        ...(DELETABLE.has(menu.chat.agent) ? [{ sep: true }, { label: "Delete…", danger: true, run: () => remove(menu.chat) }] : []),
+                        ...(canDeleteChats(menu.chat.agent) ? [{ sep: true }, { label: "Delete…", danger: true, run: () => remove(menu.chat) }] : []),
                     ]}
                     onClose={() => setMenu(null)}
                 />

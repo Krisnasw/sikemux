@@ -21,40 +21,12 @@
     position: relative;
 }
 :root {
-    --brand-claude: #d97757;
-    --brand-codex: #7a9dff;
-    --brand-hermes: #e0a050;
-    --brand-pi: #7dd3fc;
-    --brand-opencode: #a78bfa;
-    --brand-omp: #f97316;
-    --brand-grok: #fcfcfc;
     --brand-aws: #ff9900;
     --brand-bitbucket: #2684ff;
     --brand-gitlab: #fc6d26;
 }
 .agent-glyph {
     display: flex;
-}
-.agent-glyph.claude {
-    color: var(--brand-claude);
-}
-.agent-glyph.codex {
-    color: var(--brand-codex);
-}
-.agent-glyph.hermes {
-    color: var(--brand-hermes);
-}
-.agent-glyph.pi {
-    color: var(--brand-pi);
-}
-.agent-glyph.opencode {
-    color: var(--brand-opencode);
-}
-.agent-glyph.omp {
-    color: var(--brand-omp);
-}
-.agent-glyph.grok {
-    color: var(--brand-grok);
 }
 .agent-glyph.term,
 .sess-icon.ssh {
@@ -236,27 +208,6 @@
     grid-row: 1 / span 5;
     background: var(--acc);
 }
-.agent-dormant-notch.claude {
-    background: var(--brand-claude);
-}
-.agent-dormant-notch.codex {
-    background: var(--brand-codex);
-}
-.agent-dormant-notch.hermes {
-    background: var(--brand-hermes);
-}
-.agent-dormant-notch.pi {
-    background: var(--brand-pi);
-}
-.agent-dormant-notch.opencode {
-    background: var(--brand-opencode);
-}
-.agent-dormant-notch.omp {
-    background: var(--brand-omp);
-}
-.agent-dormant-notch.grok {
-    background: var(--brand-grok);
-}
 .agent-dormant-kicker {
     color: var(--live);
     font-size: 10px;
@@ -437,30 +388,6 @@
     color: var(--acc);
     background: var(--surface-selected);
 }
-.agent-header-btn.claude {
-    --agent-provider: var(--brand-claude);
-}
-.agent-header-btn.codex {
-    --agent-provider: var(--brand-codex);
-}
-
-.agent-header-btn.hermes {
-    --agent-provider: var(--brand-hermes);
-}
-
-.agent-header-btn.pi {
-    --agent-provider: var(--brand-pi);
-}
-
-.agent-header-btn.opencode {
-    --agent-provider: var(--brand-opencode);
-}
-.agent-header-btn.omp {
-    --agent-provider: var(--brand-omp);
-}
-.agent-header-btn.grok {
-    --agent-provider: var(--brand-grok);
-}
 /* The all-agents tab leads the provider row, standing a little apart from it. */
 .agent-header-types > .all-agents {
     margin-right: 6px;
@@ -545,12 +472,6 @@
     /* Divides from the list above it now, not from the header above it. */
     border-top: 1px solid var(--border);
     background: color-mix(in srgb, var(--surface-raised) 52%, transparent);
-}
-.agent-usage.claude {
-    --usage-fill: var(--brand-claude);
-}
-.agent-usage.codex {
-    --usage-fill: var(--brand-codex);
 }
 .agent-usage-head {
     display: flex;

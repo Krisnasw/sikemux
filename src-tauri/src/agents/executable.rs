@@ -4,13 +4,14 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
+use sikemux_core::agent_catalog::{AgentEntry, AGENTS};
 use sikemux_pty::user_shell::login_shell_environment;
 use tokio::process::Command;
 
 use super::config::{agent_config_root, configured_default_effort, configured_default_model};
 use super::models::model_catalog_error_detail;
 use super::status::{signed_in_status, AgentStatus};
-use super::{AgentDef, AgentInfo, AgentKind, AgentProfileRequest, AGENT_DEFS};
+use super::{AgentInfo, AgentKind, AgentProfileRequest};
 
 /* Two seconds is what a person waits for an agent binary to name its version
 before the probe gives up. A test spawns the same real process while hundreds
@@ -72,7 +73,7 @@ fn push_agent_candidate(candidates: &mut Vec<PathBuf>, candidate: PathBuf) {
     }
 }
 
-fn automatic_agent_candidates(def: &AgentDef) -> Vec<PathBuf> {
+fn automatic_agent_candidates(def: &AgentEntry) -> Vec<PathBuf> {
     let mut candidates = crate::system::find_executables(def.command);
     let home = crate::system::user_home();
     for candidate in [
@@ -279,7 +280,7 @@ pub(crate) async fn resolve_agent_executable(
     agent: &str,
     explicit: Option<&str>,
 ) -> Result<PathBuf, String> {
-    let def = AGENT_DEFS
+    let def = AGENTS
         .iter()
         .find(|def| def.kind == agent)
         .ok_or("Unknown agent provider")?;
@@ -300,7 +301,7 @@ pub(crate) async fn resolve_agent_executable(
 /// from the login shell during boot, so this matches what spawned PTYs can run.
 #[tauri::command]
 pub async fn available_agents(profiles: Vec<AgentProfileRequest>) -> Vec<AgentInfo> {
-    let available = futures::future::join_all(AGENT_DEFS.iter().map(|def| async {
+    let available = futures::future::join_all(AGENTS.iter().map(|def| async {
         let profile = profiles
             .iter()
             .find(|profile| profile.kind.as_str() == def.kind);

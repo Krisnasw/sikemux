@@ -152,7 +152,7 @@ async fn a_permission_request_reaches_the_phone_sealed_with_what_it_needs_to_ans
         Some(NotificationCategory::Permission)
     );
     assert_eq!(notification.collapse_id, push.collapse_id);
-    assert_eq!(notification.title, "Claude Code needs permission");
+    assert_eq!(notification.title, "Claude needs permission");
     assert_eq!(notification.body, "sikemux on MacBook Pro");
     assert_eq!(
         notification.detail.as_deref(),
@@ -278,7 +278,7 @@ async fn a_long_turn_finishing_notifies_at_most_every_five_minutes() {
     let sent = turn(T, 31_000, false);
     assert_eq!(sent.len(), 1);
     assert_eq!(sent[0].1.kind, NotificationKind::Finished);
-    assert_eq!(sent[0].1.title, "Claude Code finished");
+    assert_eq!(sent[0].1.title, "Claude finished");
     assert_eq!(sent[0].0.expires_at, T + 31_000 + FINISHED_LIFE_MS);
     assert!(turn(T + 60_000, 40_000, false).is_empty());
     assert!(
@@ -330,7 +330,7 @@ async fn waiting_for_input_notifies_and_clears_when_the_agent_moves_on() {
     };
     let sent = state("blocked", T);
     assert_eq!(sent[0].1.kind, NotificationKind::Input);
-    assert_eq!(sent[0].1.title, "Claude Code needs your input");
+    assert_eq!(sent[0].1.title, "Claude needs your input");
     assert!(state("blocked", T + 1).is_empty());
     let sent = state("working", T + 2);
     assert_eq!(sent[0].0.kind, PushKind::Clear);

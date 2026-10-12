@@ -28,6 +28,8 @@ on:
       - "src/agents/agentLaunch.ts"
       - "src/agents/catalog.ts"
       - "src/agents/generated/**"
+      - "src/agents/catalog.ts"
+      - "src/agents/generated/**"
       - "src/chat/**"
       - "src/lib/format.ts"
       - "src/lib/paths.ts"

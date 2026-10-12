@@ -149,16 +149,6 @@ struct AgentItem: Identifiable, Equatable {
     let ask: Ask?
 }
 
-let agentNames: [String: String] = [
-    "claude": "Claude",
-    "codex": "Codex",
-    "opencode": "OpenCode",
-    "grok": "Grok",
-    "pi": "Pi",
-    "omp": "OMP",
-    "hermes": "Hermes",
-]
-
 func agentName(_ provider: String) -> String {
     agentNames[provider] ?? provider.capitalized
 }

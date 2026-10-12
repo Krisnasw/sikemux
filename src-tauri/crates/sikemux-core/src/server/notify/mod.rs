@@ -308,21 +308,8 @@ struct Named {
 }
 
 fn provider_name(core: &Core, provider: &str) -> String {
-    let known = match provider {
-        "claude" => Some("Claude Code"),
-        "codex" => Some("Codex"),
-        "gemini" => Some("Gemini"),
-        "opencode" => Some("OpenCode"),
-        "omp" => Some("OMP"),
-        "grok" => Some("Grok"),
-        "hermes" => Some("Hermes"),
-        "cursor" => Some("Cursor"),
-        "amp" => Some("Amp"),
-        "copilot" => Some("Copilot"),
-        _ => None,
-    };
-    if let Some(known) = known {
-        return known.into();
+    if let Some(agent) = crate::agent_catalog::agent(provider) {
+        return agent.label.into();
     }
     core.workspaces
         .view()

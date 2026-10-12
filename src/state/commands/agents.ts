@@ -1,7 +1,8 @@
 import { agentApi, type AgentSession } from "../../api/agents";
 import type { AcpChat } from "../../api/acp";
 import { profileOfLauncher } from "../../remote/workspace";
-import { agentSupportsChat, isAgentType, MAX_AGENT_MODEL_LENGTH, normalizePermissionMode, type ChatAgentType } from "../../agents/agentLaunch";
+import { isAgentType } from "../../agents/catalog";
+import { agentSupportsChat, MAX_AGENT_MODEL_LENGTH, normalizePermissionMode, type ChatAgentType } from "../../agents/agentLaunch";
 import { emit } from "../bus";
 import { reduceAgentState } from "../agentStatus";
 import { confirmDialog } from "../dialog";

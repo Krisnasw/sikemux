@@ -8,7 +8,7 @@ import { toolDiff } from '@mac/chat/diff';
 import { pickerSlots, sessionConfigs, type SessionConfig } from '@mac/chat/sessionConfig';
 import { toolKind, toolLabel, toolPath } from '@mac/chat/toolLabels';
 import type { AcpAvailableCommand, AcpPermissionRequest, AcpToolCall, ChatState, ContextUsage } from '@mac/chat/types';
-import { providerName } from '@/devices/words';
+import { agentLabel } from '@mac/agents/catalog';
 import { haptics } from '@/ui/haptics';
 import { AgentIcon, Icon } from '@/ui/Icon';
 import { Track } from '@/ui/controls';
@@ -77,12 +77,12 @@ function PermissionDock({
     <View
       style={styles.dock}
       accessibilityRole="alert"
-      accessibilityLabel={`${title} ${providerName(provider)} needs permission to continue`}>
+      accessibilityLabel={`${title} ${agentLabel(provider)} needs permission to continue`}>
       <View style={styles.dockHead}>
         <Icon name="IconShieldBolt" size={16} color={colors.ink} />
         <View style={{ flex: 1 }}>
           <Text style={styles.dockTitle}>{title}</Text>
-          <Text style={styles.dockDetail}>{providerName(provider)} needs permission to continue</Text>
+          <Text style={styles.dockDetail}>{agentLabel(provider)} needs permission to continue</Text>
         </View>
         {requests.length > 1 ? (
           <View style={styles.pages}>
@@ -331,7 +331,7 @@ function ConfigSheet({
     <Sheet visible={visible} onClose={onClose}>
       <View style={styles.sheetHead}>
         <AgentIcon provider={provider} size={20} />
-        <Text style={styles.sheetTitle}>{providerName(provider)}</Text>
+        <Text style={styles.sheetTitle}>{agentLabel(provider)}</Text>
       </View>
       {model ? (
         <>

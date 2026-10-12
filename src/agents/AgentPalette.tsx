@@ -1,6 +1,6 @@
 import { useModalFocus } from "../hooks/useModalFocus";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { type AgentInfo, type AgentSession } from "../api/agents";
+import { type AgentSession } from "../api/agents";
 import { selectedAgentRuntimeProfiles, selectedProviderProfile } from "./agentProfiles";
 import { useMouseActive } from "../hooks/useMouseActive";
 import { rankBy } from "../lib/fuzzy";
@@ -11,6 +11,7 @@ import { useStore } from "../state/store";
 import type { AgentPermissionMode, AgentType } from "../state/types";
 import { AgentIcon, IconSearch, IconShield, IconShieldBolt } from "../ui/Icons";
 import { formatAge } from "../lib/format";
+import { agentLabel } from "./catalog";
 import { leavingOverlay } from "../lib/motion";
 
 type Row = AgentSession & { type: AgentType };
@@ -25,10 +26,6 @@ const MODE_CHOICES: { mode: AgentPermissionMode; label: string; title: string }[
     { mode: NORMAL, label: "safe", title: "Safe mode — the agent launches with normal approvals." },
     { mode: YOLO, label: "yolo", title: "YOLO mode — the agent launches without approvals." },
 ];
-
-function labelForType(type: AgentType, agents: readonly AgentInfo[]): string {
-    return agents.find((agent) => agent.type === type)?.label ?? type;
-}
 
 function sortRows(rows: Row[]): Row[] {
     return [...rows].sort((left, right) => right.mtime - left.mtime);
@@ -122,8 +119,8 @@ export function AgentPalette() {
     const items = useMemo(() => {
         const fresh = agents.map(({ type }): NewAgentItem => ({ kind: "new", type }));
         const resumable = rows.map((row): ResumeAgentItem => ({ kind: "resume", row }));
-        const rankedFresh = rankBy(query, fresh, (item) => `+ new ${labelForType(item.type, agents)} ${item.type}`);
-        const rankedResumable = rankBy(query, resumable, (item) => `${item.row.title} ${labelForType(item.row.type, agents)} ${item.row.type}`);
+        const rankedFresh = rankBy(query, fresh, (item) => `+ new ${agentLabel(item.type)} ${item.type}`);
+        const rankedResumable = rankBy(query, resumable, (item) => `${item.row.title} ${agentLabel(item.row.type)} ${item.row.type}`);
         return [...rankedFresh, ...rankedResumable];
     }, [agents, query, rows]);
 
@@ -259,7 +256,7 @@ export function AgentPalette() {
                         const provider = agents.find((agent) => agent.type === type);
                         const available = provider?.available !== false;
                         const key = item.kind === "new" ? `new-${type}` : `${type}-${item.row.id}`;
-                        const name = item.kind === "new" ? `+ new ${labelForType(type, agents)}` : item.row.title;
+                        const name = item.kind === "new" ? `+ new ${agentLabel(type)}` : item.row.title;
                         return (
                             <Fragment key={key}>
                                 {index === firstResumeIndex && firstResumeIndex > 0 && <div className="agent-palette-divider" />}
@@ -285,7 +282,7 @@ export function AgentPalette() {
                                                 ? provider?.status?.state === "signedOut"
                                                     ? "signed out"
                                                     : ""
-                                                : `${labelForType(type, agents)} · ${formatAge(item.row.mtime * 1000)}`}
+                                                : `${agentLabel(type)} · ${formatAge(item.row.mtime * 1000)}`}
                                     </span>
                                 </button>
                             </Fragment>

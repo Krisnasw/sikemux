@@ -545,22 +545,6 @@
     position: relative;
 }
 
-.proj-pip-claude {
-    color: var(--brand-claude);
-}
-.proj-pip-codex {
-    color: var(--brand-codex);
-}
-.proj-pip-hermes {
-    color: var(--brand-hermes);
-}
-.proj-pip-pi {
-    color: var(--brand-pi);
-}
-.proj-pip-opencode {
-    color: var(--brand-opencode);
-}
-
 .window-area {
     position: absolute;
     inset: 0;
