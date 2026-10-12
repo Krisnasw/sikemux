@@ -41,7 +41,8 @@ describe('chatState', () => {
   it('follows the agent through its lifecycle', () => {
     expect(chatState(chat({ state: 'starting' }))).toBe('Starting…');
     expect(chatState(chat({ state: 'ready', running: true }))).toBe('Working');
-    expect(chatState(chat({ state: 'ready' }))).toBe('Ready');
+    expect(chatState(chat({ state: 'ready' }))).toBe('Idle');
+    expect(chatState(chat({ state: 'ready', unread: true }))).toBe('Done');
     expect(chatState(chat({ state: 'stopped', running: true }))).toBe('Stopped');
   });
 });

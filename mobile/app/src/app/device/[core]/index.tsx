@@ -5,6 +5,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { formatAge } from '@mac/lib/format';
+import { AGENT_GROUPS, AGENT_LABELS, type AgentDisplay, type AgentGroup } from '@mac/state/agentStatus';
 import type { Attention, ChatInfo, ProjectInfo, RecentInfo, SessionInfo, Snapshot } from '@/core/protocol';
 import { problem as problemOf, reloadDevices, retry, useDevices, useHostStatus, useLive } from '@/devices/hub';
 import { deviceName, type PairedDevice, updateDevice } from '@/devices/paired';
@@ -12,7 +13,7 @@ import { ForgetSheet, useForget } from '@/devices/ForgetSheet';
 import { ProjectSheet } from '@/devices/ProjectSheet';
 import { asking as askingOf } from '@/devices/asking';
 import { summary } from '@/devices/status';
-import { chatState, chatTitle, folder } from '@/devices/words';
+import { chatDisplay, chatState, chatTitle, folder } from '@/devices/words';
 import { Wants } from '@/screens/Wants';
 import { haptics } from '@/ui/haptics';
 import { useMinute, useScrollPause } from '@/ui/motion';
@@ -20,7 +21,7 @@ import { AgentIcon, Icon } from '@/ui/Icon';
 import { Button, IconButton } from '@/ui/controls';
 import { Row, Rows, SectionLabel } from '@/ui/list';
 import { Nav, Screen, useBottomGap } from '@/ui/screen';
-import { NeedsYou, StillRunning, SubagentCount, Working } from '@/ui/status';
+import { Dot, NeedsYou, ShellCount, SubagentCount, Working } from '@/ui/status';
 import { fonts, isLight, type Palette, typeFor, useColors, useStyles, useType, translucent } from '@/ui/theme';
 
 type Tab = 'agents' | 'terminals';
@@ -45,7 +46,7 @@ function ProjectTail({ snapshot, project }: { snapshot: Snapshot; project: Proje
   const type = useType();
   const chats = snapshot.chats.filter((chat) => inProject(project, chat.cwd));
   const terminals = snapshot.sessions.filter((session) => session.project === project.id && session.running).length;
-  const waiting = chats.some((chat) => chat.pendingPermissions.length);
+  const waiting = chats.some((chat) => chatDisplay(chat).group === 'blocked');
   if (!chats.length && !terminals) return null;
   return (
     <View style={styles.tail}>
@@ -68,19 +69,21 @@ function ProjectTail({ snapshot, project }: { snapshot: Snapshot; project: Proje
   );
 }
 
-function ChatStatus({ chat }: { chat: ChatInfo }) {
-  if (chat.pendingPermissions.length) return <NeedsYou />;
-  if (chat.running) return <Working />;
-  if (chat.tasks || chat.subagents) return <StillRunning />;
+function ChatStatus({ display }: { display: AgentDisplay }) {
+  const colors = useColors();
+  if (display.group === 'blocked') return <NeedsYou />;
+  if (display.group === 'working') return <Working />;
+  if (display.group === 'done') return <Dot color={colors.accent} />;
   return null;
 }
 
 function ChatEnd({ chat }: { chat: ChatInfo }) {
-  if (!chat.subagents) return <ChatStatus chat={chat} />;
+  const display = chatDisplay(chat);
   return (
     <>
-      <SubagentCount count={chat.subagents} />
-      <ChatStatus chat={chat} />
+      {display.subagents ? <SubagentCount count={display.subagents} /> : null}
+      {display.tasks ? <ShellCount count={display.tasks} /> : null}
+      <ChatStatus display={display} />
     </>
   );
 }
@@ -199,29 +202,35 @@ function Agents({
   const scoped = snapshot.chats.filter((chat) => !scope || inProject(scope, chat.cwd));
   const chats = scoped.filter((chat) => provider === 'all' || chat.provider === provider);
   const placeOf = (chat: ChatInfo) => (scope ? undefined : projectName(snapshot, chat.cwd));
-  const asking = chats.filter((chat) => chat.pendingPermissions.length);
   const attentionOf = (chat: ChatInfo) => snapshot.attentions.find((known) => known.agentId === chat.agentId && askingOf(known));
-  const idle = chats.filter((chat) => !chat.pendingPermissions.length);
+  const groupOf = (group: AgentGroup) => {
+    const rows = chats.filter((chat) => chatDisplay(chat).group === group);
+    if (group === 'done' || group === 'idle') rows.sort((x, y) => (y.activeAt ?? 0) - (x.activeAt ?? 0));
+    return rows;
+  };
 
   return (
     <>
-      {asking.length ? (
-        <Rows style={styles.asking}>
-          {asking.map((chat) => (
-            <ChatRow key={chat.agentId} core={core} chat={chat} place={placeOf(chat)} attention={attentionOf(chat)} />
-          ))}
-        </Rows>
-      ) : null}
-      {idle.length ? (
-        <>
-          <SectionLabel>Open</SectionLabel>
-          <Rows>
-            {idle.map((chat) => (
-              <ChatRow key={chat.agentId} core={core} chat={chat} place={placeOf(chat)} />
-            ))}
-          </Rows>
-        </>
-      ) : null}
+      {AGENT_GROUPS.map((group) => {
+        const rows = groupOf(group);
+        if (!rows.length) return null;
+        return (
+          <View key={group}>
+            <SectionLabel>{AGENT_LABELS[group]}</SectionLabel>
+            <Rows>
+              {rows.map((chat) => (
+                <ChatRow
+                  key={chat.agentId}
+                  core={core}
+                  chat={chat}
+                  place={placeOf(chat)}
+                  attention={group === 'blocked' ? attentionOf(chat) : undefined}
+                />
+              ))}
+            </Rows>
+          </View>
+        );
+      })}
       <Recent core={core} snapshot={snapshot} scope={scope} provider={provider} full={full} hostName={hostName} />
       {!scoped.length && !snapshot.recent.some((chat) => !scope || chat.project === scope.id) ? (
         <Text style={styles.empty}>{scope ? `No agents in ${scope.name}.` : 'No agents running.'}</Text>
@@ -255,8 +264,8 @@ const ChatRow = memo(function ChatRow({
   place?: string;
   attention?: Attention;
 }) {
-  const asking = chat.pendingPermissions.length > 0;
-  const state = asking ? 'Needs input' : chatState(chat);
+  const state = chatState(chat);
+  const asking = chatDisplay(chat).group === 'blocked';
   return (
     <Row
       mark={<AgentIcon provider={chat.provider} size={20} />}
@@ -265,7 +274,7 @@ const ChatRow = memo(function ChatRow({
       detail={
         asking && attention ? (
           <>
-            Needs input · <Wants attention={attention} />
+            {state} · <Wants attention={attention} />
           </>
         ) : (
           state
@@ -479,7 +488,8 @@ export default function Device() {
   const starts = device?.access === 'full' && status.online && tab === 'agents';
   const bottom = useBottomGap();
   const scope = snapshot?.workspace.projects.find((project) => project.id === device?.project);
-  const asking = snapshot?.chats.filter((chat) => chat.pendingPermissions.length && (!scope || inProject(scope, chat.cwd))).length ?? 0;
+  const asking =
+    snapshot?.chats.filter((chat) => chatDisplay(chat).group === 'blocked' && (!scope || inProject(scope, chat.cwd))).length ?? 0;
   const [filter, setFilter] = useState('all');
   const providers = [
     ...new Set([
@@ -728,7 +738,6 @@ const makeStyles = (colors: Palette) => {
     faces: { flexDirection: 'row' },
     face: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
     termCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    asking: { marginTop: 8 },
     empty: { ...type.meta, textAlign: 'center', paddingTop: 40 },
     age: { fontSize: 12, fontVariant: ['tabular-nums'] },
     more: { minHeight: 40, justifyContent: 'center', paddingLeft: 38, paddingRight: 8, borderRadius: 9 },

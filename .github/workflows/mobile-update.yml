@@ -34,6 +34,7 @@ on:
       - "src/lib/format.ts"
       - "src/lib/paths.ts"
       - "src/lib/platform.ts"
+      - "src/state/agentStatus.ts"
       - "src/terminal/interactions.ts"
       - "src/ui/Icons.tsx"
       - "src/assets/agent-logos/**"
