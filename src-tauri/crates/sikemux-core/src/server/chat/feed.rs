@@ -124,13 +124,6 @@ fn session_title(payload: &Value) -> Option<&str> {
         .filter(|title| !title.is_empty())
 }
 
-/// Subagents outlive the turn that started them, but not one that was cancelled.
-/// The agent says so itself; this covers one that does not, as clients do.
-fn cancels_subagents(kind: ChatEventKind, payload: &Value) -> bool {
-    kind == ChatEventKind::TurnCompleted
-        && payload.get("stopReason").and_then(Value::as_str) == Some("cancelled")
-}
-
 /// Keeps `running` to the subagents the parent session has going. A subagent's
 /// own updates arrive under its session id and never change the count.
 fn track_subagent(running: &mut HashSet<String>, payload: &Value) {
@@ -401,10 +394,6 @@ impl Replay {
     }
 
     fn note_standing(&mut self, kind: ChatEventKind, index: u64, event: &ChatEvent) {
-        if cancels_subagents(kind, &event.payload) {
-            self.forget_subagents();
-            return;
-        }
         if kind != ChatEventKind::SessionUpdate {
             return;
         }
@@ -857,7 +846,7 @@ impl Feed {
         if kind == ChatEventKind::Status {
             inner.replay.forget_subagents();
         }
-        if kind == ChatEventKind::Status || cancels_subagents(kind, &payload) {
+        if kind == ChatEventKind::Status {
             inner.subagents.clear();
         }
         if kind == ChatEventKind::Status
@@ -1535,7 +1524,7 @@ mod tests {
     }
 
     #[test]
-    fn a_running_subagent_stands_until_it_stops_or_its_turn_is_cancelled() {
+    fn a_running_subagent_stands_until_it_stops() {
         let mut replay = Replay::new(MAX_REPLAY_BYTES, MAX_REPLAY_EVENTS, None);
         let spawned = |id: &str| {
             update(
@@ -1571,7 +1560,7 @@ mod tests {
             ChatEventKind::TurnCompleted,
             &json!({ "stopReason": "cancelled" }),
         );
-        assert!(held(&replay).is_empty());
+        assert_eq!(held(&replay), ["b"]);
     }
 
     #[tokio::test]
@@ -1595,7 +1584,7 @@ mod tests {
             ChatEventKind::TurnCompleted,
             json!({ "stopReason": "cancelled" }),
         );
-        assert_eq!(feed.running_subagents(), 0);
+        assert_eq!(feed.running_subagents(), 1);
     }
 
     #[tokio::test]

@@ -80,6 +80,7 @@ struct Tool {
 struct Child {
     session_id: String,
     ended: bool,
+    background: bool,
 }
 
 struct Task {
@@ -842,6 +843,9 @@ impl Reader {
             }
             return;
         };
+        if turn.cancelled {
+            self.end_foreground_subagents();
+        }
         let end = if turn.cancelled {
             TurnEnd::Completed(json!({ "stopReason": "cancelled" }))
         } else if let Some(failure) = turn.failure {
@@ -1091,6 +1095,9 @@ impl Reader {
             .and_then(|mut shared| shared.turn.take());
         match turn {
             Some(turn) => {
+                if turn.cancelled {
+                    self.end_foreground_subagents();
+                }
                 let end = match turn.failure {
                     Some(failure) if !turn.cancelled => TurnEnd::Failed {
                         failure,
@@ -1258,11 +1265,18 @@ impl Reader {
                 "capabilities": {},
             }),
         );
+        let background = message
+            .get("is_backgrounded")
+            .and_then(Value::as_bool)
+            .unwrap_or_else(|| {
+                input.get("run_in_background").and_then(Value::as_bool) == Some(true)
+            });
         self.children.insert(
             spawner.to_owned(),
             Child {
                 session_id: session_id.clone(),
                 ended: false,
+                background,
             },
         );
         for update in self.held.remove(spawner).unwrap_or_default() {
@@ -1373,6 +1387,30 @@ impl Reader {
             &self.session_id,
             json!({ "sessionUpdate": "notice", "severity": "info", "title": "Task stopped by user", "description": format!("{name}.") }),
         );
+    }
+
+    /// Stopping a turn stops the subagents it waits on; ones sent to the
+    /// background run on.
+    fn end_foreground_subagents(&mut self) {
+        let stopped: Vec<(String, String)> = self
+            .children
+            .iter_mut()
+            .filter(|(_, child)| !child.ended && !child.background)
+            .map(|(spawner, child)| {
+                child.ended = true;
+                (spawner.clone(), child.session_id.clone())
+            })
+            .collect();
+        for (spawner, session_id) in stopped {
+            let parent = self
+                .tools
+                .get(&spawner)
+                .map_or_else(|| self.session_id.clone(), |tool| tool.session.clone());
+            self.sink.update(
+                &parent,
+                json!({ "sessionUpdate": "subagent_state_update", "subagentSessionId": session_id, "state": "cancelled" }),
+            );
+        }
     }
 
     /// Every subagent and task still running is gone with the agent.

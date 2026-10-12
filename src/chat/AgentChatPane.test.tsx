@@ -1166,7 +1166,7 @@ describe("AgentChatPane", () => {
         await waitFor(() => expect(document.querySelector(".chat-code-title")).toHaveTextContent("100%"));
     });
 
-    it("watches a working subagent over the composer and settles its card when the turn ends", async () => {
+    it("keeps a subagent over the composer past a cancelled turn and settles its card when it stops", async () => {
         await openTranscript();
         emit("turn_started", {});
         emit("session_update", {
@@ -1195,6 +1195,12 @@ describe("AgentChatPane", () => {
         expect(card).not.toHaveTextContent("in the sikemux desktop app repo");
 
         emit("turn_completed", { stopReason: "cancelled" });
+        expect(screen.getByLabelText("1 subagent")).toBeInTheDocument();
+
+        emit("session_update", {
+            sessionId: "session-1",
+            update: { sessionUpdate: "subagent_state_update", subagentSessionId: "subagent-1", state: "cancelled" },
+        });
 
         await waitFor(() => expect(screen.queryByLabelText("1 subagent")).not.toBeInTheDocument());
         expect(document.querySelector('.chat-subagent [role="img"][aria-label="stopped"]')).not.toBeNull();

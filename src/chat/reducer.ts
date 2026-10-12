@@ -487,10 +487,10 @@ function contextUsage(update: Record<string, unknown>): ContextUsage | null {
         : { used, size };
 }
 
-/* A cancelled turn takes its subagents with it, and the agent says so itself;
-   settling them here as well covers one that does not. */
+/* A cancelled turn stops only the subagents it was waiting on, and the agent
+   says which. Background ones run on and report their own end. */
 function endTurn(state: ChatState, stopReason: string | null, at = Date.now()): ChatState {
-    const settled = settleState(state, stopReason === "cancelled");
+    const settled = settleState(state, false);
     const last = settled.messages.at(-1);
     // Only a turn this side watched run has a finish worth stamping.
     const messages = state.running && last?.role === "assistant" ? [...settled.messages.slice(0, -1), { ...last, endedAt: at }] : settled.messages;

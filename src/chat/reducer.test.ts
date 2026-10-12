@@ -328,7 +328,7 @@ describe("chat reducer", () => {
         expect(orphan.messages).toEqual([]);
     });
 
-    it("stops the work a finished turn left mid-flight", () => {
+    it("stops the calls a finished turn left mid-flight but not its subagents", () => {
         const spawned = update(initialChatState, {
             sessionUpdate: "subagent_spawned",
             subagentSessionId: "subagent-1",
@@ -341,13 +341,13 @@ describe("chat reducer", () => {
 
         const [subagentPart, toolPart] = ended.messages[0].parts;
         if (subagentPart.kind !== "subagent" || toolPart.kind !== "tool") throw new Error("expected a subagent beside a tool call");
-        expect(subagentPart.subagent.state).toBe("cancelled");
+        expect(subagentPart.subagent.state).toBe("running");
         expect(toolPart.tool.status).toBe("cancelled");
         expect(toolPart.endedAt).toBeDefined();
 
         const nestedPart = subagentPart.subagent.messages[0].parts[0];
         if (nestedPart.kind !== "tool") throw new Error("expected the subagent's own call");
-        expect(nestedPart.tool.status).toBe("cancelled");
+        expect(nestedPart.tool.status).toBe("in_progress");
     });
 
     it("leaves a call that already answered alone when the turn ends", () => {
