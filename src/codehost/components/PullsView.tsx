@@ -21,6 +21,7 @@ import { GitColumns } from "../../git/GitColumns";
 import { AuthorPicturesProvider, type AuthorPictures } from "../../git/AuthorAvatar";
 import { GitGraph } from "../../git/GitGraph";
 import { FoldPanel } from "../../git/FoldPanel";
+import { hostFileStatus } from "../../git/gitFileStatus";
 import { FileIcon } from "../../ui/FileIcon";
 import { basename, dirname } from "../../lib/paths";
 import { requestOpenFile, setGitView } from "../../state/commands";
@@ -418,13 +419,6 @@ function PullCard({
     );
 }
 
-const FILE_STATUS: Record<string, { letter: string; cls: string }> = {
-    added: { letter: "A", cls: "added" },
-    removed: { letter: "D", cls: "deleted" },
-    renamed: { letter: "R", cls: "renamed" },
-    copied: { letter: "C", cls: "renamed" },
-};
-
 /** The pull request's changed files as rows, like Changes lists staged and unstaged ones. */
 function PullFileRows({
     repo,
@@ -457,7 +451,7 @@ function PullFileRows({
             </div>
             {files.status === "loading" && !files.data && <SkeletonRows rows={3} label="Loading files" />}
             {list.map((file) => {
-                const badge = FILE_STATUS[file.status] ?? { letter: "M", cls: "modified" };
+                const badge = hostFileStatus(file.status);
                 const dir = dirname(file.path);
                 return (
                     <button
@@ -471,7 +465,9 @@ function PullFileRows({
                             {basename(file.path)}
                             {dir && <span className="git-row-dir">{dir}</span>}
                         </span>
-                        <span className={`git-status ${badge.cls}`}>{badge.letter}</span>
+                        <span className={`git-status git-${badge.cls}`} title={badge.label}>
+                            {badge.letter}
+                        </span>
                     </button>
                 );
             })}
