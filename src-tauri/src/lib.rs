@@ -83,11 +83,10 @@ pub(crate) fn install_tls_crypto() {
 
 /// The app window only ever shows the app. A link that would load another
 /// page in it would replace the whole workspace and end every running shell.
-/// WebKit asks the same of every frame, so the chat's page frames and the
-/// editor's PDF frame pass too.
+/// WebKit asks the same of every frame, so the chat's page frames pass too.
 fn main_window_may_load(url: &tauri::Url) -> bool {
     match url.scheme() {
-        "tauri" | "page" | "preview" => url.host_str() == Some("localhost"),
+        "tauri" | "page" => url.host_str() == Some("localhost"),
         "http" if cfg!(debug_assertions) => {
             url.host_str() == Some("localhost") && url.port() == Some(1420)
         }

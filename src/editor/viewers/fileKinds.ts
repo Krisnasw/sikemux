@@ -1,7 +1,7 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { extensionOf } from "../../languages";
 
-export type ViewerKind = "image" | "video" | "audio" | "pdf" | "font" | "document" | "binary";
+export type ViewerKind = "image" | "video" | "audio" | "font" | "document" | "binary";
 
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico", "avif", "tif", "tiff", "heic", "heif"];
 
@@ -44,9 +44,13 @@ export function isPreviewPath(path: string | null | undefined): boolean {
 }
 
 export function viewerKind(mime: string): ViewerKind {
-    if (DOCUMENT_MIMES.has(mime) || mime.startsWith("application/vnd.openxmlformats-") || mime.startsWith("application/vnd.oasis.opendocument."))
+    if (
+        mime === "application/pdf" ||
+        DOCUMENT_MIMES.has(mime) ||
+        mime.startsWith("application/vnd.openxmlformats-") ||
+        mime.startsWith("application/vnd.oasis.opendocument.")
+    )
         return "document";
-    if (mime === "application/pdf") return "pdf";
     if (mime.startsWith("image/")) return "image";
     if (mime.startsWith("audio/")) return "audio";
     if (mime.startsWith("video/")) return UNPLAYABLE_VIDEO.has(mime) ? "binary" : "video";
