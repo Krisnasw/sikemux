@@ -4,6 +4,7 @@ import { sql } from "kysely";
 
 import { requireSession, type AuthEnv } from "../auth.ts";
 import type { Database } from "../db.ts";
+import { consumeChallenge } from "../devices/challenge.ts";
 import { ownedDevice } from "../devices/owned.ts";
 import { pushTokenMessage, signedBy } from "../devices/signature.ts";
 import { ApiFailure, readBody } from "../http.ts";
@@ -47,19 +48,7 @@ export function pushTokenRoutes(
           "This server does not deliver through Apple's sandbox.",
         );
 
-      const challenge = await db
-        .deleteFrom("challenges")
-        .where("nonce", "=", registration.nonce)
-        .where("user_id", "=", userId)
-        .where("expires_at", ">", sql<Date>`now()`)
-        .returning("nonce")
-        .executeTakeFirst();
-      if (!challenge)
-        throw new ApiFailure(
-          400,
-          "bad_request",
-          "The challenge is unknown, already used, or expired.",
-        );
+      await consumeChallenge(db, userId, registration.nonce);
 
       const updatedAt = await db.transaction().execute(async (trx) => {
         await ownedDevice(trx, userId, key, { role: "client", lock: true });

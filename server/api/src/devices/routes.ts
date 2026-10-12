@@ -1,7 +1,5 @@
-import { randomBytes } from "node:crypto";
 import {
   deviceRoleValues,
-  type Challenge,
   type Channel,
   type Device,
   type DeviceList,
@@ -22,11 +20,10 @@ import type { JoinSigner } from "../join/signer.ts";
 import { limit, type RateLimiter } from "../limits.ts";
 import { pushTokenRoutes } from "../push/routes.ts";
 import type { PushSettings } from "../push/settings.ts";
+import { consumeChallenge, issueChallenge } from "./challenge.ts";
 import { ownedDevice } from "./owned.ts";
 import { removeDevice } from "./removal.ts";
 import { registrationMessage, signedBy } from "./signature.ts";
-
-const CHALLENGE_MS = 2 * 60_000;
 
 function toDevice(row: Selectable<Tables["devices"]>): Device {
   const device: Device = {
@@ -57,21 +54,9 @@ export function deviceRoutes(
     .use(requireIdentity(verifier, db))
     .route("/", pushTokenRoutes(database, limiter, push))
     .route("/", joinRoutes(database, limiter, join))
-    .post("/challenge", perUser("challenge", 30), async (c) => {
-      const { userId } = c.get("identity");
-      const nonce = randomBytes(32).toString("hex");
-      const expiresAt = new Date(Date.now() + CHALLENGE_MS);
-      await db
-        .deleteFrom("challenges")
-        .where("expires_at", "<", sql<Date>`now() - interval '1 hour'`)
-        .execute();
-      await db
-        .insertInto("challenges")
-        .values({ nonce, user_id: userId, expires_at: expiresAt })
-        .execute();
-      const body: Challenge = { nonce, expiresAt: expiresAt.toISOString() };
-      return c.json(body);
-    })
+    .post("/challenge", perUser("challenge", 30), async (c) =>
+      c.json(await issueChallenge(db, c.get("identity").userId)),
+    )
     .post("/", perUser("register", 20), async (c) => {
       const { userId } = c.get("identity");
       const registration = await readBody(c, "DeviceRegistration");
@@ -89,20 +74,7 @@ export function deviceRoutes(
       if (!name)
         throw new ApiFailure(400, "bad_request", "The device needs a name.");
 
-      const challenge = await db
-        .deleteFrom("challenges")
-        .where("nonce", "=", registration.nonce)
-        .where("user_id", "=", userId)
-        .where("expires_at", ">", sql<Date>`now()`)
-        .returning("nonce")
-        .executeTakeFirst();
-      if (!challenge) {
-        throw new ApiFailure(
-          400,
-          "bad_request",
-          "The challenge is unknown, already used, or expired.",
-        );
-      }
+      await consumeChallenge(db, userId, registration.nonce);
       const message = registrationMessage(
         registration.nonce,
         userId,

@@ -1,6 +1,7 @@
 import { sql, type Kysely } from "kysely";
 
 import type { Tables } from "../db.ts";
+import { pruneChallenges } from "../devices/challenge.ts";
 import type { Logger } from "../log.ts";
 
 /** How long each kind of history is kept. */
@@ -145,14 +146,7 @@ export async function pruneHistory(
     RETENTION_DAYS.removedDevices,
   );
   const audit = await olderThan("audit", "at", RETENTION_DAYS.audit);
-  const challenges = Number(
-    (
-      await db
-        .deleteFrom("challenges")
-        .where("expires_at", "<", sql<Date>`now() - interval '1 hour'`)
-        .executeTakeFirst()
-    ).numDeletedRows,
-  );
+  const challenges = await pruneChallenges(db);
   const pruned = { events, removedDevices, audit, challenges };
   log.info(pruned, "pruned old history");
   return pruned;
