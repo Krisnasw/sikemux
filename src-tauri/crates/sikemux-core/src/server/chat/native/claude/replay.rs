@@ -524,10 +524,12 @@ fn local_command_part(record: &Value) -> Option<LocalCommandPart> {
     .find_map(|(open, part)| text.starts_with(open).then_some(part))
 }
 
-const INTERRUPTION_PREFIXES: [&str; 6] = [
+const INTERRUPTION_PREFIXES: [&str; 8] = [
     "[Request interrupted by user]",
     "[Request interrupted by user for tool use]",
     "[Tool call did not complete: the turn was ended to deliver the message that follows. Nothing refused it; re-run it if still needed.]",
+    "[Tool call interrupted: the session ended before this call's result was recorded, so its outcome is unknown. Check whether it took effect before relying on it or running it again.]",
+    "[Tool call result not in this copy: this session was copied from another session before that session recorded this call's result. The call may have finished there, may still be running there, or may never have run. Check whether it took effect before relying on it or running it again.]",
     "The user doesn't want to take this action right now. STOP what you are doing and wait for the user to tell you how to proceed.",
     "[Tool call skipped: the turn was stopped before this call ran, by the check whose denial is on another call in this batch. Nothing refused this call and it had no effects; re-run it if still needed.]",
     "[Tool call skipped: the turn ended to deliver the message that follows before this call ran. Nothing refused it; re-run it if still needed.]",
@@ -866,7 +868,7 @@ fn collect_children(records: &[Value], session_id: &str) -> Vec<Child> {
                     if said.contains("Async agent launched") {
                         continue;
                     }
-                    let state = terminal_state(block);
+                    let state = terminal_state(record, block);
                     match terminal_states.iter_mut().find(|(known, _)| known == id) {
                         Some(entry) => entry.1 = state,
                         None => terminal_states.push((id.to_string(), state)),
@@ -962,9 +964,13 @@ fn task_notification(record: &Value) -> Option<(String, Subagent)> {
 /// How a subagent whose call answered with `result` ended. Live, Claude Code
 /// says so in a status; the transcript keeps only the answer, which says the
 /// person stopped it in the words it stops any call with.
-fn terminal_state(result: &Value) -> Subagent {
+fn terminal_state(record: &Value, result: &Value) -> Subagent {
     if result.get("is_error") != Some(&Value::Bool(true)) {
         return Subagent::Completed;
+    }
+    // A call stopped mid-run keeps the refusal text, but the record says the person stopped it.
+    if str_field(record, "toolUseResult") == Some("User rejected tool use") {
+        return Subagent::Cancelled;
     }
     let said = json::joined_text(result.get("content"));
     if INTERRUPTION_PREFIXES
