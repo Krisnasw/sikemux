@@ -37,6 +37,29 @@ export function retryDelayMs(attempts: number): number {
 }
 
 /**
+ * After a call to Clerk failed for the attempts-th time: logs it, as an error once it keeps
+ * failing, and returns what to record on the row so the sweeper tries again later.
+ */
+function clerkFailed(
+  log: Logger,
+  what: string,
+  {
+    error,
+    attempts,
+    ...fields
+  }: Record<string, unknown> & { error: unknown; attempts: number },
+) {
+  const logged = { err: error, ...fields, attempts };
+  if (attempts >= ALERT_AFTER_ATTEMPTS)
+    log.error(logged, `Clerk still cannot ${what}`);
+  else log.warn(logged, `Clerk could not ${what}; retrying later`);
+  return {
+    clerk_attempts: attempts,
+    clerk_retry_at: new Date(Date.now() + retryDelayMs(attempts)),
+  };
+}
+
+/**
  * Deletes the account here, in one transaction: every device moves to a tombstone, the account
  * hears device.revoked for each and one account.deleted, and its tokens are refused from now on.
  * The sign-in stays in Clerk until the account can no longer be restored. A repeat finds the
@@ -204,23 +227,17 @@ export async function deleteInClerk(
     try {
       await clerk.deleteUser(userId);
     } catch (error) {
-      const attempts = user.clerk_attempts + 1;
       await trx
         .updateTable("users")
-        .set({
-          clerk_attempts: attempts,
-          clerk_retry_at: new Date(Date.now() + retryDelayMs(attempts)),
-        })
+        .set(
+          clerkFailed(log, "delete a deleted account", {
+            error,
+            userId,
+            attempts: user.clerk_attempts + 1,
+          }),
+        )
         .where("id", "=", userId)
         .execute();
-      const fields = { err: error, userId, attempts };
-      if (attempts >= ALERT_AFTER_ATTEMPTS)
-        log.error(fields, "Clerk has still not deleted a deleted account");
-      else
-        log.warn(
-          fields,
-          "Clerk did not delete a deleted account; retrying later",
-        );
       return false;
     }
     await recordClerkDeletion(trx, userId, "system");
@@ -260,26 +277,17 @@ export async function revokeRemovedSession(
     try {
       await clerk.revokeSession(tombstone.clerk_session_id);
     } catch (error) {
-      const attempts = tombstone.clerk_attempts + 1;
       await trx
         .updateTable("removed_devices")
-        .set({
-          clerk_attempts: attempts,
-          clerk_retry_at: new Date(Date.now() + retryDelayMs(attempts)),
-        })
+        .set(
+          clerkFailed(log, "revoke a removed phone's session", {
+            error,
+            key: key.slice(0, 8),
+            attempts: tombstone.clerk_attempts + 1,
+          }),
+        )
         .where("key", "=", key)
         .execute();
-      const fields = { err: error, key: key.slice(0, 8), attempts };
-      if (attempts >= ALERT_AFTER_ATTEMPTS)
-        log.error(
-          fields,
-          "Clerk has still not revoked a removed phone's session",
-        );
-      else
-        log.warn(
-          fields,
-          "Clerk did not revoke a removed phone's session; retrying later",
-        );
       return;
     }
     await trx
