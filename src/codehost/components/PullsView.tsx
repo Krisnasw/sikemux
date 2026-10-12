@@ -33,7 +33,8 @@ import { needsPull } from "../compose";
 import { compose, openRunFrom, setListState, showItem } from "../state";
 import { CommentThread, Face } from "./CommentThread";
 import { OutcomeIcon } from "./ActionsIcon";
-import { Branch, Comments, Labels, StateMark, stateLabel, stateOf, Who } from "./Bits";
+import { pullState } from "../project";
+import { Branch, Comments, Labels, StateMark, stateLabel, Who } from "./Bits";
 import { useBusy, useEvery, useNow } from "./hooks";
 import { NewPullForm } from "./NewPullForm";
 import { PullFiles } from "./PullFiles";
@@ -70,7 +71,7 @@ function PullHeadline({
     trailing?: ReactNode;
     labels?: boolean;
 }) {
-    const state = stateOf(pull.state, pull.draft);
+    const state = pullState(pull);
     return (
         <>
             <span className="pr-face">
@@ -78,7 +79,7 @@ function PullHeadline({
             </span>
             <span className="pr-headline-top">
                 <span className="gha-state-word pr-state" data-kind="pull" data-state={state}>
-                    {stateLabel("pull", pull.state, pull.draft)}
+                    {stateLabel("pull", state)}
                 </span>
                 {title}
                 {trailing}
