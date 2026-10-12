@@ -1,11 +1,12 @@
 import { randomBytes } from "node:crypto";
-import type {
-  Challenge,
-  Channel,
-  Device,
-  DeviceList,
-  DeviceRole,
-  Platform,
+import {
+  deviceRoleValues,
+  type Challenge,
+  type Channel,
+  type Device,
+  type DeviceList,
+  type DeviceRole,
+  type Platform,
 } from "@sikemux/protocol";
 import { Hono } from "hono";
 import { sql, type Selectable } from "kysely";
@@ -25,7 +26,6 @@ import { removeDevice } from "./removal.ts";
 import { registrationMessage, signedBy } from "./signature.ts";
 
 const CHALLENGE_MS = 2 * 60_000;
-const ROLES: readonly DeviceRole[] = ["host", "client"];
 
 function toDevice(row: Selectable<Tables["devices"]>): Device {
   const device: Device = {
@@ -263,11 +263,14 @@ export function deviceRoutes(
     .get("/", perUser("list", 120), async (c) => {
       const { userId } = c.get("identity");
       const role = c.req.query("role");
-      if (role !== undefined && !ROLES.includes(role as DeviceRole)) {
+      if (
+        role !== undefined &&
+        !deviceRoleValues.includes(role as DeviceRole)
+      ) {
         throw new ApiFailure(
           400,
           "bad_request",
-          `role is one of ${ROLES.join(", ")}.`,
+          `role is one of ${deviceRoleValues.join(", ")}.`,
         );
       }
       let query = db

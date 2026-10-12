@@ -174,7 +174,7 @@
       },
       "responses": {
         "101": {
-          "description": "The connection is open. The server sends a challenge; the device answers with hello within 10 seconds. Close codes: 4400 bad message, 4401 not signed in, 4403 revoked, 4408 no hello in time, 4409 replaced by a newer connection for the same device, 4429 too many messages, 1012 restarting, 1013 overloaded."
+          "description": "The connection is open. The server sends a challenge; the device answers with hello within 10 seconds. Its close codes are LiveCloseCode."
         },
         "429": {
           "description": "Too many connections from this address.",

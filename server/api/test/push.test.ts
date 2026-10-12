@@ -3,7 +3,11 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
-import type { LivePush, PushTokenRegistration } from "@sikemux/protocol";
+import {
+  LiveCloseCode,
+  type LivePush,
+  type PushTokenRegistration,
+} from "@sikemux/protocol";
 import { pino } from "pino";
 import {
   afterAll,
@@ -19,7 +23,6 @@ import vector from "../../protocol/vectors/push-token.json" with { type: "json" 
 import type { Database } from "../src/db.ts";
 import { pushTokenMessage, signedBy } from "../src/devices/signature.ts";
 import { RateLimiter } from "../src/limits.ts";
-import { CLOSE } from "../src/live/options.ts";
 import { ApnsProvider } from "../src/push/apns.ts";
 import { FcmProvider, readServiceAccount } from "../src/push/fcm.ts";
 import type { PushMessage } from "../src/push/provider.ts";
@@ -640,7 +643,7 @@ describe("a host's push", () => {
     const peer = kept(await clientPeer(api?.url ?? "", phone, "user_a"));
     await peer.until("ready");
     peer.send(push(phone.key));
-    expect(await peer.closed).toBe(CLOSE.badMessage);
+    expect(await peer.closed).toBe(LiveCloseCode.badMessage);
   });
 
   it("forgets a token FCM says is unregistered", async () => {

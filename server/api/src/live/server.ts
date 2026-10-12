@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { STATUS_CODES, type IncomingMessage, type Server } from "node:http";
 import type { Duplex } from "node:stream";
-import type { ApiError, ErrorCode } from "@sikemux/protocol";
+import {
+  LiveCloseCode,
+  type ApiError,
+  type ErrorCode,
+} from "@sikemux/protocol";
 import { WebSocketServer } from "ws";
 
 import type { Verifier } from "../auth.ts";
@@ -11,7 +15,7 @@ import type { Logger } from "../log.ts";
 import type { Pusher } from "../push/send.ts";
 import { Hub } from "./hub.ts";
 import { listenForEvents, type Listener } from "./listener.ts";
-import { CLOSE, LIVE_OPTIONS, type LiveOptions } from "./options.ts";
+import { LIVE_OPTIONS, type LiveOptions } from "./options.ts";
 import { failedHelloKeys, LiveSocket } from "./socket.ts";
 
 export interface LiveServices {
@@ -117,7 +121,7 @@ export function attachLive(server: Server, services: LiveServices): Live {
 
     wss.handleUpgrade(request, socket, head, (ws) => {
       if (hub.open >= options.maxSockets) {
-        ws.close(CLOSE.overloaded, "too many connections");
+        ws.close(LiveCloseCode.overloaded, "too many connections");
         return;
       }
       new LiveSocket(ws, ip, context).start();

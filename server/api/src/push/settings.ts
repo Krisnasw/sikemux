@@ -1,4 +1,4 @@
-import type { PushApp } from "@sikemux/protocol";
+import { pushAppValues, type PushApp } from "@sikemux/protocol";
 
 import { readAppleKeySettings, type AppleKey } from "../apple-key.ts";
 import { APNS_TOPICS } from "./apns.ts";
@@ -15,8 +15,6 @@ export interface PushSettings {
   apns: (AppleKey & { topic: string }) | null;
 }
 
-const APPS: readonly PushApp[] = ["production", "dev"];
-
 /**
  * Reads PUSH_APP ("production" by default), APNS_ALLOW_SANDBOX ("1" to allow),
  * FCM_SERVICE_ACCOUNT_FILE, the path of the Firebase service account's JSON key, and
@@ -27,8 +25,8 @@ export function readPush(
   problems: string[],
 ): PushSettings {
   const app = (env.PUSH_APP?.trim() || "production") as PushApp;
-  if (!APPS.includes(app))
-    problems.push(`PUSH_APP is not one of ${APPS.join(", ")}`);
+  if (!pushAppValues.includes(app))
+    problems.push(`PUSH_APP is not one of ${pushAppValues.join(", ")}`);
 
   const sandbox = env.APNS_ALLOW_SANDBOX?.trim() || "0";
   if (sandbox !== "0" && sandbox !== "1")
