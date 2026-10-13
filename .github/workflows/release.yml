@@ -172,8 +172,8 @@ jobs:
     name: Build Linux packages
     needs: approve
     if: ${{ !cancelled() && (needs.approve.result == 'success' || needs.approve.result == 'skipped') }}
-    # The oldest supported runner, so the packages run on distributions with an older glibc.
-    runs-on: ubuntu-22.04
+    # The oldest runner GitHub still supports; its glibc decides the oldest distribution the packages run on.
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     environment: release
     steps:
