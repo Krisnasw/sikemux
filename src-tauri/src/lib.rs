@@ -106,7 +106,7 @@ pub fn run() {
     install_tls_crypto();
     system::normalize_user_environment();
     #[cfg(target_os = "linux")]
-    system::avoid_webkit_dmabuf_renderer_on_nvidia();
+    system::keep_webkit_rendering_on_nvidia();
 
     // Raise our open-file-descriptor limit FIRST, before any subsystem
     // opens an fd. macOS launchd hands GUI apps a soft RLIMIT_NOFILE of 256;

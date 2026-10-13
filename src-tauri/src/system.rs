@@ -257,17 +257,28 @@ pub fn normalize_user_environment() {
     }
 }
 
-/// With NVIDIA's driver, WebKitGTK's DMA-BUF renderer closes the window about a
-/// second after it opens on Wayland, and leaves it blank on X11.
+/// WebKitGTK only draws on the GPU through its DMA-BUF renderer; without it every
+/// frame is painted on the CPU. With NVIDIA's driver that renderer leaves the
+/// window blank on X11, so it is turned off there. On Wayland it closes the window
+/// a second after it opens, because NVIDIA asks the compositor for explicit sync
+/// on a window GTK also draws plain buffers into; turning that sync off is enough.
 #[cfg(target_os = "linux")]
-pub fn avoid_webkit_dmabuf_renderer_on_nvidia() {
+pub fn keep_webkit_rendering_on_nvidia() {
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_some()
         || !Path::new("/proc/driver/nvidia/version").exists()
     {
         return;
     }
+    let on_x11 = std::env::var_os("WAYLAND_DISPLAY").is_none()
+        || std::env::var("GDK_BACKEND").is_ok_and(|backend| backend.starts_with("x11"));
     // SAFETY: run() calls this before the Tauri runtime starts threads.
-    unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
+    unsafe {
+        if on_x11 {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        } else if std::env::var_os("__NV_DISABLE_EXPLICIT_SYNC").is_none() {
+            std::env::set_var("__NV_DISABLE_EXPLICIT_SYNC", "1");
+        }
+    }
 }
 
 /// Raise this process's open-file-descriptor soft limit toward its hard
