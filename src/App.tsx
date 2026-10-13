@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } fro
 import { invokeCommand as invoke } from "./api/invoke";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { checkForUpdate } from "./api/updater";
+import { checkForUpdate, UPDATES_IN_APP } from "./api/updater";
 import { reportActive } from "./api/usage";
 import { TopBar } from "./shell/TopBar";
 import { SideRail } from "./rail/SideRail";
@@ -884,7 +884,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        if (import.meta.env.DEV) return;
+        if (import.meta.env.DEV || !UPDATES_IN_APP) return;
         const firstCheck = window.setTimeout(() => void checkForUpdate(), 4000);
         const poll = window.setInterval(() => void checkForUpdate(), 30 * 60_000);
         return () => {
