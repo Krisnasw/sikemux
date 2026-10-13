@@ -6,6 +6,10 @@ import { getState, setState, type PendingUpdate, type UpdateCheckOutcome, type U
 import { errMessage, notify, reportError, swallow } from "../state/toast";
 import { formatBytes } from "../lib/format";
 
+export const RELEASES_URL = "https://github.com/nodelike/sikemux/releases";
+// The update feed only lists macOS builds, so Linux installs update by downloading the next release.
+export const UPDATES_IN_APP = !/^Linux/i.test(typeof navigator === "undefined" ? "" : navigator.platform);
+
 interface UpdateInfo {
     version: string;
     currentVersion: string;
