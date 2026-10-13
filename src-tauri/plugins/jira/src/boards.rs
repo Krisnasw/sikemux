@@ -341,6 +341,7 @@ pub async fn move_issue(data_dir: &Path, request: MoveRequest) -> JiraResult<()>
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     #[test]
     fn people_clause_keeps_the_whole_board_when_nobody_is_picked() {
@@ -362,8 +363,6 @@ mod tests {
             )
         );
     }
-
-    use super::*;
 
     fn issue(key: &str, status: &str) -> Value {
         json!({ "key": key, "fields": {

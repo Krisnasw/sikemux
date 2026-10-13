@@ -55,8 +55,9 @@ export function JiraBoard({
 
     if (whole.status === "error") return <EmptyState message={whole.error ?? "Jira could not open this board."} tone="error" />;
     if (!whole.data) return <SkeletonRows rows={6} label="Loading the board" />;
-    const board = found.data ?? whole.data;
-    const columns = matchingCards(withMoves(board, moves), words);
+    const board = whole.data;
+    const narrowed = picked.size === 0 ? board : found.data;
+    const columns = narrowed ? matchingCards(withMoves(narrowed, moves), words) : [];
     const refresh = () => invalidate((kind) => kind === "jira.board");
     const toggle = (who: string) =>
         setPicked((now) => {
@@ -73,8 +74,8 @@ export function JiraBoard({
         setMoves((now) => ({ ...now, [issue.key]: to }));
         try {
             await jiraApi.moveIssue(issue.key, target, site || undefined);
-            await found.refresh();
             refresh();
+            await found.refresh();
             invalidate((kind) => kind === "jira.search" || kind === "jira.issue");
         } catch (error) {
             notify("error", `Move ${issue.key}: ${failureMessage(error)}`);
@@ -135,7 +136,7 @@ export function JiraBoard({
                     </button>
                 </div>
                 {board.sprint?.goal && <p className="jira-board-goal">{board.sprint.goal}</p>}
-                {board.truncated && (
+                {(narrowed ?? board).truncated && (
                     <p className="jira-meta">Showing the first 300 issues. Pick people or narrow the board in Jira to see the rest.</p>
                 )}
                 <div className="jira-board-filter-row" role="group" aria-label="Filter the board">
@@ -184,6 +185,10 @@ export function JiraBoard({
             </header>
             {board.kind === "scrum" && !board.sprint ? (
                 <EmptyState message="No sprint is running on this board." />
+            ) : found.status === "error" && picked.size > 0 ? (
+                <EmptyState message={found.error ?? "Jira could not narrow the board to those people."} tone="error" />
+            ) : !narrowed ? (
+                <SkeletonRows rows={6} label="Loading their cards" />
             ) : (
                 <div className="jira-columns">
                     {columns.map((column, index) => (
